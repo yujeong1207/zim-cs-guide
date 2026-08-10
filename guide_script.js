@@ -20416,13 +20416,14 @@ function renderAdminList() {
   ioRow.innerHTML = `
     <button class="btn secondary-btn" onclick="exportAll()">⬇️ 전체 내보내기 (백업/공유)</button>
     <button class="btn secondary-btn" onclick="document.getElementById('importInput').click()">⬆️ 전체 가져오기</button>
+    <button class="btn secondary-btn" onclick="document.getElementById('partialImportInput').click()">🧩 선택 가져오기 (원하는 항목만)</button>
   `;
   body.appendChild(ioRow);
 
   const hint = document.createElement("div");
   hint.className = "hint";
   hint.style.marginTop = "10px";
-  hint.textContent = "내보내기는 절차·FAQ·FAQ그룹·메일템플릿·공문·자료·연락처·휴가일정·팀원 휴가일수·팀 일정을 전부 하나의 파일로 백업해요. 팀원에게 전달하면 가져오기로 동일하게 세팅할 수 있어요. (가져오기 시 현재 내용 전체가 교체됩니다)";
+  hint.textContent = "내보내기는 절차·FAQ·FAQ그룹·메일템플릿·공문·자료·연락처·휴가일정·팀원 휴가일수·팀 일정을 전부 하나의 파일로 백업해요. 팀원에게 전달하면 가져오기로 동일하게 세팅할 수 있어요. (전체 가져오기 시 현재 내용 전체가 교체됩니다 — 일부만 반영하고 싶으면 '🧩 선택 가져오기'를 쓰세요, 체크한 항목만 교체되고 나머지는 그대로 남아요)";
   body.appendChild(hint);
 }
 
@@ -22624,6 +22625,178 @@ function saveNtfDraft() {
 }
 
 /* ---- 내보내기 / 가져오기 (전체) ---- */
+/* =========================================================================
+   🧩 선택 가져오기 - 백업 파일 안의 항목 중 원하는 것만 골라서 가져오기
+   (전체 가져오기는 다 교체돼버려서, 자료모음처럼 일부만 새로 반영하고 싶을 때는
+   이걸로 쓰면 나머지 항목은 안 건드리고 딱 고른 것만 반영됨)
+   ========================================================================= */
+const PARTIAL_IMPORT_LABELS = {
+  templates: "✉️ 메일 템플릿",
+  ntfTemplates: "📨 공문 템플릿",
+  procedures: "📋 업무 절차",
+  faqs: "❓ FAQ",
+  faqTopics: "🗂 FAQ 그룹",
+  resources: "🔗 자료 모음",
+  contacts: "📞 연락처",
+  quotes: "💬 오늘의 한마디 문구",
+  vacationMembers: "👥 팀원 휴가일수",
+  vacationNotice: "📢 휴가 공지 문구",
+  ltMailSettings: "📧 LT LIST 메일 기본값",
+  ntfLetterhead: "📄 공문 레터헤드",
+  exchangeRates: "💱 환율 이력",
+  favoriteTemplateIds: "⭐ 메일템플릿 즐겨찾기",
+  favoriteProcIds: "⭐ 절차 즐겨찾기",
+  favoriteFaqIds: "⭐ FAQ 즐겨찾기",
+  vacations: "🏖 확정휴가 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  holidays: "🎌 공휴일 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  teamEvents: "🗓 팀일정 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  noticeBanner: "📣 공지배너 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  vessels: "🚢 모선일정 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  vesselMonths: "🚢 모선일정 월 목록 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  poaList: "🖋 위임장 (이미 실시간 연동됨 - 보통 선택 불필요)",
+  feedbackList: "💬 의견함 (이미 실시간 연동됨 - 보통 선택 불필요)",
+};
+
+const PARTIAL_IMPORT_SETTERS = {
+  templates: (v) => { TEMPLATES = v; },
+  ntfTemplates: (v) => { NTF_TEMPLATES = v; },
+  procedures: (v) => { PROCEDURES = normalizeProcedures(v); },
+  faqs: (v) => { FAQS = v; },
+  faqTopics: (v) => { FAQ_TOPICS = v; },
+  resources: (v) => { RESOURCES = v; },
+  contacts: (v) => { CONTACTS = v; },
+  quotes: (v) => { QUOTES = v; },
+  vacationMembers: (v) => { VACATION_MEMBERS = v; },
+  vacationNotice: (v) => { VACATION_NOTICE = v; },
+  ltMailSettings: (v) => { LT_MAIL_SETTINGS = v; },
+  ntfLetterhead: (v) => { NTF_LETTERHEAD = v; },
+  exchangeRates: (v) => { EXCHANGE_RATES = v; },
+  favoriteTemplateIds: (v) => { FAVORITE_TEMPLATE_IDS = v; },
+  favoriteProcIds: (v) => { FAVORITE_PROC_IDS = v; },
+  favoriteFaqIds: (v) => { FAVORITE_FAQ_IDS = v; },
+  vacations: (v) => { VACATIONS = v; },
+  holidays: (v) => { HOLIDAYS = v; },
+  teamEvents: (v) => { TEAM_EVENTS = v; },
+  noticeBanner: (v) => { NOTICE_BANNER = v; },
+  vessels: (v) => { VESSELS = v; },
+  vesselMonths: (v) => { VESSEL_MONTHS = v; },
+  poaList: (v) => { POA_LIST = v; },
+  feedbackList: (v) => { FEEDBACK_LIST = v; },
+};
+
+let pendingPartialImportData = null;
+
+function handlePartialImportFile(event) {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const imported = JSON.parse(e.target.result);
+      if (!imported || typeof imported !== "object") throw new Error("형식이 올바르지 않습니다");
+      const foundKeys = Object.keys(PARTIAL_IMPORT_SETTERS).filter((k) => imported[k] !== undefined);
+      if (foundKeys.length === 0) {
+        alert("이 파일 안에서 가져올 수 있는 항목을 찾지 못했어요.");
+        return;
+      }
+      pendingPartialImportData = imported;
+      openPartialImportModal(foundKeys);
+    } catch (err) {
+      alert("파일을 읽을 수 없습니다. 올바른 백업 JSON 파일인지 확인해주세요.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function openPartialImportModal(keys) {
+  let overlay = document.getElementById("partialImportOverlay");
+  if (overlay) overlay.remove();
+
+  overlay = document.createElement("div");
+  overlay.id = "partialImportOverlay";
+  overlay.className = "admin-overlay";
+  overlay.style.display = "flex";
+  overlay.onclick = (e) => { if (e.target === overlay) { pendingPartialImportData = null; overlay.remove(); } };
+
+  const box = document.createElement("div");
+  box.className = "admin-panel small-panel";
+
+  const header = document.createElement("div");
+  header.className = "admin-header";
+  const title = document.createElement("div");
+  title.className = "admin-title";
+  title.textContent = "🧩 어떤 항목을 가져올까요?";
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "close-btn";
+  closeBtn.textContent = "✕ 닫기";
+  closeBtn.onclick = () => { pendingPartialImportData = null; overlay.remove(); };
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+  box.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "hint";
+  hint.style.marginBottom = "12px";
+  hint.textContent = "체크한 항목만 이 파일 내용으로 교체돼요. 체크 안 한 항목은 지금 상태 그대로 안전하게 남아있어요.";
+  box.appendChild(hint);
+
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;";
+  const checkboxes = [];
+  keys.forEach((k) => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;";
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.checked = true;
+    chk.dataset.key = k;
+    checkboxes.push(chk);
+    const span = document.createElement("span");
+    span.textContent = PARTIAL_IMPORT_LABELS[k] || k;
+    row.appendChild(chk);
+    row.appendChild(span);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+  actions.style.marginTop = "16px";
+  const applyBtn = document.createElement("button");
+  applyBtn.className = "btn generate-btn";
+  applyBtn.type = "button";
+  applyBtn.textContent = "✅ 선택한 항목 가져오기";
+  applyBtn.onclick = () => {
+    const selected = checkboxes.filter((c) => c.checked).map((c) => c.dataset.key);
+    if (selected.length === 0) { alert("최소 하나는 선택해주세요."); return; }
+    selected.forEach((k) => {
+      if (pendingPartialImportData[k] !== undefined && PARTIAL_IMPORT_SETTERS[k]) {
+        PARTIAL_IMPORT_SETTERS[k](pendingPartialImportData[k]);
+      }
+    });
+    saveData();
+    renderAdminList();
+    refreshCurrentTab();
+    renderNoticeBanner();
+    renderFeedbackBadge();
+    pendingPartialImportData = null;
+    overlay.remove();
+    alert("선택한 " + selected.length + "개 항목을 가져왔어요 💖");
+  };
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn secondary-btn";
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "취소";
+  cancelBtn.onclick = () => { pendingPartialImportData = null; overlay.remove(); };
+  actions.appendChild(applyBtn);
+  actions.appendChild(cancelBtn);
+  box.appendChild(actions);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+}
+
 function exportAll() {
   const payload = {
     templates: TEMPLATES, ntfTemplates: NTF_TEMPLATES, procedures: PROCEDURES, faqs: FAQS, resources: RESOURCES,
