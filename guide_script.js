@@ -15417,7 +15417,7 @@ async function submitPoaInlineForm() {
 function getPoaExpiryWarning(submittedDate) {
   const dateStr = formatPoaDate(submittedDate);
   if (!dateStr) {
-    return "⚠️ 제출일자가 없어요 — 위임장 기한을 다시 확인해주세요. 찾을 수 없으면 새로 받아야 할 것 같아요.";
+    return "⚠️ 제출일자가 비어있어요 — 제출일자를 모른다면 위임장을 새로 받아주세요.";
   }
   const submitted = new Date(dateStr);
   if (isNaN(submitted.getTime())) return null;
@@ -15457,7 +15457,7 @@ function renderPoaTable() {
   matched.forEach((p) => {
     const tr = document.createElement("tr");
     tr.dataset.poaId = p.id;
-    const warning = q ? getPoaExpiryWarning(p.submittedDate) : null;
+    const warning = getPoaExpiryWarning(p.submittedDate);
     if (warning) warningCount++;
     tr.innerHTML = `<td>${q ? snippetHtml(p.applicant || "", q) : escapeHtml(p.applicant || "")}</td>`
       + `<td>${q ? snippetHtml(p.shipper || "", q) : escapeHtml(p.shipper || "")}</td>`
@@ -15473,6 +15473,12 @@ function renderPoaTable() {
     countInfo.textContent = warningCount > 0
       ? "✅ " + matched.length + "건 검색됨 (이 중 " + warningCount + "건은 위임장 기한 확인이 필요해요)"
       : "✅ 제출 완료 (" + matched.length + "건 검색됨)";
+    wrap.appendChild(countInfo);
+  } else if (warningCount > 0) {
+    const countInfo = document.createElement("div");
+    countInfo.className = "hint";
+    countInfo.style.marginTop = "8px";
+    countInfo.textContent = "⚠️ 전체 " + matched.length + "건 중 " + warningCount + "건은 위임장 기한 확인이 필요해요";
     wrap.appendChild(countInfo);
   }
 }
