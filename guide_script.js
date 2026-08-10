@@ -15676,8 +15676,9 @@ function renderSearchResults(query) {
     const full = r.title + " " + (r.description || "") + " " + subText;
     if (full.toLowerCase().includes(q)) {
       let snippet = r.description ? escapeHtml(r.description) : "";
+      const matchPath = r.subItems && r.subItems.length ? findProcMatchPath(r.subItems, q) : null;
       if (!snippet && subText && subText.toLowerCase().includes(q)) snippet = snippetHtml(subText, query);
-      results.push({ kind: "resource", label: "🔗 자료 모음", title: r.title, snippet, category: r.category, id: r.id });
+      results.push({ kind: "resource", label: "🔗 자료 모음", title: r.title, snippet, category: r.category, id: r.id, path: matchPath });
     }
   });
   VESSELS.forEach((v) => {
@@ -15752,12 +15753,14 @@ function renderSearchResults(query) {
   });
 
   // 개수와 상관없이 모든 카테고리를 일단 접어두고 헤더만 쭉 보여줘서,
-  // "어떤 종류에 몇 건씩 있는지"를 한눈에 훑어본 다음 원하는 걸 펼쳐보게 함
+  // "어떤 종류에 몇 건씩 있는지"를 한눈에 훑어본 다음 원하는 걸 펼쳐보게 함.
+  // 단, 1건뿐인 카테고리는 접었다 펼 이유가 없어서 그냥 바로 보여줌
   groups.forEach((group, gi) => {
     const groupId = "searchGroup_" + gi;
+    const singleItem = group.items.length === 1;
 
     const headerRow = document.createElement("div");
-    headerRow.className = "search-result-group-header-row collapsible";
+    headerRow.className = "search-result-group-header-row" + (singleItem ? "" : " collapsible");
     const headerText = document.createElement("div");
     headerText.className = "search-result-group-header";
     headerText.textContent = group.label + " · " + group.items.length + "건";
@@ -15765,17 +15768,19 @@ function renderSearchResults(query) {
 
     const itemsWrap = document.createElement("div");
     itemsWrap.id = groupId;
-    itemsWrap.style.display = "none";
+    itemsWrap.style.display = singleItem ? "block" : "none";
 
-    const toggleHint = document.createElement("div");
-    toggleHint.className = "search-result-group-toggle-hint";
-    toggleHint.textContent = "펼쳐보기 ▾";
-    headerRow.appendChild(toggleHint);
-    headerRow.onclick = () => {
-      const isOpen = itemsWrap.style.display !== "none";
-      itemsWrap.style.display = isOpen ? "none" : "block";
-      toggleHint.textContent = isOpen ? "펼쳐보기 ▾" : "접기 ▴";
-    };
+    if (!singleItem) {
+      const toggleHint = document.createElement("div");
+      toggleHint.className = "search-result-group-toggle-hint";
+      toggleHint.textContent = "펼쳐보기 ▾";
+      headerRow.appendChild(toggleHint);
+      headerRow.onclick = () => {
+        const isOpen = itemsWrap.style.display !== "none";
+        itemsWrap.style.display = isOpen ? "none" : "block";
+        toggleHint.textContent = isOpen ? "펼쳐보기 ▾" : "접기 ▴";
+      };
+    }
 
     list.appendChild(headerRow);
 
@@ -15863,6 +15868,13 @@ function jumpToResult(kind, id, path) {
       if (el) {
         const groupBody = el.closest(".content-card-body");
         if (groupBody) groupBody.classList.add("open");
+        const ownBody = el.querySelector(".content-card-body");
+        if (ownBody) {
+          ownBody.classList.add("open");
+          if (path && path.length) {
+            setTimeout(() => clickProcPillPath(ownBody, path, 0), 80);
+          }
+        }
         el.scrollIntoView({ behavior: "smooth", block: "center" });
       }
     }, 50);
