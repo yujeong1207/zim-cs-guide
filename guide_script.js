@@ -2947,6 +2947,14 @@ const DEFAULT_VACATIONS = [
     "endDate": "2026-12-31",
     "unit": "full",
     "note": ""
+  },
+  {
+    "id": "v_msmoo2giv6mx",
+    "name": "박민희",
+    "startDate": "2027-01-04",
+    "endDate": "2027-01-05",
+    "note": "",
+    "unit": "full"
   }
 ];
 
@@ -3340,6 +3348,76 @@ const DEFAULT_HOLIDAYS = [
     "id": "h2026_15",
     "date": "2026-12-25",
     "name": "성탄절"
+  },
+  {
+    "id": "h2027_01",
+    "date": "2027-01-01",
+    "name": "신정"
+  },
+  {
+    "id": "h2027_02",
+    "date": "2027-02-08",
+    "name": "설날 연휴"
+  },
+  {
+    "id": "h2027_03",
+    "date": "2027-02-09",
+    "name": "설날 대체공휴일"
+  },
+  {
+    "id": "h2027_04",
+    "date": "2027-03-01",
+    "name": "삼일절"
+  },
+  {
+    "id": "h2027_05",
+    "date": "2027-05-05",
+    "name": "어린이날"
+  },
+  {
+    "id": "h2027_06",
+    "date": "2027-05-13",
+    "name": "부처님오신날"
+  },
+  {
+    "id": "h2027_07",
+    "date": "2027-07-17",
+    "name": "제헌절"
+  },
+  {
+    "id": "h2027_08",
+    "date": "2027-08-16",
+    "name": "광복절 대체공휴일"
+  },
+  {
+    "id": "h2027_09",
+    "date": "2027-09-14",
+    "name": "추석 연휴"
+  },
+  {
+    "id": "h2027_10",
+    "date": "2027-09-15",
+    "name": "추석"
+  },
+  {
+    "id": "h2027_11",
+    "date": "2027-09-16",
+    "name": "추석 연휴"
+  },
+  {
+    "id": "h2027_12",
+    "date": "2027-10-04",
+    "name": "개천절 대체공휴일"
+  },
+  {
+    "id": "h2027_13",
+    "date": "2027-10-11",
+    "name": "한글날 대체공휴일"
+  },
+  {
+    "id": "h2027_14",
+    "date": "2027-12-27",
+    "name": "크리스마스 대체공휴일"
   }
 ];
 
@@ -18747,6 +18825,81 @@ function renderNoticeBanner() {
 }
 
 /* ---- 💬 팀원 의견함 ---- */
+/* =========================================================================
+   ⚙️ 의견 남기기 실시간 공유 설정
+   위임장/오비엘/모선일정과 같은 방식이에요. 새 구글 시트 + 새 Apps Script
+   웹앱을 배포한 뒤, 그 주소를 아래에 붙여넣으면 활성화돼요. 팀원이 어느
+   브라우저에서 의견을 남기든, 관리자(회원님) 화면에 전부 모여요.
+   ========================================================================= */
+const FEEDBACK_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwRTAr4gumzsNANjS0oXRfqINFsrl-OndTwcQe8cAXTCDRZ9mwDJ4-Cf8JQC7r0UgQGww/exec";
+
+async function fetchFeedbackListFromServer() {
+  if (!FEEDBACK_SHEET_API_URL) return null;
+  try {
+    const res = await fetch(FEEDBACK_SHEET_API_URL, { method: "GET" });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    return data.list.map((row) => ({
+      id: row.id, text: row.text || "", date: row.date || "",
+      resolved: row.resolved === true || row.resolved === "TRUE" || row.resolved === "true"
+    }));
+  } catch (err) {
+    console.error("의견 목록 서버 불러오기 실패:", err);
+    return null;
+  }
+}
+
+async function submitFeedbackToServer(entry) {
+  if (!FEEDBACK_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(FEEDBACK_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("의견 서버 등록 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function updateFeedbackOnServer(id, resolved) {
+  if (!FEEDBACK_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(FEEDBACK_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "update", id: id, resolved: resolved }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "변경에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("의견 서버 수정 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function deleteFeedbackFromServer(id) {
+  if (!FEEDBACK_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(FEEDBACK_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "delete", id: id }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("의견 서버 삭제 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
 function renderFeedbackBadge() {
   const badge = document.getElementById("feedbackBadge");
   if (!badge) return;
@@ -18768,10 +18921,21 @@ function closeFeedbackModal() {
   document.getElementById("feedbackOverlay").style.display = "none";
 }
 
-function submitFeedback() {
+async function submitFeedback() {
   const text = document.getElementById("feedbackText").value.trim();
   if (!text) { alert("내용을 입력해주세요."); return; }
-  FEEDBACK_LIST.push({ id: genId("fb"), text, date: todayStr(), resolved: false });
+  const entry = { text, date: todayStr(), resolved: false };
+
+  if (FEEDBACK_SHEET_API_URL) {
+    const result = await submitFeedbackToServer(entry);
+    closeFeedbackModal();
+    if (result.ok) alert("의견이 등록됐어요. 소중한 의견 감사합니다! 🙌");
+    else alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류"));
+    return;
+  }
+
+  // 연동 꺼져있으면 예전 방식(브라우저 저장) 그대로 - 이 경우 본인 브라우저에만 남아요
+  FEEDBACK_LIST.push(Object.assign({ id: genId("fb") }, entry));
   const ok = saveData();
   closeFeedbackModal();
   renderFeedbackBadge();
@@ -18779,13 +18943,33 @@ function submitFeedback() {
   else alert("저장에 실패했어요. 저장 공간을 확인해주세요.");
 }
 
-function renderFeedbackAdminBody(body) {
+async function renderFeedbackAdminBody(body) {
+  body.innerHTML = "";
   const hint = document.createElement("div");
   hint.className = "hint";
   hint.style.margin = "0 0 14px";
   hint.textContent = "팀원이 우측 하단 \"📝 의견 남기기\" 버튼으로 보낸 의견·오탈자 제보가 모여요. 확인 후 해결 표시하거나 삭제할 수 있어요.";
   body.appendChild(hint);
 
+  if (FEEDBACK_SHEET_API_URL) {
+    const loading = document.createElement("div");
+    loading.className = "empty-state";
+    loading.textContent = "⏳ 최신 의견을 불러오는 중이에요...";
+    body.appendChild(loading);
+    const list = await fetchFeedbackListFromServer();
+    if (list) {
+      FEEDBACK_LIST = list;
+    } else {
+      loading.textContent = "⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).";
+      return;
+    }
+    body.removeChild(loading);
+  }
+
+  renderFeedbackAdminListInner(body);
+}
+
+function renderFeedbackAdminListInner(body) {
   if (FEEDBACK_LIST.length === 0) {
     const empty = document.createElement("div");
     empty.className = "empty-state";
@@ -18806,15 +18990,32 @@ function renderFeedbackAdminBody(body) {
     const resolveBtn = document.createElement("button");
     resolveBtn.className = "btn secondary-btn";
     resolveBtn.textContent = fb.resolved ? "미해결로" : "해결완료";
-    resolveBtn.onclick = () => { fb.resolved = !fb.resolved; saveData(); renderFeedbackAdminBody(body); renderFeedbackBadge(); };
+    resolveBtn.onclick = async () => {
+      const newResolved = !fb.resolved;
+      if (FEEDBACK_SHEET_API_URL) {
+        resolveBtn.disabled = true;
+        const result = await updateFeedbackOnServer(fb.id, newResolved);
+        if (!result.ok) { alert("변경에 실패했어요: " + (result.error || "알 수 없는 오류")); resolveBtn.disabled = false; return; }
+      } else {
+        saveData();
+      }
+      fb.resolved = newResolved;
+      renderFeedbackAdminListRefresh(body);
+      renderFeedbackBadge();
+    };
     const delBtn = document.createElement("button");
     delBtn.className = "btn danger-btn";
     delBtn.textContent = "삭제";
-    delBtn.onclick = () => {
+    delBtn.onclick = async () => {
       if (!confirm("이 의견을 삭제할까요?")) return;
+      if (FEEDBACK_SHEET_API_URL) {
+        const result = await deleteFeedbackFromServer(fb.id);
+        if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      } else {
+        saveData();
+      }
       FEEDBACK_LIST = FEEDBACK_LIST.filter((x) => x.id !== fb.id);
-      saveData();
-      renderFeedbackAdminBody(body);
+      renderFeedbackAdminListRefresh(body);
       renderFeedbackBadge();
     };
     actions.appendChild(resolveBtn);
@@ -18823,6 +19024,16 @@ function renderFeedbackAdminBody(body) {
     card.appendChild(actions);
     body.appendChild(card);
   });
+}
+
+function renderFeedbackAdminListRefresh(body) {
+  body.innerHTML = "";
+  const hint = document.createElement("div");
+  hint.className = "hint";
+  hint.style.margin = "0 0 14px";
+  hint.textContent = "팀원이 우측 하단 \"📝 의견 남기기\" 버튼으로 보낸 의견·오탈자 제보가 모여요. 확인 후 해결 표시하거나 삭제할 수 있어요.";
+  body.appendChild(hint);
+  renderFeedbackAdminListInner(body);
 }
 
 /* ---- ⭐ 즐겨찾기 메일 템플릿 ---- */
@@ -22834,6 +23045,11 @@ initTypeSelect();
 initNtfTypeSelect();
 renderNoticeBanner();
 renderFeedbackBadge();
+if (FEEDBACK_SHEET_API_URL) {
+  fetchFeedbackListFromServer().then((list) => {
+    if (list) { FEEDBACK_LIST = list; renderFeedbackBadge(); }
+  });
+}
 checkAndShowDailyQuote();
 renderRecentItemsRow();
 populateOblNameSelect();
