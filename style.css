@@ -583,12 +583,13 @@ input, select, textarea {
 .step-image { max-width: 100%; border-radius: 10px; margin: 6px 0 12px; display: block; border: 1px solid #eef0f3; }
 .step-table-wrap { overflow-x: auto; margin: 8px 0 2px; border: 1px solid #eef0f3; border-radius: 8px; }
 .step-table { width: auto; max-width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.4; }
-.step-table caption { text-align: left; font-size: 12px; font-weight: bold; color: #4f46e5; padding: 5px 10px 4px; }
+.step-table caption { text-align: left; font-size: 12px; font-weight: bold; color: #0c447c; padding: 5px 10px 4px; }
 .step-table th {
-  background: #f3f4ff; color: #4f46e5; font-weight: bold; padding: 8px 18px;
-  border-bottom: 1px solid #e0e2f5; white-space: nowrap; text-align: center;
+  background: #e6f1fb; color: #0c447c; font-weight: bold; padding: 8px 18px;
+  border-bottom: 1px solid #cfe0f2; white-space: nowrap; text-align: center;
+  position: sticky; top: 0; z-index: 2;
 }
-.step-table td { padding: 8px 18px; text-align: left; border-bottom: 1px solid #f3f4f6; color: #374151; white-space: nowrap; }
+.step-table td { padding: 8px 18px; text-align: left; border-bottom: 1px solid #f3f4f6; color: #374151; white-space: normal; word-break: keep-all; overflow-wrap: break-word; max-width: 320px; }
 .step-table td:first-child { font-weight: bold; color: #4b5563; }
 .step-table tr:last-child td { border-bottom: none; }
 .step-table-edit-note {

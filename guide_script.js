@@ -2859,8 +2859,6 @@ const DEFAULT_RESOURCES = [
         "id": "res_bl_car_1",
         "name": "국가별 규정 (ZAT)",
         "steps": [
-          "CARIBBEAN/CENTRAM",
-          "* SUBJ Approval no longer applicable to US exports",
           {
             "type": "table",
             "caption": "",
@@ -3132,6 +3130,8 @@ const DEFAULT_RESOURCES = [
         "id": "res_bl_car_2",
         "name": "특수 케이스 (콜롬비아·페루·에콰도르·칠레)",
         "steps": [
+          "CARIBBEAN/CENTRAM",
+          "* SUBJ Approval no longer applicable to US exports",
           {
             "type": "table",
             "caption": "",
@@ -16570,15 +16570,25 @@ function renderResList() {
   ungrouped.forEach((r) => {
     const card = document.createElement("div");
     card.className = "content-card";
-    card.style.cursor = "default";
     card.dataset.resId = r.id;
     if (r.subItems && r.subItems.length) {
-      card.appendChild(buildResourceRow(r));
+      card.style.cursor = "default";
+      const head = document.createElement("div");
+      head.className = "content-card-head";
+      head.style.cursor = "pointer";
+      head.appendChild(buildResourceRow(r));
+      const toggleIcon = document.createElement("div");
+      toggleIcon.className = "content-card-toggle";
+      toggleIcon.textContent = "▾";
+      head.appendChild(toggleIcon);
       const subBody = document.createElement("div");
-      subBody.style.marginTop = "10px";
+      subBody.className = "content-card-body";
       renderProcNode({ subItems: r.subItems }, subBody);
+      head.onclick = () => subBody.classList.toggle("open");
+      card.appendChild(head);
       card.appendChild(subBody);
     } else {
+      card.style.cursor = "default";
       card.appendChild(buildResourceRow(r));
       renderAttachDisplay(card, r.attachments);
     }
@@ -16600,13 +16610,23 @@ function renderResList() {
       const itemWrap = document.createElement("div");
       itemWrap.className = "resource-group-item";
       itemWrap.dataset.resId = r.id;
-      itemWrap.appendChild(buildResourceRow(r));
       if (r.subItems && r.subItems.length) {
+        const itemHead = document.createElement("div");
+        itemHead.className = "content-card-head resource-sub-head";
+        itemHead.style.cursor = "pointer";
+        itemHead.appendChild(buildResourceRow(r));
+        const toggleIcon = document.createElement("div");
+        toggleIcon.className = "content-card-toggle";
+        toggleIcon.textContent = "▾";
+        itemHead.appendChild(toggleIcon);
         const subBody = document.createElement("div");
-        subBody.style.marginTop = "10px";
+        subBody.className = "content-card-body";
         renderProcNode({ subItems: r.subItems }, subBody);
+        itemHead.onclick = () => subBody.classList.toggle("open");
+        itemWrap.appendChild(itemHead);
         itemWrap.appendChild(subBody);
       } else {
+        itemWrap.appendChild(buildResourceRow(r));
         renderAttachDisplay(itemWrap, r.attachments);
       }
       cbody.appendChild(itemWrap);
