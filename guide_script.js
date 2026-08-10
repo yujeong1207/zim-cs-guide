@@ -18956,10 +18956,13 @@ function openAdminEditDirect(section, id) {
   showPinPrompt();
 }
 
-function openAdminListActual() {
+async function openAdminListActual() {
   adminSection = mainTab === "templates" ? "templates" : mainTab === "faqs" ? "faqs" : mainTab;
   document.getElementById("adminOverlay").style.display = "flex";
   renderAdminSectionTabs();
+  if (adminSection === "vacations" && CORE_SHEET_API_URL) { await syncVacationsFromServer(); }
+  if (adminSection === "holidays" && CORE_SHEET_API_URL) { await syncHolidaysFromServer(); }
+  if (adminSection === "teamEvents" && CORE_SHEET_API_URL) { await syncTeamEventsFromServer(); }
   renderAdminList();
   renderStorageUsage();
 }
@@ -19000,7 +19003,15 @@ function renderAdminSectionTabs() {
     const btn = document.createElement("button");
     btn.className = "admin-section-tab" + (key === adminSection ? " active" : "");
     btn.textContent = ADMIN_SECTION_LABELS[key];
-    btn.onclick = () => { adminSection = key; draft = null; poaAdminQuery = ""; renderAdminSectionTabs(); renderAdminList(); };
+    btn.onclick = async () => {
+      adminSection = key; draft = null; poaAdminQuery = "";
+      renderAdminSectionTabs();
+      // 확정휴가·공휴일·팀일정·공지배너는 관리 화면 들어갈 때마다 서버에서 최신 목록으로 먼저 갱신
+      if (key === "vacations" && CORE_SHEET_API_URL) { await syncVacationsFromServer(); }
+      if (key === "holidays" && CORE_SHEET_API_URL) { await syncHolidaysFromServer(); }
+      if (key === "teamEvents" && CORE_SHEET_API_URL) { await syncTeamEventsFromServer(); }
+      renderAdminList();
+    };
     wrap.appendChild(btn);
   });
 }
