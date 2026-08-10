@@ -852,6 +852,11 @@ input, select, textarea {
   padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; flex-shrink: 0;
 }
 .search-jump-btn:hover { background: #4f46e5; }
+.search-result-group-header {
+  font-size: 13px; font-weight: bold; color: #6b7280;
+  margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 2px solid #eef0f3;
+}
+.search-result-group-header:first-of-type { margin-top: 4px; }
 
 /* ===== 헤더 액션 (최근 업데이트 / 관리) ===== */
 .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
@@ -1185,19 +1190,19 @@ input, select, textarea {
 .contacts-table { width: 100%; border-collapse: collapse; font-size: 14.5px; background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05); table-layout: fixed; }
 .contacts-table td[rowspan] { vertical-align: middle; font-weight: bold; background: #fafafe; }
 .contacts-table td.contact-section-header {
-  background: #eef0ff; color: #4f46e5; font-weight: bold; font-size: 16px;
+  background: #faece7; color: #712b13; font-weight: bold; font-size: 16px;
   padding: 9px 12px; letter-spacing: 0.2px;
 }
 .contacts-table td.contact-group-toggle { cursor: pointer; user-select: none; }
-.contacts-table td.contact-group-toggle:hover { background: #e0e3ff; }
-.contact-group-arrow { display: inline-block; width: 16px; font-size: 13px; color: #818cf8; }
+.contacts-table td.contact-group-toggle:hover { background: #f5ddd4; }
+.contact-group-arrow { display: inline-block; width: 16px; font-size: 13px; color: #d85a30; }
 .contacts-table th {
   background: #f8f9fb; padding: 7px 10px; font-size: 13.5px; font-weight: bold;
   color: #4b5563; text-align: left; border-bottom: 1px solid #eef0f3;
 }
 .contacts-table td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; vertical-align: top; word-break: break-word; }
 .contacts-table tr:last-child td { border-bottom: none; }
-.contacts-table td a { color: #4f46e5; text-decoration: none; }
+.contacts-table td a { color: #993c1d; text-decoration: none; }
 .contacts-table td a:hover { text-decoration: underline; }
 .contact-row-highlight { background: #fef9c3; transition: background 1.6s ease; }
 

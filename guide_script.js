@@ -14029,6 +14029,24 @@ function flattenProcNodeText(node) {
   }).join(" ");
 }
 
+/* 검색어가 subItems 트리 중 정확히 어느 하위 탭(가장 안쪽 leaf까지)에 있는지 경로(id 배열)를 찾는다.
+   예: [상위탭id, 하위탭id, ...] - 바로가기 눌렀을 때 이 경로대로 탭을 자동으로 눌러서
+   정확한 항목까지 들어가지도록 하는 데 씀 */
+function findProcMatchPath(subItems, qLower) {
+  if (!subItems || !subItems.length) return null;
+  for (const child of subItems) {
+    if (child.subItems && child.subItems.length) {
+      const subPath = findProcMatchPath(child.subItems, qLower);
+      if (subPath) return [child.id, ...subPath];
+      if ((child.name || "").toLowerCase().includes(qLower)) return [child.id];
+    } else {
+      const leafText = (child.name || "") + " " + flattenProcNodeText(child);
+      if (leafText.toLowerCase().includes(qLower)) return [child.id];
+    }
+  }
+  return null;
+}
+
 /* subItems 트리(중첩된 카테고리 포함)의 최하위 단계/답변 총 개수 */
 function countProcNodeSteps(items) {
   return items.reduce((sum, si) => {
@@ -15068,7 +15086,10 @@ function renderSearchResults(query) {
 
   PROCEDURES.forEach((p) => {
     const full = p.title + " " + flattenProcNodeText({ subItems: p.subItems });
-    if (full.toLowerCase().includes(q)) results.push({ kind: "procedure", label: "📋 업무 절차", title: p.title, snippet: snippetHtml(full, query), category: p.category, id: p.id });
+    if (full.toLowerCase().includes(q)) {
+      const matchPath = findProcMatchPath(p.subItems, q);
+      results.push({ kind: "procedure", label: "📋 업무 절차", title: p.title, snippet: snippetHtml(full, query), category: p.category, id: p.id, path: matchPath });
+    }
   });
   FAQS.forEach((f) => {
     const full = f.question + " " + f.answer;
@@ -15140,33 +15161,63 @@ function renderSearchResults(query) {
   countLabel.textContent = results.length + "건의 결과를 찾았어요.";
   list.appendChild(countLabel);
 
+  // 종류(label)별로 묶어서 순서대로 보여줌 - 절차가 잔뜩 나온 다음 맨 아래 연락처가
+  // 섞여있는 게 아니라, 종류마다 구분 제목이 붙어서 한눈에 훑어볼 수 있게
+  const groups = [];
+  const groupIndex = {};
   results.forEach((r) => {
-    const card = document.createElement("div");
-    card.className = "content-card";
-    card.style.cursor = "default";
+    if (!(r.label in groupIndex)) {
+      groupIndex[r.label] = groups.length;
+      groups.push({ label: r.label, items: [] });
+    }
+    groups[groupIndex[r.label]].items.push(r);
+  });
 
-    const row = document.createElement("div");
-    row.className = "resource-row";
+  groups.forEach((group) => {
+    const header = document.createElement("div");
+    header.className = "search-result-group-header";
+    header.textContent = group.label + " · " + group.items.length + "건";
+    list.appendChild(header);
 
-    const left = document.createElement("div");
-    left.innerHTML = '<span class="search-result-type">' + r.label + '</span>'
-      + (r.category ? badgeHtml(r.category) : "")
-      + '<span class="content-card-title">' + escapeHtml(r.title) + '</span>'
-      + (r.snippet ? '<div class="search-result-snippet">' + r.snippet + '</div>' : "");
-    row.appendChild(left);
+    group.items.forEach((r) => {
+      const card = document.createElement("div");
+      card.className = "content-card";
+      card.style.cursor = "default";
 
-    const jumpBtn = document.createElement("button");
-    jumpBtn.className = "search-jump-btn";
-    jumpBtn.textContent = "바로가기 →";
-    jumpBtn.onclick = () => jumpToResult(r.kind, r.id);
-    row.appendChild(jumpBtn);
+      const row = document.createElement("div");
+      row.className = "resource-row";
 
-    card.appendChild(row);
-    list.appendChild(card);
+      const left = document.createElement("div");
+      left.innerHTML = '<span class="search-result-type">' + r.label + '</span>'
+        + (r.category ? badgeHtml(r.category) : "")
+        + '<span class="content-card-title">' + escapeHtml(r.title) + '</span>'
+        + (r.snippet ? '<div class="search-result-snippet">' + r.snippet + '</div>' : "");
+      row.appendChild(left);
+
+      const jumpBtn = document.createElement("button");
+      jumpBtn.className = "search-jump-btn";
+      jumpBtn.textContent = "바로가기 →";
+      jumpBtn.onclick = () => jumpToResult(r.kind, r.id, r.path);
+      row.appendChild(jumpBtn);
+
+      card.appendChild(row);
+      list.appendChild(card);
+    });
   });
 }
 
-function jumpToResult(kind, id) {
+/* 검색 바로가기로 들어왔을 때, 찾은 경로(id 배열)를 순서대로 따라가며
+   알약 버튼을 자동으로 클릭해서 정확한 하위 탭까지 열어준다 */
+function clickProcPillPath(rootEl, path, i) {
+  if (i >= path.length) return;
+  const pillEl = rootEl.querySelector('[data-subitem-id="' + path[i] + '"]');
+  if (pillEl) {
+    pillEl.click();
+    clickProcPillPath(rootEl, path, i + 1);
+  }
+}
+
+function jumpToResult(kind, id, path) {
   if (kind === "procedure") {
     switchMainTab("procedures");
     setTimeout(() => {
@@ -15180,6 +15231,9 @@ function jumpToResult(kind, id) {
         }
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.querySelector(".content-card-body").classList.add("open");
+        if (path && path.length) {
+          setTimeout(() => clickProcPillPath(el, path, 0), 80);
+        }
       }
     }, 50);
   } else if (kind === "faq") {
@@ -15514,6 +15568,7 @@ function renderProcNode(node, container) {
         pill.type = "button";
         pill.className = "subitem-pill" + (child.id === activeId ? " active" : "");
         pill.textContent = child.name;
+        pill.dataset.subitemId = child.id;
         pill.onclick = (e) => {
           e.stopPropagation();
           activeId = child.id;
