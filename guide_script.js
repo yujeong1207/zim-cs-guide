@@ -519,6 +519,60 @@ async function loadVesselTab() {
   renderVesselTab();
 }
 
+let oblStatsOpen = false;
+let oblStatsMonth = null; // "YYYY-MM", 처음 열 때 이번 달로 초기화
+
+function toggleOblStats() {
+  oblStatsOpen = !oblStatsOpen;
+  if (oblStatsOpen && !oblStatsMonth) {
+    const today = new Date();
+    oblStatsMonth = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0");
+  }
+  renderOblTable();
+}
+
+function changeOblStatsMonth(delta) {
+  const [y, m] = oblStatsMonth.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  oblStatsMonth = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+  renderOblTable();
+}
+
+function buildOblStatsHtml() {
+  const monthEntries = OBL_LIST.filter((o) => (o.date || "").slice(0, 7) === oblStatsMonth);
+  const countByName = {};
+  monthEntries.forEach((o) => {
+    const n = o.name || "(이름 없음)";
+    countByName[n] = (countByName[n] || 0) + 1;
+  });
+  const sortedNames = Object.keys(countByName).sort((a, b) => countByName[b] - countByName[a]);
+
+  const [y, m] = oblStatsMonth.split("-");
+  let html = `<div class="excel-question-box" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-weight:800;">📊 담당자별 접수 현황</div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="btn secondary-btn" style="padding:2px 10px;font-size:13px;" onclick="changeOblStatsMonth(-1)">◀</button>
+        <span style="font-weight:700;">${y}년 ${Number(m)}월</span>
+        <button class="btn secondary-btn" style="padding:2px 10px;font-size:13px;" onclick="changeOblStatsMonth(1)">▶</button>
+      </div>
+    </div>`;
+
+  if (sortedNames.length === 0) {
+    html += `<div class="hint">이 달에는 접수된 건이 없어요.</div>`;
+  } else {
+    html += `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px;">`;
+    sortedNames.forEach((n) => {
+      html += `<div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:6px 12px;font-size:13px;">
+        <b>${escapeHtml(n)}</b> · ${countByName[n]}건
+      </div>`;
+    });
+    html += `</div><div class="hint" style="margin:0;">이번 달 전체 ${monthEntries.length}건</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
 function renderOblTable() {
   const wrap = document.getElementById("oblTableWrap");
   if (!wrap) return;
@@ -535,8 +589,11 @@ function renderOblTable() {
     ? sorted.filter((o) => [o.name, o.blNumber].filter(Boolean).join(" ").toLowerCase().includes(q))
     : sorted;
 
+  let prefixHtml = `<button class="btn secondary-btn" style="margin-bottom:14px;" onclick="toggleOblStats()">${oblStatsOpen ? "📊 담당자별 현황 접기" : "📊 담당자별 접수 현황 보기"}</button>`;
+  if (oblStatsOpen) prefixHtml += buildOblStatsHtml();
+
   if (q && matched.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요.</div>';
+    wrap.innerHTML = prefixHtml + '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요.</div>';
     return;
   }
 
@@ -552,7 +609,7 @@ function renderOblTable() {
       + `<td><button class="btn danger-btn" style="padding:4px 10px;font-size:12px;" onclick="deleteOblItemFlow('${o.id}')">삭제</button></td>`;
     table.appendChild(tr);
   });
-  wrap.innerHTML = "";
+  wrap.innerHTML = prefixHtml;
   wrap.appendChild(table);
   if (q) {
     const countInfo = document.createElement("div");
