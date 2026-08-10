@@ -23349,11 +23349,8 @@ function buildCrossCheckMscHtml() {
   if (crossCheckState.manifestSheets && crossCheckState.oursContainers && !crossCheckState.oursPod) {
     html += `<div class="excel-question-box" style="margin-top:16px;">⚠️ 양하리스트 파일에서 POD(양하항)를 못 찾았어요. "Disch Port/Depot To" 컬럼이 있는 파일이 맞는지 확인해주세요.</div>`;
   } else if (crossCheckState.manifestKrpusSet && crossCheckState.oursContainers) {
-    const oursSet = new Set(crossCheckState.oursContainers);
     const missing = crossCheckState.oursContainers.filter((c) => !crossCheckState.manifestKrpusSet.has(c));
-    const extra = Array.from(crossCheckState.manifestKrpusSet).filter((c) => !oursSet.has(c));
 
-    // ① 우리 리스트엔 있는데 선사 목록엔 없는 것 (실제로 안 실렸을 가능성)
     if (missing.length === 0) {
       html += `<div class="excel-question-box" style="margin-top:16px;">✅ 우리 양하리스트 컨테이너 <b>${crossCheckState.oursContainers.length}건 전부</b> ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))})에서 확인됐어요.</div>`;
     } else {
@@ -23363,20 +23360,6 @@ function buildCrossCheckMscHtml() {
         <div class="excel-result-table-wrap" style="margin-top:10px;">
           <table class="excel-result-table"><thead><tr><th>Container</th></tr></thead>
           <tbody>${missing.map((c) => `<tr><td>${escapeHtml(c)}</td></tr>`).join("")}</tbody></table>
-        </div>
-      </div>`;
-    }
-
-    // ② 선사 목록엔 있는데 우리 리스트엔 없는 것 (우리 쪽 리스트 작성 시 누락 가능성)
-    if (extra.length === 0) {
-      html += `<div class="excel-question-box" style="margin-top:10px;">✅ ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))}) 컨테이너도 전부 우리 양하리스트에 있어요. 누락된 게 없어요.</div>`;
-    } else {
-      html += `<div class="excel-warning-box" style="margin-top:10px;">
-        <div class="excel-warning-title">⚠️ 선사 목록엔 있는데 우리 리스트엔 없는 컨테이너 ${extra.length}건</div>
-        아래 컨테이너들은 ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))})엔 있는데, 우리 양하리스트엔 안 보여요. 실제로 실렸는데 우리 쪽 리스트 작성 시 빠졌을 수 있으니 꼭 확인해주세요:
-        <div class="excel-result-table-wrap" style="margin-top:10px;">
-          <table class="excel-result-table"><thead><tr><th>Container</th></tr></thead>
-          <tbody>${extra.map((c) => `<tr><td>${escapeHtml(c)}</td></tr>`).join("")}</tbody></table>
         </div>
       </div>`;
     }
