@@ -243,6 +243,163 @@ async function deleteOblFromServer(id) {
   }
 }
 
+/* =========================================================================
+   ⚙️ 확정 휴가 실시간 공유 설정
+   위임장/오비엘/모선일정/의견남기기와 같은 방식이에요. 새 구글 시트 + 새
+   Apps Script 웹앱을 배포한 뒤, 그 주소를 아래에 붙여넣으면 활성화돼요.
+   ========================================================================= */
+const VACATION_SHEET_API_URL = "";
+
+async function fetchVacationListFromServer() {
+  if (!VACATION_SHEET_API_URL) return null;
+  try {
+    const res = await fetch(VACATION_SHEET_API_URL, { method: "GET" });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    return data.list.map((row) => ({
+      id: row.id, name: row.name || "", startDate: row.startDate || "",
+      endDate: row.endDate || "", note: row.note || "", unit: row.unit || "full"
+    }));
+  } catch (err) {
+    console.error("휴가 목록 서버 불러오기 실패:", err);
+    return null;
+  }
+}
+
+async function submitVacationToServer(entry) {
+  if (!VACATION_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(VACATION_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
+    return { ok: true, id: data.id };
+  } catch (err) {
+    console.error("휴가 서버 등록 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function updateVacationOnServer(entry) {
+  if (!VACATION_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(VACATION_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: "update" }, entry)),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "수정에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("휴가 서버 수정 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function deleteVacationFromServer(id) {
+  if (!VACATION_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(VACATION_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "delete", id: id }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("휴가 서버 삭제 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/* 확정휴가 탭·팀일정 캘린더 탭 둘 다 VACATIONS를 쓰기 때문에, 둘 중 어디로
+   들어오든 이 함수로 먼저 최신화한 뒤 화면을 그린다 */
+async function syncVacationsFromServer() {
+  if (!VACATION_SHEET_API_URL) return;
+  const list = await fetchVacationListFromServer();
+  if (list) VACATIONS = list;
+}
+
+/* =========================================================================
+   ⚙️ 공휴일 실시간 공유 설정
+   ========================================================================= */
+const HOLIDAY_SHEET_API_URL = "";
+
+async function fetchHolidayListFromServer() {
+  if (!HOLIDAY_SHEET_API_URL) return null;
+  try {
+    const res = await fetch(HOLIDAY_SHEET_API_URL, { method: "GET" });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    return data.list.map((row) => ({ id: row.id, date: row.date || "", name: row.name || "" }));
+  } catch (err) {
+    console.error("공휴일 목록 서버 불러오기 실패:", err);
+    return null;
+  }
+}
+
+async function submitHolidayToServer(entry) {
+  if (!HOLIDAY_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(HOLIDAY_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
+    return { ok: true, id: data.id };
+  } catch (err) {
+    console.error("공휴일 서버 등록 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function updateHolidayOnServer(entry) {
+  if (!HOLIDAY_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(HOLIDAY_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ action: "update" }, entry)),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "수정에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("공휴일 서버 수정 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function deleteHolidayFromServer(id) {
+  if (!HOLIDAY_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  try {
+    const res = await fetch(HOLIDAY_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "delete", id: id }),
+    });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
+    return { ok: true };
+  } catch (err) {
+    console.error("공휴일 서버 삭제 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+async function syncHolidaysFromServer() {
+  if (!HOLIDAY_SHEET_API_URL) return;
+  const list = await fetchHolidayListFromServer();
+  if (list) HOLIDAYS = list;
+}
+
 async function loadOblTab() {
   const wrap = document.getElementById("oblTableWrap");
   if (!OBL_SHEET_API_URL) {
@@ -14732,7 +14889,7 @@ let expandedVesselMonths = new Set();
    불필요한 요청을 줄여요. 주기를 바꾸고 싶으면 아래 숫자만 고치면 돼요.
    ========================================================================= */
 const LIVE_TAB_REFRESH_MINUTES = 15;
-const LIVE_TAB_LOADERS = { poa: loadPoaTab, obl: loadOblTab, vessels: loadVesselTab };
+const LIVE_TAB_LOADERS = { poa: loadPoaTab, obl: loadOblTab, vessels: loadVesselTab, vacations: loadVacationTab };
 let liveTabRefreshTimer = null;
 
 function stopLiveTabRefresh() {
@@ -14749,6 +14906,16 @@ function startLiveTabRefresh(tab) {
   }, LIVE_TAB_REFRESH_MINUTES * 60 * 1000);
 }
 
+async function loadVacationTab() {
+  await syncVacationsFromServer();
+  renderVacationTab();
+}
+
+async function loadTeamCalendarTab() {
+  await Promise.all([loadTentativeVacations(), syncVacationsFromServer(), syncHolidaysFromServer()]);
+  renderTeamCalendar();
+}
+
 function switchMainTab(tab) {
   const searchInput = document.getElementById("globalSearch");
   if (searchInput.value.trim()) searchInput.value = "";
@@ -14763,8 +14930,8 @@ function switchMainTab(tab) {
   if (tab === "poa") loadPoaTab();
   if (tab === "obl") loadOblTab();
   if (LIVE_TAB_LOADERS[tab]) startLiveTabRefresh(tab);
-  if (tab === "vacations") renderVacationTab();
-  if (tab === "teamEvents") { loadTentativeVacations().then(renderTeamCalendar); renderTeamCalendar(); }
+  if (tab === "vacations") loadVacationTab();
+  if (tab === "teamEvents") { loadTeamCalendarTab(); renderTeamCalendar(); }
   if (tab === "calc") renderCalcTool();
   if (tab === "memo") renderMemoTab();
   if (tab === "templates" && !currentType) initTypeSelect();
@@ -16668,6 +16835,18 @@ function closePersonVacationEditor() {
   renderVacationList(); // 요약 줄(건수 등)이 바뀌었을 수 있으니 뒤 화면도 갱신
 }
 
+/* person-vacation-row 안에서 값 하나 바뀔 때마다 호출 - 서버 연동 켜져있으면 그쪽으로,
+   아니면 예전처럼 로컬 저장 */
+async function persistVacationEdit(v) {
+  if (VACATION_SHEET_API_URL) {
+    const result = await updateVacationOnServer({ id: v.id, name: v.name, startDate: v.startDate, endDate: v.endDate, note: v.note || "", unit: v.unit || "full" });
+    if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return false; }
+    await syncVacationsFromServer();
+    return true;
+  }
+  return saveData();
+}
+
 function renderPersonVacationBody(name) {
   const body = document.getElementById("personVacationBody");
   body.innerHTML = "";
@@ -16723,7 +16902,7 @@ function renderPersonVacationBody(name) {
         tilde.style.display = "none"; endInput.style.display = "none";
         endInput.value = startInput.value;
         v.endDate = startInput.value;
-        saveData(); refreshCurrentTab();
+        persistVacationEdit(v).then(() => { refreshCurrentTab(); renderPersonVacationBody(name); });
       }
     };
     rangeLabel.appendChild(rangeCheck);
@@ -16734,12 +16913,12 @@ function renderPersonVacationBody(name) {
       v.startDate = startInput.value;
       if (!rangeCheck.checked) { endInput.value = startInput.value; v.endDate = startInput.value; }
       else if (endInput.value && endInput.value < startInput.value) { endInput.value = startInput.value; v.endDate = startInput.value; }
-      saveData(); refreshCurrentTab();
+      persistVacationEdit(v).then(() => { refreshCurrentTab(); renderPersonVacationBody(name); });
     };
     endInput.onchange = () => {
       v.endDate = endInput.value < v.startDate ? v.startDate : endInput.value;
       endInput.value = v.endDate;
-      saveData(); refreshCurrentTab();
+      persistVacationEdit(v).then(() => { refreshCurrentTab(); renderPersonVacationBody(name); });
     };
 
     const unitSelect = document.createElement("select");
@@ -16751,16 +16930,25 @@ function renderPersonVacationBody(name) {
       unitSelect.appendChild(opt);
     });
     unitSelect.value = v.unit || "full";
-    unitSelect.onchange = () => { v.unit = unitSelect.value; saveData(); refreshCurrentTab(); };
+    unitSelect.onchange = () => {
+      v.unit = unitSelect.value;
+      persistVacationEdit(v).then(() => { refreshCurrentTab(); renderPersonVacationBody(name); });
+    };
     row.appendChild(unitSelect);
 
     const delBtn = document.createElement("button");
     delBtn.className = "btn secondary-btn";
     delBtn.style.cssText = "flex-shrink:0;padding:6px 10px;font-size:12px;color:#dc2626;";
     delBtn.textContent = "삭제";
-    delBtn.onclick = () => {
-      VACATIONS = VACATIONS.filter((t) => t.id !== v.id);
-      saveData();
+    delBtn.onclick = async () => {
+      if (VACATION_SHEET_API_URL) {
+        const result = await deleteVacationFromServer(v.id);
+        if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+        await syncVacationsFromServer();
+      } else {
+        VACATIONS = VACATIONS.filter((t) => t.id !== v.id);
+        saveData();
+      }
       refreshCurrentTab();
       renderPersonVacationBody(name);
     };
@@ -16792,13 +16980,17 @@ function renderPersonVacationBody(name) {
   addBtn.className = "btn generate-btn";
   addBtn.style.cssText = "flex-shrink:0;padding:6px 14px;font-size:12.5px;";
   addBtn.textContent = "+ 추가";
-  addBtn.onclick = () => {
+  addBtn.onclick = async () => {
     if (!addDate.value) { alert("날짜를 선택해주세요."); return; }
-    VACATIONS.push({
-      id: genId("v"), name, startDate: addDate.value, endDate: addDate.value,
-      unit: addUnit.value, note: ""
-    });
-    saveData();
+    const entry = { name, startDate: addDate.value, endDate: addDate.value, unit: addUnit.value, note: "" };
+    if (VACATION_SHEET_API_URL) {
+      const result = await submitVacationToServer(entry);
+      if (!result.ok) { alert("등록에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      await syncVacationsFromServer();
+    } else {
+      VACATIONS.push(Object.assign({ id: genId("v") }, entry));
+      saveData();
+    }
     refreshCurrentTab();
     renderPersonVacationBody(name);
   };
@@ -16901,12 +17093,27 @@ function renderVacationEditorBody(existingId, prefillName) {
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn generate-btn full";
   saveBtn.textContent = existing ? "저장" : "+ 추가하기";
-  saveBtn.onclick = () => {
+  saveBtn.onclick = async () => {
     const name = nameInput.value.trim();
     if (!name) { alert("이름을 입력해주세요."); return; }
     if (!startInput.value) { alert("시작일을 선택해주세요."); return; }
     const endDate = rangeCheck.checked ? (endInput.value || startInput.value) : startInput.value;
     const unit = unitSelect.value;
+    const entry = { name, startDate: startInput.value, endDate, note: noteInput.value.trim(), unit };
+
+    if (VACATION_SHEET_API_URL) {
+      saveBtn.disabled = true;
+      const result = existing
+        ? await updateVacationOnServer(Object.assign({ id: existing.id }, entry))
+        : await submitVacationToServer(entry);
+      saveBtn.disabled = false;
+      if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      await syncVacationsFromServer();
+      refreshCurrentTab();
+      closeVacationEditor();
+      return;
+    }
+
     if (existing) {
       existing.name = name;
       existing.startDate = startInput.value;
@@ -16914,7 +17121,7 @@ function renderVacationEditorBody(existingId, prefillName) {
       existing.note = noteInput.value.trim();
       existing.unit = unit;
     } else {
-      VACATIONS.push({ id: genId("v"), name, startDate: startInput.value, endDate, note: noteInput.value.trim(), unit });
+      VACATIONS.push(Object.assign({ id: genId("v") }, entry));
     }
     saveData();
     refreshCurrentTab();
@@ -19401,7 +19608,7 @@ async function deletePoaItemFlow(id) {
   renderFavoriteRow();
 }
 
-function deleteItem(id) {
+async function deleteItem(id) {
   if (adminSection === "templates") {
     const item = TEMPLATES.find((t) => t.id === id);
     if (!confirm(`"${item.label}" 유형을 삭제할까요?`)) return;
@@ -19436,6 +19643,14 @@ function deleteItem(id) {
   } else if (adminSection === "vacations") {
     const item = VACATIONS.find((t) => t.id === id);
     if (!confirm(`"${item.name}"님의 휴가 일정을 삭제할까요?`)) return;
+    if (VACATION_SHEET_API_URL) {
+      const result = await deleteVacationFromServer(id);
+      if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      await syncVacationsFromServer();
+      renderAdminList();
+      refreshCurrentTab();
+      return;
+    }
     VACATIONS = VACATIONS.filter((t) => t.id !== id);
   } else if (adminSection === "vacationMembers") {
     const item = VACATION_MEMBERS.find((t) => t.id === id);
@@ -19456,6 +19671,14 @@ function deleteItem(id) {
   } else if (adminSection === "holidays") {
     const item = HOLIDAYS.find((t) => t.id === id);
     if (!confirm(`"${item.name}" (${item.date}) 공휴일을 삭제할까요?`)) return;
+    if (HOLIDAY_SHEET_API_URL) {
+      const result = await deleteHolidayFromServer(id);
+      if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      await syncHolidaysFromServer();
+      renderAdminList();
+      refreshCurrentTab();
+      return;
+    }
     HOLIDAYS = HOLIDAYS.filter((t) => t.id !== id);
   } else {
     const item = TEAM_EVENTS.find((t) => t.id === id);
@@ -19478,8 +19701,8 @@ function refreshCurrentTab() {
   if (mainTab === "contacts") renderContactsTable();
   if (mainTab === "poa") loadPoaTab();
   if (mainTab === "obl") loadOblTab();
-  if (mainTab === "vacations") renderVacationTab();
-  if (mainTab === "teamEvents") renderTeamCalendar();
+  if (mainTab === "vacations") loadVacationTab();
+  if (mainTab === "teamEvents") loadTeamCalendarTab();
 }
 
 function openAdminNew() {
@@ -20699,9 +20922,33 @@ function appendSaveCancelButtons(body, saveFn) {
   body.appendChild(actions);
 }
 
-function commitDraft(list, setter) {
-  const next = list.slice();
+async function commitDraft(list, setter) {
   const isNew = !draft.id;
+
+  // 확정휴가·공휴일은 서버 연동이 켜져 있으면 구글시트에 저장하고, 최신 목록으로 다시 불러온다
+  if (adminSection === "vacations" && VACATION_SHEET_API_URL) {
+    const entry = { name: draft.name, startDate: draft.startDate, endDate: draft.endDate, note: draft.note, unit: draft.unit || "full" };
+    const result = isNew ? await submitVacationToServer(entry) : await updateVacationOnServer(Object.assign({ id: draft.id }, entry));
+    if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+    draft = null;
+    await syncVacationsFromServer();
+    renderAdminList();
+    refreshCurrentTab();
+    return;
+  }
+  if (adminSection === "holidays" && HOLIDAY_SHEET_API_URL) {
+    const entry = { date: draft.date, name: draft.name };
+    const result = isNew ? await submitHolidayToServer(entry) : await updateHolidayOnServer(Object.assign({ id: draft.id }, entry));
+    if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+    draft = null;
+    await syncHolidaysFromServer();
+    renderAdminList();
+    refreshCurrentTab();
+    return;
+  }
+
+  // 연동 꺼져있거나 다른 섹션이면 예전 방식(브라우저 저장) 그대로
+  const next = list.slice();
   draft.updatedAt = todayStr();
   if (isNew) {
     draft.id = genId("item");
@@ -21966,16 +22213,34 @@ function buildCrossCheckMscHtml() {
   if (crossCheckState.manifestSheets && crossCheckState.oursContainers && !crossCheckState.oursPod) {
     html += `<div class="excel-question-box" style="margin-top:16px;">⚠️ 양하리스트 파일에서 POD(양하항)를 못 찾았어요. "Disch Port/Depot To" 컬럼이 있는 파일이 맞는지 확인해주세요.</div>`;
   } else if (crossCheckState.manifestKrpusSet && crossCheckState.oursContainers) {
+    const oursSet = new Set(crossCheckState.oursContainers);
     const missing = crossCheckState.oursContainers.filter((c) => !crossCheckState.manifestKrpusSet.has(c));
+    const extra = Array.from(crossCheckState.manifestKrpusSet).filter((c) => !oursSet.has(c));
+
+    // ① 우리 리스트엔 있는데 선사 목록엔 없는 것 (실제로 안 실렸을 가능성)
     if (missing.length === 0) {
       html += `<div class="excel-question-box" style="margin-top:16px;">✅ 우리 양하리스트 컨테이너 <b>${crossCheckState.oursContainers.length}건 전부</b> ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))})에서 확인됐어요.</div>`;
     } else {
       html += `<div class="excel-warning-box" style="margin-top:16px;">
-        <div class="excel-warning-title">⚠️ ${missing.length}건이 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))})에서 안 보여요</div>
-        아래 컨테이너들은 우리 양하리스트엔 있는데, ${carrierLabel} 양하목록에서 이 POD로 확인이 안 돼요. 오적재나 리스트 오류 가능성이 있으니 꼭 확인해주세요:
+        <div class="excel-warning-title">⚠️ 우리 리스트엔 있는데 선사 목록엔 없는 컨테이너 ${missing.length}건</div>
+        아래 컨테이너들은 우리 양하리스트엔 있는데, ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))})에서 이 POD로 확인이 안 돼요. 실제로 안 실렸거나 리스트 오류일 수 있으니 꼭 확인해주세요:
         <div class="excel-result-table-wrap" style="margin-top:10px;">
           <table class="excel-result-table"><thead><tr><th>Container</th></tr></thead>
           <tbody>${missing.map((c) => `<tr><td>${escapeHtml(c)}</td></tr>`).join("")}</tbody></table>
+        </div>
+      </div>`;
+    }
+
+    // ② 선사 목록엔 있는데 우리 리스트엔 없는 것 (우리 쪽 리스트 작성 시 누락 가능성)
+    if (extra.length === 0) {
+      html += `<div class="excel-question-box" style="margin-top:10px;">✅ ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))}) 컨테이너도 전부 우리 양하리스트에 있어요. 누락된 게 없어요.</div>`;
+    } else {
+      html += `<div class="excel-warning-box" style="margin-top:10px;">
+        <div class="excel-warning-title">⚠️ 선사 목록엔 있는데 우리 리스트엔 없는 컨테이너 ${extra.length}건</div>
+        아래 컨테이너들은 ${carrierLabel} 양하목록(POD:${escapeHtml(podAliasDisplay(crossCheckState.oursPod))})엔 있는데, 우리 양하리스트엔 안 보여요. 실제로 실렸는데 우리 쪽 리스트 작성 시 빠졌을 수 있으니 꼭 확인해주세요:
+        <div class="excel-result-table-wrap" style="margin-top:10px;">
+          <table class="excel-result-table"><thead><tr><th>Container</th></tr></thead>
+          <tbody>${extra.map((c) => `<tr><td>${escapeHtml(c)}</td></tr>`).join("")}</tbody></table>
         </div>
       </div>`;
     }
