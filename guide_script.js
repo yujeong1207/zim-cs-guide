@@ -15156,13 +15156,14 @@ function renderSearchResults(query) {
   }
 
   const countLabel = document.createElement("div");
-  countLabel.className = "hint";
-  countLabel.style.marginBottom = "12px";
-  countLabel.textContent = results.length + "건의 결과를 찾았어요.";
+  countLabel.className = "search-result-count";
+  countLabel.textContent = "🔍 " + results.length + "건의 결과를 찾았어요";
   list.appendChild(countLabel);
 
   // 종류(label)별로 묶어서 순서대로 보여줌 - 절차가 잔뜩 나온 다음 맨 아래 연락처가
-  // 섞여있는 게 아니라, 종류마다 구분 제목이 붙어서 한눈에 훑어볼 수 있게
+  // 섞여있는 게 아니라, 종류마다 구분 제목이 붙어서 한눈에 훑어볼 수 있게.
+  // 한 종류 안에서 6건을 넘으면(24인치 모니터 기준 스크롤 없이 보이는 한계), 접어두고
+  // 눌러야 펼쳐지게 해서 결과가 많은 검색어(예: "미국")에서도 안 어지럽게 함
   const groups = [];
   const groupIndex = {};
   results.forEach((r) => {
@@ -15173,11 +15174,36 @@ function renderSearchResults(query) {
     groups[groupIndex[r.label]].items.push(r);
   });
 
-  groups.forEach((group) => {
-    const header = document.createElement("div");
-    header.className = "search-result-group-header";
-    header.textContent = group.label + " · " + group.items.length + "건";
-    list.appendChild(header);
+  const SEARCH_GROUP_COLLAPSE_THRESHOLD = 6;
+
+  groups.forEach((group, gi) => {
+    const shouldCollapse = group.items.length > SEARCH_GROUP_COLLAPSE_THRESHOLD;
+    const groupId = "searchGroup_" + gi;
+
+    const headerRow = document.createElement("div");
+    headerRow.className = "search-result-group-header-row" + (shouldCollapse ? " collapsible" : "");
+    const headerText = document.createElement("div");
+    headerText.className = "search-result-group-header";
+    headerText.textContent = group.label + " · " + group.items.length + "건";
+    headerRow.appendChild(headerText);
+
+    const itemsWrap = document.createElement("div");
+    itemsWrap.id = groupId;
+    itemsWrap.style.display = shouldCollapse ? "none" : "block";
+
+    if (shouldCollapse) {
+      const toggleHint = document.createElement("div");
+      toggleHint.className = "search-result-group-toggle-hint";
+      toggleHint.textContent = "펼쳐보기 ▾";
+      headerRow.appendChild(toggleHint);
+      headerRow.onclick = () => {
+        const isOpen = itemsWrap.style.display !== "none";
+        itemsWrap.style.display = isOpen ? "none" : "block";
+        toggleHint.textContent = isOpen ? "펼쳐보기 ▾" : "접기 ▴";
+      };
+    }
+
+    list.appendChild(headerRow);
 
     group.items.forEach((r) => {
       const card = document.createElement("div");
@@ -15201,8 +15227,10 @@ function renderSearchResults(query) {
       row.appendChild(jumpBtn);
 
       card.appendChild(row);
-      list.appendChild(card);
+      itemsWrap.appendChild(card);
     });
+
+    list.appendChild(itemsWrap);
   });
 }
 
