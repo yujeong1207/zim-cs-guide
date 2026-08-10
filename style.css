@@ -851,13 +851,17 @@ input, select, textarea {
   padding: 8px 16px; font-size: 12px; font-weight: bold; cursor: pointer; flex-shrink: 0;
 }
 .search-jump-btn:hover { background: #4f46e5; }
+.poa-expiry-warning {
+  font-size: 12px; color: #b91c1c; font-weight: bold; margin-top: 4px;
+  background: #fef2f2; padding: 4px 8px; border-radius: 6px; display: inline-block;
+}
 .search-result-count {
   font-size: 15px; font-weight: bold; color: #111827;
   margin-bottom: 14px; padding: 8px 14px;
   background: #eef2ff; border-radius: 10px; display: inline-block;
 }
 .search-result-group-header-row {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: flex-start; gap: 10px;
   margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 2px solid #eef0f3; cursor: default;
 }
 .search-result-group-header-row.collapsible { cursor: pointer; }

@@ -15412,6 +15412,23 @@ async function submitPoaInlineForm() {
   alert("등록됐어요 ✅");
 }
 
+/* 위임장 제출일자가 1년 넘었는지, 아예 없는지 확인해서 안내 문구를 돌려줌.
+   문제없으면 null을 돌려줌 */
+function getPoaExpiryWarning(submittedDate) {
+  const dateStr = formatPoaDate(submittedDate);
+  if (!dateStr) {
+    return "⚠️ 제출일자가 없어요 — 위임장 기한을 다시 확인해주세요. 찾을 수 없으면 새로 받아야 할 것 같아요.";
+  }
+  const submitted = new Date(dateStr);
+  if (isNaN(submitted.getTime())) return null;
+  const oneYearLater = new Date(submitted);
+  oneYearLater.setFullYear(oneYearLater.getFullYear() + 1);
+  if (new Date() >= oneYearLater) {
+    return "⚠️ 제출일로부터 1년이 지났어요 (" + dateStr + ") — 위임 권한은 최대 1년이라, 새 위임장을 받아주세요.";
+  }
+  return null;
+}
+
 function renderPoaTable() {
   const wrap = document.getElementById("poaTableWrap");
   if (!wrap) return;
@@ -15436,12 +15453,15 @@ function renderPoaTable() {
   const table = document.createElement("table");
   table.className = "contacts-table";
   table.innerHTML = "<tr><th>신청업체 (포워더/관세사무소)</th><th>실화주</th><th>제출일자</th></tr>";
+  let warningCount = 0;
   matched.forEach((p) => {
     const tr = document.createElement("tr");
     tr.dataset.poaId = p.id;
+    const warning = q ? getPoaExpiryWarning(p.submittedDate) : null;
+    if (warning) warningCount++;
     tr.innerHTML = `<td>${q ? snippetHtml(p.applicant || "", q) : escapeHtml(p.applicant || "")}</td>`
       + `<td>${q ? snippetHtml(p.shipper || "", q) : escapeHtml(p.shipper || "")}</td>`
-      + `<td>${formatPoaDate(p.submittedDate) || "-"}</td>`;
+      + `<td>${formatPoaDate(p.submittedDate) || "-"}${warning ? `<div class="poa-expiry-warning">${escapeHtml(warning)}</div>` : ""}</td>`;
     table.appendChild(tr);
   });
   wrap.innerHTML = "";
@@ -15450,7 +15470,9 @@ function renderPoaTable() {
     const countInfo = document.createElement("div");
     countInfo.className = "hint";
     countInfo.style.marginTop = "8px";
-    countInfo.textContent = "✅ 제출 완료 (" + matched.length + "건 검색됨)";
+    countInfo.textContent = warningCount > 0
+      ? "✅ " + matched.length + "건 검색됨 (이 중 " + warningCount + "건은 위임장 기한 확인이 필요해요)"
+      : "✅ 제출 완료 (" + matched.length + "건 검색됨)";
     wrap.appendChild(countInfo);
   }
 }
