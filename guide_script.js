@@ -3128,7 +3128,7 @@ const DEFAULT_RESOURCES = [
       },
       {
         "id": "res_bl_car_2",
-        "name": "특수 케이스 (콜롬비아·페루·에콰도르·칠레)",
+        "name": "콜롬비아·페루·에콰도르·칠레",
         "steps": [
           "CARIBBEAN/CENTRAM",
           "* SUBJ Approval no longer applicable to US exports",
