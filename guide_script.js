@@ -1092,7 +1092,7 @@ const DEFAULT_TEMPLATES = [
         "id": "o_mseq10ko1lh8",
         "name": "화주 답장",
         "text": "Dear Team,\n \nS/ would like to proceed POD diversion as below.\nPlease advise availability and if any penalty or cost would be occurred.\n \nVessel Name   {{Vessel Name}}\nVessel Code    {{Vessel Code}}\nZIM Voyage #  {{ZIM Voyage #}} \nPartners Voyage # -\nZIM Service Code {{ZIM Service Code}}\nPartner Service Code \nB/L  {{B/L}} \nContainer Number & Size {{Container Number & Size}}\nOriginal POL {{Original POL }}\nOriginal POD {{Original POD}}\nRequested POD {{Requested POD}}\n",
-        "to": "au.import@zim.com; OPS-ZIM-AUS.AU@zim.com; ALL@ZIMOPS-HKG.ZIM.COM; MCC@ZIMMKT-HKG.ZIM.COM",
+        "to": "au.import@zim.com; OPS-ZIM-AUS.AU@zim.com; GSLOPS@goldstarline.com; MCC@ZIMMKT-HKG.ZIM.COM",
         "subject": "COD Request - {{Vessel Code}} {{ZIM Voyage #}} ({{Original POD}} -> {{Requested POD}}) / {{B/L}} / {{Container Number & Size}}",
         "attachments": [],
         "attachmentLink": "",
@@ -1100,7 +1100,7 @@ const DEFAULT_TEMPLATES = [
         "images": []
       }
     ],
-    "updatedAt": "2026-08-06"
+    "updatedAt": "2026-08-10"
   },
   {
     "id": "item_mseqgye831l9",
@@ -7133,6415 +7133,6415 @@ const DEFAULT_QUOTES = [
 /* 🖋️ 위임장 제출 현황 - 신청업체(포워더/관세사무소) + 실화주 + 제출일자(최근 추가분만 있음) */
 const DEFAULT_POA_LIST = [
   {
-    "id": "poa1",
+    "id": "e1dcb15c-e25a-42c7-abce-48e831f55d75",
     "applicant": "(주)대동종합물류",
     "shipper": "오픈월드케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa2",
+    "id": "4806b2b4-6c5d-4ca0-b259-167619a3e96d",
     "applicant": "인천조은관세사무소",
     "shipper": "(주)케이디에스디앤티",
     "submittedDate": ""
   },
   {
-    "id": "poa3",
+    "id": "170f0986-fa2b-4a85-bfbf-89615ec6b1a2",
     "applicant": "디케이켈슨",
     "shipper": "티와이로지스틱스",
     "submittedDate": ""
   },
   {
-    "id": "poa4",
+    "id": "542744ec-22c8-4a66-8779-b7380f4e9735",
     "applicant": "대승글로텍",
     "shipper": "엘텍인터네셔널",
     "submittedDate": ""
   },
   {
-    "id": "poa5",
+    "id": "60fd2a7f-466d-4a39-980b-2c703cef66b0",
     "applicant": "지케이 관세사무소",
     "shipper": "아이에스에이상사",
     "submittedDate": ""
   },
   {
-    "id": "poa6",
+    "id": "35fbee89-10d7-49ae-8b48-54c2f1f5a474",
     "applicant": "클로버엔터프라이즈",
     "shipper": "아이푸드트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa7",
+    "id": "39057db2-22cb-4a64-a44f-411358b08a2c",
     "applicant": "지원관세법인",
     "shipper": "SL CORPORATION",
     "submittedDate": ""
   },
   {
-    "id": "poa8",
+    "id": "76530f72-9ed8-4929-a03b-f414172f6f11",
     "applicant": "SWC관세사무소",
     "shipper": "HS CHEM HSCHEM",
     "submittedDate": ""
   },
   {
-    "id": "poa9",
+    "id": "74b615bf-57f9-4670-a164-be7bd0775cab",
     "applicant": "관세법인진명",
     "shipper": "동원산업",
     "submittedDate": ""
   },
   {
-    "id": "poa10",
+    "id": "bb479fc3-5ac8-46df-bd69-0953713235ce",
     "applicant": "티앤제이글로벌라인",
     "shipper": "MARTIN BROWER KOREA/TRAD",
     "submittedDate": ""
   },
   {
-    "id": "poa11",
+    "id": "aa5f77db-3951-4f2a-b676-93e65f8229ed",
     "applicant": "청현기업",
     "shipper": "엠지티앤씨",
     "submittedDate": ""
   },
   {
-    "id": "poa12",
+    "id": "37113ee9-59f5-4c8d-b79c-48fa12efbdef",
     "applicant": "삼현INT",
     "shipper": "농업엘유엑스회사법인 주식회사 스마일팜",
     "submittedDate": ""
   },
   {
-    "id": "poa13",
+    "id": "140ccd89-7017-4c83-b157-0e3ffb25e5eb",
     "applicant": "라인브릿지 삼현INT",
     "shipper": "에이치엘홀딩스 주식회사프린스페이퍼",
     "submittedDate": ""
   },
   {
-    "id": "poa14",
+    "id": "2f992d83-82b4-483e-82e4-c0647e72ecbe",
     "applicant": "제이아이해운항공",
     "shipper": "LSMNM",
     "submittedDate": ""
   },
   {
-    "id": "poa15",
+    "id": "42bd0b8e-74c8-4bc6-b262-4107e6a36f80",
     "applicant": "클로버엔터프라이즈",
     "shipper": "부광미트",
     "submittedDate": ""
   },
   {
-    "id": "poa16",
+    "id": "9204ef08-f725-4d1e-9874-689f9e4de279",
     "applicant": "삼일국제물류",
     "shipper": "선진FS",
     "submittedDate": ""
   },
   {
-    "id": "poa17",
+    "id": "b623a1f1-fb5b-4e88-8eff-831f9a8a5198",
     "applicant": "지성",
     "shipper": "KBI METAL CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa18",
+    "id": "60c9de77-b04d-4b20-ae9e-5f4174681b2a",
     "applicant": "부산특수물류",
     "shipper": "LS MNM INC",
     "submittedDate": ""
   },
   {
-    "id": "poa19",
+    "id": "15598683-bd32-4111-a922-3a4361dce268",
     "applicant": "대흥기업",
     "shipper": "대산에프앤아이",
     "submittedDate": ""
   },
   {
-    "id": "poa20",
+    "id": "1bf726b2-7dce-49d3-939e-0bea9ccc4a0a",
     "applicant": "대흥기업",
     "shipper": "동원홈푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa21",
+    "id": "57022abd-5feb-4c5e-a073-e20a90495c4b",
     "applicant": "대흥기업",
     "shipper": "삼성웰스토리",
     "submittedDate": ""
   },
   {
-    "id": "poa22",
+    "id": "10c0579c-46b8-44e6-96b2-baa9b59afab7",
     "applicant": "삼현 INT",
     "shipper": "정성과친절",
     "submittedDate": ""
   },
   {
-    "id": "poa23",
+    "id": "427b3fff-5599-4b84-a9ac-f26339d649df",
     "applicant": "씨에스글로벌로지스틱스",
     "shipper": "솜인터내셔널",
     "submittedDate": ""
   },
   {
-    "id": "poa24",
+    "id": "50cf41d2-5cec-4c30-b115-2cbc0373def5",
     "applicant": "예스로지텍",
     "shipper": "미원스페셜티케이칼",
     "submittedDate": ""
   },
   {
-    "id": "poa25",
+    "id": "977d7c7f-fbd9-451d-a56d-102f5856fbfb",
     "applicant": "케이엘씨",
     "shipper": "TAEWOND AUTOMOTIVE태원 오토모티브",
     "submittedDate": ""
   },
   {
-    "id": "poa26",
+    "id": "2bf4189e-71d1-4b8f-9869-e34c4e5a0522",
     "applicant": "엘유엑스",
     "shipper": "KGH ENVIRONMENT IND케이지에이치환경산업",
     "submittedDate": ""
   },
   {
-    "id": "poa27",
+    "id": "63d7adfd-1842-4fb4-b611-81e1e9eb137a",
     "applicant": "맥스글로벌",
     "shipper": "LOTTE WELLFOOD",
     "submittedDate": ""
   },
   {
-    "id": "poa28",
+    "id": "f293b5ad-3306-4bf8-baff-62390f5d291a",
     "applicant": "맥스글로벌",
     "shipper": "LOTTE INTERNATIONAL",
     "submittedDate": ""
   },
   {
-    "id": "poa29",
+    "id": "d6d7d04a-afc6-4379-9b73-a4d935641b39",
     "applicant": "호성국제운송",
     "shipper": "ZIOMET",
     "submittedDate": ""
   },
   {
-    "id": "poa30",
+    "id": "b7222fbc-e29b-466e-a259-73d7bcafb4c7",
     "applicant": "고려물류컨설팅",
     "shipper": "한중푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa31",
+    "id": "c3215e50-f0af-4eba-a4bb-de25eeeaa6d4",
     "applicant": "고려물류컨설팅",
     "shipper": "견우푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa32",
+    "id": "aaa44b41-e8ef-460c-9ccc-b9ff5b895633",
     "applicant": "세방익스프레스",
     "shipper": "상신금속",
     "submittedDate": ""
   },
   {
-    "id": "poa33",
+    "id": "ec8d304f-912a-418b-94fe-b539a18a7052",
     "applicant": "세방익스프레스",
     "shipper": "세교월드브릿지",
     "submittedDate": ""
   },
   {
-    "id": "poa34",
+    "id": "4b84582c-ae2f-4ad9-a919-403be5aae13f",
     "applicant": "아태물류",
     "shipper": "돌코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa35",
+    "id": "00423ad7-0e7d-4d83-86af-cb5c5094266c",
     "applicant": "엔케이로지스틱스",
     "shipper": "에임하이코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa36",
+    "id": "82cf4a64-f21e-41d4-91be-e7120b92d257",
     "applicant": "에이치에스엘엔씨",
     "shipper": "안진(통상)",
     "submittedDate": ""
   },
   {
-    "id": "poa37",
+    "id": "21912575-cb7b-4bfd-aeca-79c69859000b",
     "applicant": "고려물류컨설팅",
     "shipper": "(주)서울사무소",
     "submittedDate": ""
   },
   {
-    "id": "poa38",
+    "id": "ee026ab9-d758-4f89-a62e-854edce2b91c",
     "applicant": "고려물류컨설팅",
     "shipper": "태원트레이드",
     "submittedDate": ""
   },
   {
-    "id": "poa39",
+    "id": "4126ba0c-ace0-4e8d-953e-20bbf9f7cf7e",
     "applicant": "오리엔트스타로직스",
     "shipper": "HANKUK PAPER",
     "submittedDate": ""
   },
   {
-    "id": "poa40",
+    "id": "a1db1ba0-b828-45d2-9cd7-e0d8fd371208",
     "applicant": "엔비비네트웍스",
     "shipper": "비콘얼라이언스",
     "submittedDate": ""
   },
   {
-    "id": "poa41",
+    "id": "e4dd62c5-414e-4332-ba70-85aeb89ab752",
     "applicant": "썬물류",
     "shipper": "도레이첨단소재주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa42",
+    "id": "16bba911-7a0d-438d-868b-1344daa6a395",
     "applicant": "넥스트(NEXT)관세사무소",
     "shipper": "오토코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa43",
+    "id": "fe569a28-4a01-4854-bc74-0fa079228278",
     "applicant": "삼현 INT",
     "shipper": "주식회사 영남",
     "submittedDate": ""
   },
   {
-    "id": "poa44",
+    "id": "63e31a7b-cb49-4282-9d4e-db148a1c29be",
     "applicant": "제이더블유제이로지스틱스",
     "shipper": "B2S COMPANY",
     "submittedDate": ""
   },
   {
-    "id": "poa45",
+    "id": "fa0c8462-286e-43f9-a930-93732387137f",
     "applicant": "청현기업",
     "shipper": "동진미트트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa46",
+    "id": "48faea03-d515-4eb5-96e3-ea186140e8da",
     "applicant": "중앙기업",
     "shipper": "동남울산공장",
     "submittedDate": ""
   },
   {
-    "id": "poa47",
+    "id": "931b68c4-1dc8-4a60-8858-4d643332e04c",
     "applicant": "한익스프레스",
     "shipper": "INEOS STYROLUTION",
     "submittedDate": ""
   },
   {
-    "id": "poa48",
+    "id": "1a892bf0-0990-4130-bb99-6fd87d03a2ba",
     "applicant": "동해로지스틱스",
     "shipper": "삼정펄프",
     "submittedDate": ""
   },
   {
-    "id": "poa49",
+    "id": "00075d40-ffcd-4629-8591-f614b0328b0c",
     "applicant": "아태물류",
     "shipper": "점보후레쉬후르츠",
     "submittedDate": ""
   },
   {
-    "id": "poa50",
+    "id": "dd13017a-2e6b-4da9-9da0-1729b9490e5d",
     "applicant": "엔케이로지스틱스",
     "shipper": "지오멧",
     "submittedDate": ""
   },
   {
-    "id": "poa51",
+    "id": "c68e5fb2-b117-4a7b-9b32-3582c45665d6",
     "applicant": "남부기업",
     "shipper": "prochem co ltd",
     "submittedDate": ""
   },
   {
-    "id": "poa52",
+    "id": "9a3be9a6-801e-4cd7-a470-ee344951b359",
     "applicant": "대흥기업",
     "shipper": "삼성원미트",
     "submittedDate": ""
   },
   {
-    "id": "poa53",
+    "id": "403ac824-94f1-4a71-bae3-0a71c418f5fe",
     "applicant": "삼현 INT",
     "shipper": "노블푸드 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa54",
+    "id": "f8f3277d-cf9e-4226-af4b-fa382ba6c773",
     "applicant": "금강물류",
     "shipper": "NOVELIS KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa55",
+    "id": "94aca337-6302-4ed5-a5b6-0d0ede102801",
     "applicant": "세방익스프레스",
     "shipper": "EMART",
     "submittedDate": ""
   },
   {
-    "id": "poa56",
+    "id": "c1dec8ea-c904-4399-bf5f-259adc1ed7c5",
     "applicant": "삼성글로텍",
     "shipper": "프린스페이퍼",
     "submittedDate": ""
   },
   {
-    "id": "poa57",
+    "id": "7746c9bb-173b-43c1-8a5f-607e8808d63c",
     "applicant": "대흥기업",
     "shipper": "애터맘컴퍼니",
     "submittedDate": ""
   },
   {
-    "id": "poa58",
+    "id": "8afce063-0a75-48d0-bcde-0e53d0d5594d",
     "applicant": "대흥기업",
     "shipper": "케이미트",
     "submittedDate": ""
   },
   {
-    "id": "poa59",
+    "id": "88e3905a-86e7-48ea-9bc4-0a922785aef0",
     "applicant": "신세기기업",
     "shipper": "고려아연",
     "submittedDate": ""
   },
   {
-    "id": "poa60",
+    "id": "e4d4a455-d369-497f-807b-df60b31c86f6",
     "applicant": "나온합동관세사무소",
     "shipper": "코주부비앤에프",
     "submittedDate": ""
   },
   {
-    "id": "poa61",
+    "id": "ce47c521-cfb7-4a41-ab54-1ce9f9d31d8d",
     "applicant": "원스탑에어앤씨",
     "shipper": "타이슨푸드코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa62",
+    "id": "22ca9509-01b1-4adc-95e4-cb49898d9f88",
     "applicant": "샘스킵로지스틱스코리아",
     "shipper": "ASIA SEAFOOD INC",
     "submittedDate": ""
   },
   {
-    "id": "poa63",
+    "id": "992ce297-c6f2-4e09-809b-db995c96b1b7",
     "applicant": "지성",
     "shipper": "KBI METAL",
     "submittedDate": ""
   },
   {
-    "id": "poa64",
+    "id": "a570b95f-1302-42e1-8c12-d7efc45451ae",
     "applicant": "삼현INT",
     "shipper": "이랜드팜앤푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa65",
+    "id": "d34fc09c-ce83-4d2e-a116-08410b365efa",
     "applicant": "부산세원관세사무소",
     "shipper": "오뗄포천지점",
     "submittedDate": ""
   },
   {
-    "id": "poa66",
+    "id": "374efbc5-6de8-4747-8265-3fc7138f3062",
     "applicant": "엘에스로직스",
     "shipper": "KYUNG SHIN",
     "submittedDate": ""
   },
   {
-    "id": "poa67",
+    "id": "5f6270cc-ee12-46a3-a4d7-d911fe00a796",
     "applicant": "엘에스로직스",
     "shipper": "DS GLOBNAL 동성글로벌",
     "submittedDate": ""
   },
   {
-    "id": "poa68",
+    "id": "91abfdb4-2e10-4602-9615-8a58a42a558d",
     "applicant": "관세법인 신보성",
     "shipper": "세진메탈",
     "submittedDate": ""
   },
   {
-    "id": "poa69",
+    "id": "4c06c888-9480-47b1-958c-14372e3ac135",
     "applicant": "대흥기업",
     "shipper": "리앤에스푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa70",
+    "id": "d40e0508-db3c-465f-a470-3bba9d3e1526",
     "applicant": "위즈로지스틱",
     "shipper": "피에스케이인터내셔널",
     "submittedDate": ""
   },
   {
-    "id": "poa71",
+    "id": "9a3a97eb-7b5a-4874-85bc-7d40785f5c43",
     "applicant": "성림종합물류",
     "shipper": "에이치엔비아시아",
     "submittedDate": ""
   },
   {
-    "id": "poa72",
+    "id": "4a421693-8e6f-4603-810c-52e7ce428076",
     "applicant": "성림종합물류",
     "shipper": "서현통상",
     "submittedDate": ""
   },
   {
-    "id": "poa73",
+    "id": "578a93bf-6f6e-4a63-9f7a-6ca7b6876563",
     "applicant": "삼현INT",
     "shipper": "주식회사 제이비푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa74",
+    "id": "fe9f0e87-743a-484b-8126-56a8d646b7aa",
     "applicant": "동해로지스틱스",
     "shipper": "조흥",
     "submittedDate": ""
   },
   {
-    "id": "poa75",
+    "id": "76178d99-f086-414e-a34e-8581ce28a33b",
     "applicant": "삼현 INT",
     "shipper": "농심태경",
     "submittedDate": ""
   },
   {
-    "id": "poa76",
+    "id": "23c9c5b8-8ef8-4f51-8b8f-930309228336",
     "applicant": "관세법인 대하",
     "shipper": "DOOIN CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa77",
+    "id": "dae0afa4-e4ff-4bd7-8158-87979964a979",
     "applicant": "콘테이너라인",
     "shipper": "DAESANG CORPORATION",
     "submittedDate": ""
   },
   {
-    "id": "poa78",
+    "id": "ba82a130-acc3-4797-8103-ea23178c4ca0",
     "applicant": "에이티앤에프글로벌",
     "shipper": "현대포리텍",
     "submittedDate": ""
   },
   {
-    "id": "poa79",
+    "id": "093d2ddb-39e3-454b-afc5-b18483f878e0",
     "applicant": "동일쉬핑",
     "shipper": "대성이노켐",
     "submittedDate": ""
   },
   {
-    "id": "poa80",
+    "id": "1dc4bf9c-bede-4e08-9af4-b185632aa4ac",
     "applicant": "근화물류",
     "shipper": "오영",
     "submittedDate": ""
   },
   {
-    "id": "poa81",
+    "id": "9af12ea2-d650-44c5-a919-089e8fe8a1d8",
     "applicant": "대우로지스틱스울산",
     "shipper": "SAMWOOALLOYIND",
     "submittedDate": ""
   },
   {
-    "id": "poa82",
+    "id": "d1a50e42-19e4-4ed7-af2b-8aadecb06a03",
     "applicant": "동우인터네셔널",
     "shipper": "와이엔케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa83",
+    "id": "49212019-64fa-4554-b5a3-d2e3f38a27a0",
     "applicant": "조양국제종합물류",
     "shipper": "BASF",
     "submittedDate": ""
   },
   {
-    "id": "poa84",
+    "id": "aa779505-33bb-49c9-acb0-56355ef57eb6",
     "applicant": "삼현INT",
     "shipper": "현대코퍼레이션홀딩스",
     "submittedDate": ""
   },
   {
-    "id": "poa85",
+    "id": "bbaa9bca-b23a-4752-a826-073f8541df73",
     "applicant": "국제종합물류",
     "shipper": "세경금속",
     "submittedDate": ""
   },
   {
-    "id": "poa86",
+    "id": "2fd22131-ec18-4945-9d62-eb6cee017a07",
     "applicant": "휘 관세사무소",
     "shipper": "홈우드",
     "submittedDate": ""
   },
   {
-    "id": "poa87",
+    "id": "e0c5dfe4-2724-451b-9004-8cb2d2bc8b88",
     "applicant": "케이엠씨",
     "shipper": "스마트하우스 업승ㅁ.",
     "submittedDate": ""
   },
   {
-    "id": "poa88",
+    "id": "49decd37-d26f-4028-8a96-ad84e4c2662b",
     "applicant": "케이엠씨",
     "shipper": "현성종합목재",
     "submittedDate": ""
   },
   {
-    "id": "poa89",
+    "id": "b87c9bcd-f1f9-49b5-8e39-8ee6d8f2328f",
     "applicant": "케이엠씨",
     "shipper": "메리트우드",
     "submittedDate": ""
   },
   {
-    "id": "poa90",
+    "id": "906941f9-8f2d-4df7-aa5e-5a33f0048bc1",
     "applicant": "관세법인엘리트부산지점",
     "shipper": "감로파인케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa91",
+    "id": "25526819-530d-441c-bae3-913f5aa68ddf",
     "applicant": "세인물류시스템",
     "shipper": "해농상사",
     "submittedDate": ""
   },
   {
-    "id": "poa92",
+    "id": "81d91092-b44a-4b35-9a40-6671f0032972",
     "applicant": "투제이비씨엘",
     "shipper": "경인양행",
     "submittedDate": ""
   },
   {
-    "id": "poa93",
+    "id": "89850fa3-4630-4fb3-b5d7-fcd31b2bebff",
     "applicant": "한영",
     "shipper": "블룸에스케이퓨얼셀",
     "submittedDate": ""
   },
   {
-    "id": "poa94",
+    "id": "2be4fefe-e529-4db3-9fcd-adb99ca0afa1",
     "applicant": "동원로엑스",
     "shipper": "브랜탁코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa95",
+    "id": "8ed110ed-92a5-4bd8-a71a-91b763ba99e4",
     "applicant": "케이엠씨",
     "shipper": "삼양팀버",
     "submittedDate": ""
   },
   {
-    "id": "poa96",
+    "id": "0321a31d-2a79-42d8-bab4-345bf0efecde",
     "applicant": "세방(주)",
     "shipper": "전주지점 -DAEDOO FOODS",
     "submittedDate": ""
   },
   {
-    "id": "poa97",
+    "id": "07c7d31e-8335-418d-9fd0-7b9217cdb264",
     "applicant": "동북관세법인",
     "shipper": "동영강재",
     "submittedDate": ""
   },
   {
-    "id": "poa98",
+    "id": "d2fc7960-d682-465d-9cb9-1ffbf8b1426d",
     "applicant": "관세법인진명",
     "shipper": "홈앤디포",
     "submittedDate": ""
   },
   {
-    "id": "poa99",
+    "id": "b01dab69-70ac-49a8-ba9e-35704c01d9ec",
     "applicant": "케이엠씨",
     "shipper": "한림에이치우드",
     "submittedDate": ""
   },
   {
-    "id": "poa100",
+    "id": "c4462c6d-54f5-4eae-a626-14c3e5322138",
     "applicant": "클로버엔터프라이즈",
     "shipper": "보네코",
     "submittedDate": ""
   },
   {
-    "id": "poa101",
+    "id": "bd1f3960-d076-42d2-9947-feb7915a8db1",
     "applicant": "제이티에스쉬핑",
     "shipper": "한양특수산업",
     "submittedDate": ""
   },
   {
-    "id": "poa102",
+    "id": "371e407f-45ce-4ce6-b45e-419e069e462d",
     "applicant": "대건물류",
     "shipper": "UNID GLOBAL CORPORATION",
     "submittedDate": ""
   },
   {
-    "id": "poa103",
+    "id": "bb3e8231-67be-4b4e-a7ea-5991f26475c9",
     "applicant": "관세법인진명",
     "shipper": "우덱스",
     "submittedDate": ""
   },
   {
-    "id": "poa104",
+    "id": "a1667a8e-9fb6-4993-a961-7156ec8d5681",
     "applicant": "청호물류",
     "shipper": "NOINS CORPORATION 노인스",
     "submittedDate": ""
   },
   {
-    "id": "poa105",
+    "id": "f7f93691-0481-42d9-a101-3238ec082c8e",
     "applicant": "성우합동관세사무소",
     "shipper": "두보식품(주)농업회사법인",
     "submittedDate": ""
   },
   {
-    "id": "poa106",
+    "id": "423e70bd-f3d9-4087-b350-3b9205c056b6",
     "applicant": "신거성관세사무소",
     "shipper": "하나두올",
     "submittedDate": ""
   },
   {
-    "id": "poa107",
+    "id": "31245d9e-8e6b-46c3-84bc-3a31b10c4af7",
     "applicant": "메가쉬핑글로벌",
     "shipper": "포천목재포",
     "submittedDate": ""
   },
   {
-    "id": "poa108",
+    "id": "4c561438-b05e-46e4-8883-49aabcd5b7b5",
     "applicant": "케이제이상사",
     "shipper": "광진트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa109",
+    "id": "72e67ed0-ed4f-4129-a231-8e100b0a128c",
     "applicant": "관세법인 온유 인천지사",
     "shipper": "디앤비컴퍼니",
     "submittedDate": ""
   },
   {
-    "id": "poa110",
+    "id": "04476c54-8f10-4fb8-9bc1-1b4184eed9a4",
     "applicant": "금강기업",
     "shipper": "에이스바이오팜(ACEBIOPHARM)",
     "submittedDate": ""
   },
   {
-    "id": "poa111",
+    "id": "f7a4f62e-2c87-4180-a1aa-18f548969253",
     "applicant": "뉴하나로관세법인",
     "shipper": "동남합성",
     "submittedDate": ""
   },
   {
-    "id": "poa112",
+    "id": "9ec1c247-ba91-4ff8-a022-6f3f1b0eda27",
     "applicant": "세방익스프레스",
     "shipper": "서우첨단소재",
     "submittedDate": ""
   },
   {
-    "id": "poa113",
+    "id": "69ea6989-5348-4f0a-a79b-e2ae33de0b41",
     "applicant": "선광관세사",
     "shipper": "유니드글로벌상사",
     "submittedDate": ""
   },
   {
-    "id": "poa114",
+    "id": "539c41e4-3073-4048-a0f7-f4387c6eaee3",
     "applicant": "인천관세법인",
     "shipper": "(주)일루비즈",
     "submittedDate": ""
   },
   {
-    "id": "poa115",
+    "id": "f51fd8db-119e-4fa4-a384-82b1c3dcce9d",
     "applicant": "주식회사 동우로직스",
     "shipper": "엔에스홈",
     "submittedDate": ""
   },
   {
-    "id": "poa116",
+    "id": "6c8ae117-eb9f-49fb-b69c-6fde88127e19",
     "applicant": "주식회사 에이지엘코리아",
     "shipper": "GMS",
     "submittedDate": ""
   },
   {
-    "id": "poa117",
+    "id": "2bc7bf0f-b11f-4d0a-9488-bcb8013888b6",
     "applicant": "로드스타씨앤에어",
     "shipper": "지오멧",
     "submittedDate": ""
   },
   {
-    "id": "poa118",
+    "id": "f1c72374-b859-4c95-ba89-2d8c86b46e1d",
     "applicant": "선민관세사무소",
     "shipper": "폰토스",
     "submittedDate": ""
   },
   {
-    "id": "poa119",
+    "id": "777b0150-eb12-41a3-91b0-5441e7027e3a",
     "applicant": "대신관세사법인",
     "shipper": "원익큐브",
     "submittedDate": ""
   },
   {
-    "id": "poa120",
+    "id": "7b47a010-50f1-434f-b836-131c93dfa649",
     "applicant": "한솔관세사무소",
     "shipper": "한국델몬트후레쉬프로듀스",
     "submittedDate": ""
   },
   {
-    "id": "poa121",
+    "id": "78e84d43-150a-4c96-bdc5-d82c048425ee",
     "applicant": "제일특수",
     "shipper": "CM TRADING",
     "submittedDate": ""
   },
   {
-    "id": "poa122",
+    "id": "3535dd2b-12b4-4760-a846-613a937e66ef",
     "applicant": "호성국제운송",
     "shipper": "국제금속",
     "submittedDate": ""
   },
   {
-    "id": "poa123",
+    "id": "72798346-ca1d-4334-ae14-b36b2d469109",
     "applicant": "한국엠씨씨로지스틱스",
     "shipper": "이지바이오 직산",
     "submittedDate": ""
   },
   {
-    "id": "poa124",
+    "id": "cc9bdb00-bbbc-48c6-abb1-eb8d8751a65c",
     "applicant": "삼현INT",
     "shipper": "씨앤케이무역",
     "submittedDate": ""
   },
   {
-    "id": "poa125",
+    "id": "94b2edab-10cb-4c23-a643-f32f2e44bedb",
     "applicant": "쿨스",
     "shipper": "SAMBO INDUSTRIAL 삼보산업",
     "submittedDate": ""
   },
   {
-    "id": "poa126",
+    "id": "08e3abdc-53dd-435d-9cac-3222a5458bc1",
     "applicant": "쿨스",
     "shipper": "삼보오토 20260206 ~",
     "submittedDate": ""
   },
   {
-    "id": "poa127",
+    "id": "112a81bf-c842-4fb3-8fdb-c5d1896b82c4",
     "applicant": "삼현INT",
     "shipper": "씨에프터내셔날",
     "submittedDate": ""
   },
   {
-    "id": "poa128",
+    "id": "95dcd17f-4b46-4e7c-80cf-ca6756ff902b",
     "applicant": "삼현INT",
     "shipper": "미트올플러스 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa129",
+    "id": "13a167de-7c4f-4793-9fa9-0d2d7d63505e",
     "applicant": "미금로지스",
     "shipper": "농업회사법인 주식회사 구봉산업",
     "submittedDate": ""
   },
   {
-    "id": "poa130",
+    "id": "13d88966-4d12-4131-80c9-0dfe91475ba0",
     "applicant": "청현기업",
     "shipper": "엘에스네트웍스",
     "submittedDate": ""
   },
   {
-    "id": "poa131",
+    "id": "55cbe2b3-93c3-4179-9f3c-d4a8115804fb",
     "applicant": "청현기업",
     "shipper": "우진미트",
     "submittedDate": ""
   },
   {
-    "id": "poa132",
+    "id": "f210d28d-6bee-4e9f-8c93-90d593ac96ac",
     "applicant": "포유엔터프라이즈",
     "shipper": "매일유업",
     "submittedDate": ""
   },
   {
-    "id": "poa133",
+    "id": "b210931b-f1ad-447b-8d15-f90186ee35cd",
     "applicant": "KWE",
     "shipper": "스텔란티스",
     "submittedDate": ""
   },
   {
-    "id": "poa134",
+    "id": "02968af8-3341-4ca0-8baa-7b23bd7655c5",
     "applicant": "삼현 INT",
     "shipper": "나인미라클",
     "submittedDate": ""
   },
   {
-    "id": "poa135",
+    "id": "b51b914d-ed2c-42e7-83ee-59ce050eb97f",
     "applicant": "평택명성합동관세사무소",
     "shipper": "선인",
     "submittedDate": ""
   },
   {
-    "id": "poa136",
+    "id": "a4e0f1b3-8dc5-438f-8ac0-7e4245a09185",
     "applicant": "시노관세사무소",
     "shipper": "에스피씨지에프에스",
     "submittedDate": ""
   },
   {
-    "id": "poa137",
+    "id": "9baf2c90-3ea0-48ab-a0f1-234b83d6fe05",
     "applicant": "삼현INT",
     "shipper": "태영팀버 아워홈빌딩",
     "submittedDate": ""
   },
   {
-    "id": "poa138",
+    "id": "4a35fb6d-70a0-4d5e-9c71-480135030d6d",
     "applicant": "동신종합물류",
     "shipper": "글로벌통상주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa139",
+    "id": "f61cb80f-25d8-49ab-bb0e-bcda0100ae2b",
     "applicant": "동구국제부산지점",
     "shipper": "유니레버, 유니레버코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa140",
+    "id": "1b1c351d-536a-4cd3-a6fb-e4e5dc452191",
     "applicant": "미르해운",
     "shipper": "TAEYOUNG INDUSTRY C",
     "submittedDate": ""
   },
   {
-    "id": "poa141",
+    "id": "e7195cda-8272-4bac-bc17-a20bb221caa4",
     "applicant": "제이에스로지스틱스",
     "shipper": "주식회사 코웍커피 COWORK COFFEE INC.",
     "submittedDate": ""
   },
   {
-    "id": "poa142",
+    "id": "aea082d5-2596-42cd-979a-1a3e0d8db28c",
     "applicant": "클로버엔터프라이즈",
     "shipper": "위드엔",
     "submittedDate": ""
   },
   {
-    "id": "poa143",
+    "id": "f606203a-00f4-47f3-bb51-5918bc28f6a2",
     "applicant": "대호관세사법인",
     "shipper": "크라운제과",
     "submittedDate": ""
   },
   {
-    "id": "poa144",
+    "id": "44049577-9146-4cba-af84-bf03f77eb35a",
     "applicant": "제지아이해운항공",
     "shipper": "주식회사 태영화학",
     "submittedDate": ""
   },
   {
-    "id": "poa145",
+    "id": "b1ec598d-dcc7-4aa6-af51-4e544a0070c5",
     "applicant": "디와이글로벌로지스",
     "shipper": "M.I.COFFE CORPORATION",
     "submittedDate": ""
   },
   {
-    "id": "poa146",
+    "id": "13cdf8c9-deac-4be0-b62f-8a30b4ff72df",
     "applicant": "삼현INT",
     "shipper": "비앤피아이앤씨",
     "submittedDate": ""
   },
   {
-    "id": "poa147",
+    "id": "22c0b99e-7fe0-4863-a1c4-e3ad049b43e3",
     "applicant": "삼현INT",
     "shipper": "주식회사 부일그룹",
     "submittedDate": ""
   },
   {
-    "id": "poa148",
+    "id": "00b78f26-d7c6-40dd-bda9-ed0c037b6dcb",
     "applicant": "레오나해운항공 주식회사",
     "shipper": "ROMANSYS CO., LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa149",
+    "id": "6fa4d4e3-02bf-4ad2-9bca-46922692f739",
     "applicant": "세방(주)전주지점",
     "shipper": "DAEDOO FOODS",
     "submittedDate": ""
   },
   {
-    "id": "poa150",
+    "id": "109c727f-a835-42b7-b23c-9a15d5de88ae",
     "applicant": "대흥기업",
     "shipper": "부천유통",
     "submittedDate": ""
   },
   {
-    "id": "poa151",
+    "id": "3962f5a2-b75f-4ff0-a36a-9a1566d60609",
     "applicant": "대흥기업",
     "shipper": "하이랜드푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa152",
+    "id": "0275716c-0b51-4a0b-a837-69503607f5ed",
     "applicant": "삼현INT",
     "shipper": "아라유통",
     "submittedDate": ""
   },
   {
-    "id": "poa153",
+    "id": "5e2143ea-9a57-4380-9430-763d1a270abd",
     "applicant": "삼현INT",
     "shipper": "보보스미트트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa154",
+    "id": "7d000b09-229d-4614-8d7b-a29c7a9f8f72",
     "applicant": "백두관세사무소",
     "shipper": "재인텍",
     "submittedDate": ""
   },
   {
-    "id": "poa155",
+    "id": "4ecfb741-6aad-4cf5-9dc9-4fe1117afd62",
     "applicant": "씨제이대한통운",
     "shipper": "씨제리프레시웨이",
     "submittedDate": ""
   },
   {
-    "id": "poa156",
+    "id": "6db982fd-7e45-4e5b-9394-8131a5a47485",
     "applicant": "롯데글로벌로지스",
     "shipper": "BRITISH AMERICAN TOBACCO",
     "submittedDate": ""
   },
   {
-    "id": "poa157",
+    "id": "50939eca-940a-4d98-9bea-6072655e926a",
     "applicant": "삼현INT",
     "shipper": "아라통상",
     "submittedDate": ""
   },
   {
-    "id": "poa158",
+    "id": "3b88e088-2fc2-4c8d-ba21-9617d5d4d7d1",
     "applicant": "관세법인진명",
     "shipper": "재현인텍스",
     "submittedDate": ""
   },
   {
-    "id": "poa159",
+    "id": "2a1b47ae-9d7f-4b2c-8825-2b3473c5a6ae",
     "applicant": "케이씨티시",
     "shipper": "HYUNDAI ENGINEERING",
     "submittedDate": ""
   },
   {
-    "id": "poa160",
+    "id": "9b1ca468-bd0a-416c-9641-44f8f547c330",
     "applicant": "위너스해운항공",
     "shipper": "ACCESS WORLD BUSAN",
     "submittedDate": ""
   },
   {
-    "id": "poa161",
+    "id": "6a342378-7c47-4680-90f5-b1759ebacfa2",
     "applicant": "유신관세법인",
     "shipper": "PLASTIC OMNIUM CO LTD. 플라스틱옴니엄(주)",
     "submittedDate": ""
   },
   {
-    "id": "poa162",
+    "id": "94d71bb4-7485-4c1b-9af9-337f9700727b",
     "applicant": "관세법인엘리트부산지점",
     "shipper": "비상트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa163",
+    "id": "fbb02cfb-a06f-4355-bbe8-e98cc20c5282",
     "applicant": "팀버라인",
     "shipper": "APEC LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa164",
+    "id": "90f97dc6-62f2-4653-a59e-004cee478011",
     "applicant": "조양국제종합물류",
     "shipper": "컬러스앤이펙츠",
     "submittedDate": ""
   },
   {
-    "id": "poa165",
+    "id": "6300db96-296f-40f1-b2b8-f6cd4cd846d7",
     "applicant": "신화관세사무소",
     "shipper": "엔시스",
     "submittedDate": ""
   },
   {
-    "id": "poa166",
+    "id": "599dc35c-e9c9-46e3-a84d-f90c87462e44",
     "applicant": "월드라인",
     "shipper": "대한전선 TAIHAN CABLE AND SOLUTION CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa167",
+    "id": "7ecd8629-3312-439c-8b91-7ef58c17c587",
     "applicant": "삼성글로텍",
     "shipper": "아이유제지",
     "submittedDate": ""
   },
   {
-    "id": "poa168",
+    "id": "f4cc14a7-70aa-45a2-8588-7386eea76e16",
     "applicant": "삼현 INT",
     "shipper": "주식회사 지엠컴퍼니",
     "submittedDate": ""
   },
   {
-    "id": "poa169",
+    "id": "8ada8722-78d4-47e0-ac1f-477754e9a59e",
     "applicant": "유원해상",
     "shipper": "대화산기",
     "submittedDate": ""
   },
   {
-    "id": "poa170",
+    "id": "21054b0b-7fd6-4239-b77c-bd0a82a53f0b",
     "applicant": "부원물류",
     "shipper": "대현우드",
     "submittedDate": ""
   },
   {
-    "id": "poa171",
+    "id": "58a0b0f4-b139-4663-a1a5-1045f83d1443",
     "applicant": "휴먼로직스",
     "shipper": "세광 씨앤씨",
     "submittedDate": ""
   },
   {
-    "id": "poa172",
+    "id": "a529812b-55a5-4d3a-8cb9-6d4a40af9162",
     "applicant": "은산해운항공",
     "shipper": "TAIHAN CABLE& SOLUTION",
     "submittedDate": ""
   },
   {
-    "id": "poa173",
+    "id": "591a8ede-cdf9-45e6-b7b7-3f692f1950a3",
     "applicant": "제일특수",
     "shipper": "SHINWOO신우",
     "submittedDate": ""
   },
   {
-    "id": "poa174",
+    "id": "ee1da4c6-f0f1-4f7e-9132-e88a3fb2ff5b",
     "applicant": "비엘코",
     "shipper": "부강유통",
     "submittedDate": ""
   },
   {
-    "id": "poa175",
+    "id": "025724ed-1b4b-45ab-a9d3-440a380ce1d6",
     "applicant": "관세법인케이앤엘",
     "shipper": "에스오에프티",
     "submittedDate": ""
   },
   {
-    "id": "poa176",
+    "id": "96857c6a-0cb0-40c0-9d37-cc9a69209239",
     "applicant": "서진통운",
     "shipper": "악조노벨분체도료",
     "submittedDate": ""
   },
   {
-    "id": "poa177",
+    "id": "b66d0f7b-b1da-4e02-87b3-95459fbb9b12",
     "applicant": "유센로지스틱스코리아",
     "shipper": "COUPANG",
     "submittedDate": ""
   },
   {
-    "id": "poa178",
+    "id": "5d753c7c-d55f-4475-bfd7-86760450c2f4",
     "applicant": "오제이종합물류",
     "shipper": "대원제지",
     "submittedDate": ""
   },
   {
-    "id": "poa179",
+    "id": "dc302a2b-2a5c-4c1e-b142-af1ee1f9bd06",
     "applicant": "글로텍",
     "shipper": "태광산업",
     "submittedDate": ""
   },
   {
-    "id": "poa180",
+    "id": "30cb77d6-3805-46d8-be96-138f34f359fc",
     "applicant": "상록로지텍코리아",
     "shipper": "신송산업",
     "submittedDate": ""
   },
   {
-    "id": "poa181",
+    "id": "93abd766-891c-489f-98ca-2ad1e7d57574",
     "applicant": "주식회사 대창로지스틱스",
     "shipper": "아오조라코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa182",
+    "id": "3a3286ef-fea7-4dc7-998a-11c5b2a01e2b",
     "applicant": "성림종합물류",
     "shipper": "유한회사 썬리지",
     "submittedDate": ""
   },
   {
-    "id": "poa183",
+    "id": "f77395f4-9d92-4d93-8dc2-cba1633537df",
     "applicant": "삼현INT",
     "shipper": "현대그린푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa184",
+    "id": "aadd5076-27a6-402c-8fbe-8192ae4800fe",
     "applicant": "마스타해운항공",
     "shipper": "동원플라트",
     "submittedDate": ""
   },
   {
-    "id": "poa185",
+    "id": "3de413f8-1988-4aaf-b055-d150172e121d",
     "applicant": "관세법인 신보성",
     "shipper": "칠보생물산업",
     "submittedDate": ""
   },
   {
-    "id": "poa186",
+    "id": "c3519cc4-2d87-4f09-8e97-d9bf5f486693",
     "applicant": "성우합동관세사무소",
     "shipper": "HKM",
     "submittedDate": ""
   },
   {
-    "id": "poa187",
+    "id": "3b485a04-d626-4dc2-8355-7fffc27b4d29",
     "applicant": "INT",
     "shipper": "금미트",
     "submittedDate": ""
   },
   {
-    "id": "poa188",
+    "id": "164c795e-2954-498d-ab81-a9f7d72e2792",
     "applicant": "조양국제종합물류",
     "shipper": "IMCD KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa189",
+    "id": "240fa120-5fe2-4382-8747-4ca6f9036b10",
     "applicant": "중앙기업",
     "shipper": "풍산서울사무소",
     "submittedDate": ""
   },
   {
-    "id": "poa190",
+    "id": "f7f9414c-9254-417c-8780-3cdce7cfc5b6",
     "applicant": "위즈로지스틱",
     "shipper": "신평아이엔티",
     "submittedDate": ""
   },
   {
-    "id": "poa191",
+    "id": "dd9471b3-ab80-4ddc-bbbd-812f150998a7",
     "applicant": "광진티엘에스",
     "shipper": "DAE HAN STEEL",
     "submittedDate": ""
   },
   {
-    "id": "poa192",
+    "id": "1fdbaad9-8562-4ac0-8b24-3baf8b880359",
     "applicant": "비디피로지스틱스코리아",
     "shipper": "DOW CHEMICAL KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa193",
+    "id": "db0c77fb-9a81-432d-94ff-d772fcc97e87",
     "applicant": "견우마을",
     "shipper": "고려물류컨설팅",
     "submittedDate": ""
   },
   {
-    "id": "poa194",
+    "id": "da0c8054-3962-41a9-9597-b8e44194b3c6",
     "applicant": "용마로지스",
     "shipper": "일진전기",
     "submittedDate": ""
   },
   {
-    "id": "poa195",
+    "id": "1449d2f5-e951-43cb-ad01-a05e7078911a",
     "applicant": "세청국제운송",
     "shipper": "DEERS SEDA",
     "submittedDate": ""
   },
   {
-    "id": "poa196",
+    "id": "1741362d-5933-4869-bedb-98b3974bd235",
     "applicant": "대흥기업",
     "shipper": "혜성프로비젼",
     "submittedDate": ""
   },
   {
-    "id": "poa197",
+    "id": "b5da5d9e-78a0-4e0c-a9ef-21ce430f65be",
     "applicant": "케이씨티시",
     "shipper": "대상",
     "submittedDate": ""
   },
   {
-    "id": "poa198",
+    "id": "479e0bb6-cc91-47e3-9706-45fbd716c12b",
     "applicant": "인터지스",
     "shipper": "케이씨씨",
     "submittedDate": ""
   },
   {
-    "id": "poa199",
+    "id": "67235b44-d08a-49ea-a12c-9f12ca5acb88",
     "applicant": "삼현INT",
     "shipper": "네이쳐스푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa200",
+    "id": "ce438a61-3684-4452-aefd-a6be987eea3e",
     "applicant": "엠익스프레스",
     "shipper": "미원스페션티케미칼주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa201",
+    "id": "9ff99a1b-0e72-44a8-a72b-007a0abbe26f",
     "applicant": "명지합동관세사무소",
     "shipper": "재호식품",
     "submittedDate": ""
   },
   {
-    "id": "poa202",
+    "id": "3a255171-e487-4bd1-8b5c-bc9a043084b6",
     "applicant": "지원관세법인",
     "shipper": "바이킹마켓",
     "submittedDate": ""
   },
   {
-    "id": "poa203",
+    "id": "02ddfc8c-e365-466a-b3bf-579f4b18f04c",
     "applicant": "한타특수운송",
     "shipper": "주식회사 현대엘앤씨",
     "submittedDate": ""
   },
   {
-    "id": "poa204",
+    "id": "6fd14e1c-3a50-4ad2-b979-110fa9e3eb49",
     "applicant": "팀버라인",
     "shipper": "코스모크린텍",
     "submittedDate": ""
   },
   {
-    "id": "poa205",
+    "id": "00fdf07f-5026-4c73-b8c4-8c1f5c592417",
     "applicant": "글로비즈로지스틱스",
     "shipper": "아진 피앤피",
     "submittedDate": ""
   },
   {
-    "id": "poa206",
+    "id": "17b5f14f-5c0e-4306-9a14-215eb8949a89",
     "applicant": "국제로지스틱",
     "shipper": "주식회사 마운틴우드",
     "submittedDate": ""
   },
   {
-    "id": "poa207",
+    "id": "87fc033b-b358-41b9-a416-897c07e643fc",
     "applicant": "대경글로벌로지텍",
     "shipper": "MIWON COMMERCIAL",
     "submittedDate": ""
   },
   {
-    "id": "poa208",
+    "id": "3036c3be-bbfe-4cb4-bb1c-4410779d59e1",
     "applicant": "아이티엘",
     "shipper": "YUHAN",
     "submittedDate": ""
   },
   {
-    "id": "poa209",
+    "id": "794ae2b8-bae0-4788-a9a5-f04ab2249dae",
     "applicant": "제이큐로지스틱스",
     "shipper": "민진코퍼레이션",
     "submittedDate": ""
   },
   {
-    "id": "poa210",
+    "id": "1081e6b1-bbab-4200-8150-7bc85dd9a0e3",
     "applicant": "대기익스프레스",
     "shipper": "농심켈로그",
     "submittedDate": ""
   },
   {
-    "id": "poa211",
+    "id": "3a28035a-297d-49e7-951b-3292b3251be7",
     "applicant": "나비고인터내셔널",
     "shipper": "금강변압기",
     "submittedDate": ""
   },
   {
-    "id": "poa212",
+    "id": "3e67c710-3046-41c2-a1bf-86c91f9c8038",
     "applicant": "씨에이치로지스틱스",
     "shipper": "CHANGEUN RADIX CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa213",
+    "id": "95bbe9dd-cb9b-460c-a2be-7668e0922c70",
     "applicant": "신세기기업",
     "shipper": "코이",
     "submittedDate": ""
   },
   {
-    "id": "poa214",
+    "id": "9590b3f2-a8c4-471c-9632-2d376aff1885",
     "applicant": "에스비로지스틱스",
     "shipper": "FNC KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa215",
+    "id": "ed8d285c-6382-4fa6-94e5-ac2a9a1b5e7d",
     "applicant": "디와이글로벌로지스",
     "shipper": "SOPEX KOREA CO. LTD.",
     "submittedDate": ""
   },
   {
-    "id": "poa216",
+    "id": "3f71f2f1-f5f1-44d6-99a6-4baadc6e7082",
     "applicant": "삼현INT",
     "shipper": "제트원미트",
     "submittedDate": ""
   },
   {
-    "id": "poa217",
+    "id": "aaffc9ee-350c-45a8-a83d-f505f44e99a1",
     "applicant": "관세법인 충정",
     "shipper": "지오멧 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa218",
+    "id": "870cf5ee-35e9-4880-9efc-d567384bf726",
     "applicant": "동해로지스틱스",
     "shipper": "에이치알엠",
     "submittedDate": ""
   },
   {
-    "id": "poa219",
+    "id": "6fe5b488-b272-4300-aa57-ec17e070c0ed",
     "applicant": "대림",
     "shipper": "DL케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa220",
+    "id": "3288c7b5-f718-4097-a489-47f184868b72",
     "applicant": "용신물류",
     "shipper": "롯데웰푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa221",
+    "id": "5d766da1-6c7c-4e3f-882f-26dea79fedf5",
     "applicant": "성우관세사무소",
     "shipper": "한국비철",
     "submittedDate": ""
   },
   {
-    "id": "poa222",
+    "id": "b8eca9df-56dd-4469-91e7-119f52de78be",
     "applicant": "유성물류",
     "shipper": "태우",
     "submittedDate": ""
   },
   {
-    "id": "poa223",
+    "id": "8c6873dc-3b48-4bae-9230-55963a3a9a2f",
     "applicant": "한마루통운",
     "shipper": "헨켈코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa224",
+    "id": "e72e4f68-2d20-4968-8abb-288cf8b36ccb",
     "applicant": "씨제이대한통운",
     "shipper": "VALEO PYEONGHWA CO 평화발레오",
     "submittedDate": ""
   },
   {
-    "id": "poa225",
+    "id": "63529cc2-ee22-4e4d-895c-0edc9a5faefc",
     "applicant": "쓰리웨이 로지스틱스",
     "shipper": "티센크루프머리머티리얼 THYSSENKRUPP MATERIALS",
     "submittedDate": ""
   },
   {
-    "id": "poa226",
+    "id": "24d46564-a86b-4ace-b3b8-26123a6525cb",
     "applicant": "KOREA 청진관세법인",
     "shipper": "헤드코메탈스코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa227",
+    "id": "dabf5415-4b9b-4cf7-8c6c-847636942b8c",
     "applicant": "주식회사 팍스웨이",
     "shipper": "FOOD ALL MARKER",
     "submittedDate": ""
   },
   {
-    "id": "poa228",
+    "id": "58d54395-3f12-4493-87ad-9db293e0966e",
     "applicant": "남선창고",
     "shipper": "크로다코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa229",
+    "id": "84640bb2-e358-41c8-8e84-97f5d29a2efd",
     "applicant": "제이씨티엘에스",
     "shipper": "제이하베스트",
     "submittedDate": ""
   },
   {
-    "id": "poa230",
+    "id": "b09aa2a5-f55c-42a8-a805-856fabcc0e2c",
     "applicant": "부산세원관세사무소",
     "shipper": "KOREA FOOD INDUSTRY ASSOCIATION",
     "submittedDate": ""
   },
   {
-    "id": "poa231",
+    "id": "9666a531-8b4a-48de-8c25-7d6f21d120e5",
     "applicant": "관세법인 온유 인천지사",
     "shipper": "곰표",
     "submittedDate": ""
   },
   {
-    "id": "poa232",
+    "id": "d44da031-203b-4bfa-aa82-24b1d0f312e1",
     "applicant": "하이원해운항공",
     "shipper": "화창",
     "submittedDate": ""
   },
   {
-    "id": "poa233",
+    "id": "b88bc601-2df3-4cc9-8349-94e987668f76",
     "applicant": "인터지스",
     "shipper": "리치프로덕츠코리아 유한책임회사",
     "submittedDate": ""
   },
   {
-    "id": "poa234",
+    "id": "316052e9-aab7-4d6f-824c-8fa0add455e3",
     "applicant": "레이딕스",
     "shipper": "바이오프랜즈",
     "submittedDate": ""
   },
   {
-    "id": "poa235",
+    "id": "c3300513-f6be-4d52-9b38-7e63ee76e831",
     "applicant": "관세법인 샤인",
     "shipper": "엘코어코퍼레이션",
     "submittedDate": ""
   },
   {
-    "id": "poa236",
+    "id": "4464eef9-1659-4dea-b948-6c6d88a011b9",
     "applicant": "성림종합물류",
     "shipper": "UB korea 유비코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa237",
+    "id": "76efe8e9-aff3-4079-81c2-16b7498a9218",
     "applicant": "대흥기업",
     "shipper": "한결엘에스",
     "submittedDate": ""
   },
   {
-    "id": "poa238",
+    "id": "0c182fb1-766d-475d-a0c2-daa9b0322ae0",
     "applicant": "삼일국제물류",
     "shipper": "선진햄",
     "submittedDate": ""
   },
   {
-    "id": "poa239",
+    "id": "066c4b25-5a6b-4ca8-848d-affa3bc135d5",
     "applicant": "주식회사 케이텍",
     "shipper": "IMEX GLOBAL",
     "submittedDate": ""
   },
   {
-    "id": "poa240",
+    "id": "85832d3e-6ee1-41aa-a4d0-2a228609526f",
     "applicant": "아람물류",
     "shipper": "타이어월드",
     "submittedDate": ""
   },
   {
-    "id": "poa241",
+    "id": "9f218bf6-15d5-41d7-b864-547913adff10",
     "applicant": "유림피엔엘주식회사",
     "shipper": "MOORIMPAPER",
     "submittedDate": ""
   },
   {
-    "id": "poa242",
+    "id": "91e52ee4-e309-44e7-8a0a-9bd773327d2b",
     "applicant": "세신관세사",
     "shipper": "대승물산",
     "submittedDate": ""
   },
   {
-    "id": "poa243",
+    "id": "e8ea074b-32d6-44a4-916b-150607a21d3a",
     "applicant": "관세법인진명",
     "shipper": "에프원에프앤비",
     "submittedDate": ""
   },
   {
-    "id": "poa244",
+    "id": "7b9fbee4-8751-4986-a392-c6cf5caa7e26",
     "applicant": "성림종합물류",
     "shipper": "에이케이팜",
     "submittedDate": ""
   },
   {
-    "id": "poa245",
+    "id": "c30afbbc-9386-4096-bd9c-93d3adf38017",
     "applicant": "삼현INT",
     "shipper": "정드림고트",
     "submittedDate": ""
   },
   {
-    "id": "poa246",
+    "id": "73649cfa-344f-4afa-8eec-8458a637babf",
     "applicant": "제이아이해운항공",
     "shipper": "TAE YOUNG CHEM",
     "submittedDate": ""
   },
   {
-    "id": "poa247",
+    "id": "7ac9a2cb-3255-417d-b5c0-8670d8b7d5e0",
     "applicant": "클로버엔터프라이즈",
     "shipper": "청송축산유통",
     "submittedDate": ""
   },
   {
-    "id": "poa248",
+    "id": "200a3113-1633-4b15-9f0f-be0618c39635",
     "applicant": "한진",
     "shipper": "AZLEIS KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa249",
+    "id": "7c754b29-e22d-4046-bedc-68ab444ab1ad",
     "applicant": "엘리온종합물류",
     "shipper": "포스코퓨처엠",
     "submittedDate": ""
   },
   {
-    "id": "poa250",
+    "id": "8fd71813-ef8b-4213-980f-8a7da347f7c3",
     "applicant": "씨앤아이 해운항공",
     "shipper": "비타민디아이와이",
     "submittedDate": ""
   },
   {
-    "id": "poa251",
+    "id": "42276407-3432-4ddf-bcee-8d7d1e75c670",
     "applicant": "오양합동관세사무소",
     "shipper": "태두섬유",
     "submittedDate": ""
   },
   {
-    "id": "poa252",
+    "id": "197e463f-9f1d-45c5-8ee7-565b15a757ff",
     "applicant": "브라이트해운항공",
     "shipper": "에이치제이케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa253",
+    "id": "347ddaae-4b15-4ad1-b89b-cad76ccc36f7",
     "applicant": "국보해운",
     "shipper": "ECOLAV KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa254",
+    "id": "96dc7682-d269-42ad-a32f-61c04c06464e",
     "applicant": "에이치케이씨",
     "shipper": "대구농산",
     "submittedDate": ""
   },
   {
-    "id": "poa255",
+    "id": "89758086-15e8-4a7f-a9e6-98f8fc1adbca",
     "applicant": "요요로직스",
     "shipper": "주식회사 유상",
     "submittedDate": ""
   },
   {
-    "id": "poa256",
+    "id": "c64383b3-ad0a-4d3a-8db8-c227ddc909ba",
     "applicant": "관세법인진명",
     "shipper": "롯데상사",
     "submittedDate": "2026-04-01"
   },
   {
-    "id": "poa257",
+    "id": "ff810737-edb5-4b5c-9aa7-d736882988d8",
     "applicant": "삼현 INT",
     "shipper": "농업회사법인 가온에프엔비 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa258",
+    "id": "918589d0-6270-4c5b-82e3-6d9b84d93411",
     "applicant": "새아로지스",
     "shipper": "LS CABLE AND SYSTEM LTD엘에스전선 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa259",
+    "id": "5de70c93-8014-458e-bc96-361c453d9755",
     "applicant": "티에이치로지스틱스",
     "shipper": "주식회사 에어텍",
     "submittedDate": ""
   },
   {
-    "id": "poa260",
+    "id": "c81d3ca9-971f-4fc9-a5cc-e11883681027",
     "applicant": "주식회사 영로직스",
     "shipper": "블랙앤데커아시아퍼시픽피티이리미티드",
     "submittedDate": ""
   },
   {
-    "id": "poa261",
+    "id": "d8d5ae21-4beb-4249-a78d-5f350f7b0e5e",
     "applicant": "부건합동관세사",
     "shipper": "농업회사법인유한회사광복",
     "submittedDate": ""
   },
   {
-    "id": "poa262",
+    "id": "9021c9d7-b075-4df1-a502-a0d2791cf28c",
     "applicant": "엠버시프레이트서비스",
     "shipper": "우진섬유",
     "submittedDate": ""
   },
   {
-    "id": "poa263",
+    "id": "5132f59f-9cba-41d8-b966-3417a3c93513",
     "applicant": "부림교역",
     "shipper": "동성글로벌",
     "submittedDate": ""
   },
   {
-    "id": "poa264",
+    "id": "59df4532-08ea-4f83-b21d-a4660a179d1f",
     "applicant": "맥스피드",
     "shipper": "INTER B AND F CO LTD / INTER B&F CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa265",
+    "id": "602782ff-0350-4574-9d46-47b9e9244db9",
     "applicant": "주식회사지피글로벌",
     "shipper": "에이엔코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa266",
+    "id": "385c9a69-889c-4611-b6d2-73ff91c992f2",
     "applicant": "나진물류",
     "shipper": "그린텍스인터내셔널",
     "submittedDate": ""
   },
   {
-    "id": "poa267",
+    "id": "00691b21-40e1-4fb9-8cc0-def24ee70b09",
     "applicant": "부산세원관세사무소",
     "shipper": "BLUE NILE TRADING",
     "submittedDate": ""
   },
   {
-    "id": "poa268",
+    "id": "71ba57ae-d9ae-4b66-b690-e54c1a549fb1",
     "applicant": "톨글로벌로지스틱스코리아",
     "shipper": "SHARPDO&CO",
     "submittedDate": ""
   },
   {
-    "id": "poa269",
+    "id": "8298fdf6-6a92-4ae5-bd7c-3e6c6387ee8e",
     "applicant": "디티씨",
     "shipper": "WONDERGREEN",
     "submittedDate": ""
   },
   {
-    "id": "poa270",
+    "id": "bee4bde5-75a5-4d25-9379-fff4e27295bd",
     "applicant": "주식회사티씨더블유라인",
     "shipper": "지에스첨단소재1공장",
     "submittedDate": ""
   },
   {
-    "id": "poa271",
+    "id": "eca52424-d338-4b13-a463-04bcd0dab45e",
     "applicant": "주식회사 세코로지스틱",
     "shipper": "주식회사 엘케이",
     "submittedDate": ""
   },
   {
-    "id": "poa272",
+    "id": "bd25ae5e-00c1-4065-a9d1-cad4c63d9583",
     "applicant": "남해해운",
     "shipper": "고려조선",
     "submittedDate": ""
   },
   {
-    "id": "poa273",
+    "id": "ce50e1f9-f110-45a3-9a0a-7afa04616461",
     "applicant": "모리앤 글로벌",
     "shipper": "대현우드 DAIHYUN WOOD",
     "submittedDate": ""
   },
   {
-    "id": "poa274",
+    "id": "29be82af-09c0-4d59-9408-82088d15ae67",
     "applicant": "씨에스에스로지스",
     "shipper": "JADE CHEM 제이드켐",
     "submittedDate": ""
   },
   {
-    "id": "poa275",
+    "id": "ed3d7063-6e2e-4319-83d9-e33d50b55ff2",
     "applicant": "아태물류",
     "shipper": "신세계푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa276",
+    "id": "ac3c6160-ff61-4456-bab1-ba6f0b6df336",
     "applicant": "관세법인 제일광양지사",
     "shipper": "아그리씨엔에스",
     "submittedDate": ""
   },
   {
-    "id": "poa277",
+    "id": "4d026a49-9a61-4979-9d2a-a5dc1197711e",
     "applicant": "대건물류",
     "shipper": "DOFAGRO",
     "submittedDate": ""
   },
   {
-    "id": "poa278",
+    "id": "0636ae25-d62d-489f-8db3-b7b9bfb7794a",
     "applicant": "한성통상",
     "shipper": "라크인더스트리",
     "submittedDate": ""
   },
   {
-    "id": "poa279",
+    "id": "86a2fabe-7083-407f-93ee-c6eabf049b04",
     "applicant": "나루인터내셔날",
     "shipper": "욱성화학",
     "submittedDate": ""
   },
   {
-    "id": "poa280",
+    "id": "b571a820-3142-4920-97d3-093cfff29435",
     "applicant": "고려물류컨설팅",
     "shipper": "주식회사 태진트레이드",
     "submittedDate": ""
   },
   {
-    "id": "poa281",
+    "id": "447a2158-8480-4522-b231-39600d6115fb",
     "applicant": "하나로직스",
     "shipper": "JUSUNG METAL CO., LTD 주성메탈 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa282",
+    "id": "eba18108-74ba-4b98-857d-1ab619b07805",
     "applicant": "용신로지스틱스",
     "shipper": "상록",
     "submittedDate": ""
   },
   {
-    "id": "poa283",
+    "id": "9aa63854-1b94-47b1-9652-a1dead2a3e4a",
     "applicant": "위더스관세사무소",
     "shipper": "스웨코",
     "submittedDate": ""
   },
   {
-    "id": "poa284",
+    "id": "b28192db-5368-4948-a356-adfeffbcf193",
     "applicant": "대동종합물류",
     "shipper": "오에스피",
     "submittedDate": ""
   },
   {
-    "id": "poa285",
+    "id": "d90b2da1-5c04-42e7-a82e-003ba740dd17",
     "applicant": "주원관세사무소",
     "shipper": "주식회사 대동퍼시픽",
     "submittedDate": ""
   },
   {
-    "id": "poa286",
+    "id": "c0a58563-197a-4c93-b45d-06541e2ac912",
     "applicant": "아태물류",
     "shipper": "넥스트브릭스",
     "submittedDate": ""
   },
   {
-    "id": "poa287",
+    "id": "dfc8dd21-fecf-4e16-9d69-40ece3824cbb",
     "applicant": "디와이글로벌로지스",
     "shipper": "블레스빈",
     "submittedDate": ""
   },
   {
-    "id": "poa288",
+    "id": "655e3783-4b3c-4b7b-9347-f9bc796458fe",
     "applicant": "지원관세법인",
     "shipper": "아틀란티스유니온",
     "submittedDate": ""
   },
   {
-    "id": "poa289",
+    "id": "cfc9016f-ba8b-4495-96c0-add25d8808a4",
     "applicant": "관세법인 신보성",
     "shipper": "그린힐",
     "submittedDate": "2026-04-08"
   },
   {
-    "id": "poa290",
+    "id": "a98cc7ef-d007-4414-ba36-defa60b0b331",
     "applicant": "수성육운",
     "shipper": "주식회사 썬앤지",
     "submittedDate": ""
   },
   {
-    "id": "poa291",
+    "id": "dbbdd072-9dc9-49f5-b426-43eeee60cb94",
     "applicant": "시온로직스",
     "shipper": "WORLD GREEN AGRICULTURAL",
     "submittedDate": ""
   },
   {
-    "id": "poa292",
+    "id": "b61e3015-a3e5-47a3-bab9-bc1d045edb2a",
     "applicant": "로드스타씨앤에어",
     "shipper": "중일",
     "submittedDate": ""
   },
   {
-    "id": "poa293",
+    "id": "8d4ed4a5-3855-4aff-b8ee-1ddfad93c1af",
     "applicant": "주노트랜스",
     "shipper": "피제이메탈",
     "submittedDate": ""
   },
   {
-    "id": "poa294",
+    "id": "fb336e7c-e0a1-4087-a5e1-2320e12aef04",
     "applicant": "클로버엔터프라이즈",
     "shipper": "남상푸드",
     "submittedDate": ""
   },
   {
-    "id": "poa295",
+    "id": "6dfc217b-e970-4e15-86cd-045589bf3b73",
     "applicant": "한일관세법인",
     "shipper": "오리온",
     "submittedDate": ""
   },
   {
-    "id": "poa296",
+    "id": "7d1c1d00-8855-49eb-8bb4-2a4ba6e04f69",
     "applicant": "에이치엔엑스 주식회사",
     "shipper": "비콘얼라이언스 주식회사 (2025.08.07 갱신)",
     "submittedDate": ""
   },
   {
-    "id": "poa297",
+    "id": "f9da3997-6669-4a72-bfde-478856b94528",
     "applicant": "파로스해운항공",
     "shipper": "주식회사 노비아레텍",
     "submittedDate": ""
   },
   {
-    "id": "poa298",
+    "id": "0ff8acc8-3d9c-4fb9-9f83-e7bac0ff825d",
     "applicant": "라인브릿지",
     "shipper": "건우인트라",
     "submittedDate": ""
   },
   {
-    "id": "poa299",
+    "id": "ebc12a96-c1c5-4f98-a4f4-6a524e27fe8d",
     "applicant": "삼현 INT",
     "shipper": "하나프라임",
     "submittedDate": ""
   },
   {
-    "id": "poa300",
+    "id": "90aafbb9-59c3-4a7b-8067-08415339a0d7",
     "applicant": "지니어스글로벌",
     "shipper": "두올섬유주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa301",
+    "id": "0f0730d0-6c3e-4802-a173-91849b015bba",
     "applicant": "한국종합물류",
     "shipper": "하이베이스(HI- BASE)",
     "submittedDate": ""
   },
   {
-    "id": "poa302",
+    "id": "d18d7e5a-a4c5-48a4-9211-5f3159c9cd33",
     "applicant": "비케이해운항공주식회사",
     "shipper": "마루켐텍",
     "submittedDate": ""
   },
   {
-    "id": "poa303",
+    "id": "ccd9c645-fe6a-4024-aa3d-2288e4d38e44",
     "applicant": "나진물류",
     "shipper": "위더스코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa304",
+    "id": "45fbb51b-5a71-47bc-9e10-e0bf2f4b71ab",
     "applicant": "포트로직스 주식회사",
     "shipper": "그린랩스",
     "submittedDate": ""
   },
   {
-    "id": "poa305",
+    "id": "beb8f922-1cb6-4acb-9ebc-a99513b57a74",
     "applicant": "청현기업",
     "shipper": "주식회사 케이에이디에스",
     "submittedDate": ""
   },
   {
-    "id": "poa306",
+    "id": "b217e1bb-4a81-4662-a5a5-6b9ff2b59a75",
     "applicant": "관세법인대인",
     "shipper": "신성미네랄",
     "submittedDate": ""
   },
   {
-    "id": "poa307",
+    "id": "a4304490-0811-4f62-a1b0-a365bcd9b399",
     "applicant": "맥스피드",
     "shipper": "삼강금속",
     "submittedDate": ""
   },
   {
-    "id": "poa308",
+    "id": "d4205c55-30e6-4368-b700-f01a88b59427",
     "applicant": "벨로지스",
     "shipper": "lotte shopping",
     "submittedDate": ""
   },
   {
-    "id": "poa309",
+    "id": "5e40c036-843d-4a74-b11a-1351336f4122",
     "applicant": "고려종합운송",
     "shipper": "한양교역",
     "submittedDate": ""
   },
   {
-    "id": "poa310",
+    "id": "f2634e9d-39e4-4061-93c3-3c9d8ce45562",
     "applicant": "원진물류주식회사",
     "shipper": "농업회사 휴버트",
     "submittedDate": ""
   },
   {
-    "id": "poa311",
+    "id": "0e59a4c0-9569-42ff-91b0-16e937dad567",
     "applicant": "관세법인 온유 인천지사",
     "shipper": "남해수산",
     "submittedDate": ""
   },
   {
-    "id": "poa312",
+    "id": "a8baf52a-4c0a-41da-b35e-c0482656c22a",
     "applicant": "은빛관세사",
     "shipper": "동주상역 DONGHU M&T CORP",
     "submittedDate": ""
   },
   {
-    "id": "poa313",
+    "id": "60c162db-79f8-4a49-bde4-a841af0f5bbc",
     "applicant": "제이씨티엘에스",
     "shipper": "에이플러스프레쉬",
     "submittedDate": ""
   },
   {
-    "id": "poa314",
+    "id": "2b239f31-4475-494e-8cdb-036e644978c1",
     "applicant": "유로 관세사무소",
     "shipper": "PHARMIST CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa315",
+    "id": "2e19142c-3250-4d05-8316-149033d987dd",
     "applicant": "선민관세사무소",
     "shipper": "해영물산 HAE YOUNG PRODUCT COLTD",
     "submittedDate": ""
   },
   {
-    "id": "poa316",
+    "id": "ca0076e8-0fbb-4180-8ad2-074fd748f710",
     "applicant": "코리이앤엘",
     "shipper": "주식회사 고트팜",
     "submittedDate": ""
   },
   {
-    "id": "poa317",
+    "id": "a64cfe47-886b-4b6c-a61a-f04fb269e471",
     "applicant": "로지싱크",
     "shipper": "보광 BOGWANG",
     "submittedDate": ""
   },
   {
-    "id": "poa318",
+    "id": "05bb33a6-3c7f-4de5-8440-b5cc1e872b35",
     "applicant": "케이제이티티",
     "shipper": "필립코",
     "submittedDate": ""
   },
   {
-    "id": "poa319",
+    "id": "79e3c4a1-bf5c-4624-9c08-6a89eb67b172",
     "applicant": "제이엠로지스틱스",
     "shipper": "아이엠코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa320",
+    "id": "4ac9a562-fa03-4a1f-aec1-b004ba8d3401",
     "applicant": "신성통운공사",
     "shipper": "금라교역",
     "submittedDate": ""
   },
   {
-    "id": "poa321",
+    "id": "a0a35e47-f254-41f8-8dc4-9a178c7b4fd2",
     "applicant": "대흥기업",
     "shipper": "미아트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa322",
+    "id": "2f310e60-ece6-4d73-8494-437c8e14d0a3",
     "applicant": "아라온지엘에스ARAON GLS CORP",
     "shipper": "대명메라민",
     "submittedDate": ""
   },
   {
-    "id": "poa323",
+    "id": "a7e1d6ae-577c-455b-9237-0b0e3fdf16cd",
     "applicant": "레이딕스",
     "shipper": "KUMHO P&B CHEMICALS",
     "submittedDate": ""
   },
   {
-    "id": "poa324",
+    "id": "cad38d9d-ce5e-4b22-ad4e-8ab8aedae295",
     "applicant": "대건종합물류",
     "shipper": "HANYUNG METAL 한융",
     "submittedDate": ""
   },
   {
-    "id": "poa325",
+    "id": "96e3eef3-bd5b-4bb8-9734-1b59038adaa3",
     "applicant": "로지스퀘어",
     "shipper": "BAYER CROP SCIENCE LP",
     "submittedDate": ""
   },
   {
-    "id": "poa326",
+    "id": "185d475f-3da4-4b10-8a99-a11c1d6fa3df",
     "applicant": "삼현INT",
     "shipper": "주식회사 금화",
     "submittedDate": ""
   },
   {
-    "id": "poa327",
+    "id": "54587af4-8649-4bbe-83a3-fcb71442378e",
     "applicant": "삼현INT",
     "shipper": "주식회사 케이티에스씨",
     "submittedDate": ""
   },
   {
-    "id": "poa328",
+    "id": "ab3876ce-8871-482b-978d-021001b6cdde",
     "applicant": "1208149418 코스타해운항공",
     "shipper": "글로젠",
     "submittedDate": ""
   },
   {
-    "id": "poa329",
+    "id": "cba77fa6-450e-4660-b474-cb3831243e5e",
     "applicant": "주식회사 영로지스",
     "shipper": "블랙앤데커아시아퍼시픽피티이라미티드",
     "submittedDate": ""
   },
   {
-    "id": "poa330",
+    "id": "7f74fd49-334b-4026-acbd-17803f592523",
     "applicant": "씨티아이로지스틱스",
     "shipper": "우진섬유",
     "submittedDate": ""
   },
   {
-    "id": "poa331",
+    "id": "c339b758-05bf-4d59-a943-fc5bc5911f9f",
     "applicant": "동양제지공업",
     "shipper": "프레이트 동키스",
     "submittedDate": ""
   },
   {
-    "id": "poa332",
+    "id": "b61ed5ad-56df-4bf2-b05c-0781758d6613",
     "applicant": "와프코리아",
     "shipper": "JK METAL",
     "submittedDate": ""
   },
   {
-    "id": "poa333",
+    "id": "8c6617ae-5241-4d9f-8bca-78f615c1875e",
     "applicant": "동성항운",
     "shipper": "크레콤",
     "submittedDate": ""
   },
   {
-    "id": "poa334",
+    "id": "ae590dbb-d0bf-4f16-8f2d-e489232e3d3d",
     "applicant": "대호관세법인",
     "shipper": "비케이산업사 BK IND CORP",
     "submittedDate": ""
   },
   {
-    "id": "poa335",
+    "id": "310e1e8a-50d8-41ae-9ccc-b6ea9c363a85",
     "applicant": "세평종합물류",
     "shipper": "이룸푸드시스템",
     "submittedDate": ""
   },
   {
-    "id": "poa336",
+    "id": "e92ff9c1-2954-427e-8986-a3be20242951",
     "applicant": "선민관세사무소",
     "shipper": "DAE HONG OCEAN TRADING COLTD 대홍오션무역",
     "submittedDate": ""
   },
   {
-    "id": "poa337",
+    "id": "f9c934ef-d76f-403e-a628-bca12b19c74e",
     "applicant": "디와이글로벌로지스",
     "shipper": "WOO SUNG M.F CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa338",
+    "id": "edca8759-90f3-49dd-b964-0e22a3bcdeaf",
     "applicant": "제이글로벌해운항공",
     "shipper": "코맥스인터내셔널",
     "submittedDate": ""
   },
   {
-    "id": "poa339",
+    "id": "4c45b6e9-77cd-4fb2-a256-ba6f271449a4",
     "applicant": "지원관세법인",
     "shipper": "주식회사 우리",
     "submittedDate": ""
   },
   {
-    "id": "poa340",
+    "id": "3d8e5f6b-2a9f-4d72-a9f6-e640be0e9589",
     "applicant": "원컨설팅 관세사무소",
     "shipper": "Rasa Rahasa Sds",
     "submittedDate": ""
   },
   {
-    "id": "poa341",
+    "id": "1e830ce8-3b13-40d3-b151-16c4d9330d0a",
     "applicant": "원스탑관세법인",
     "shipper": "오리온 crop",
     "submittedDate": ""
   },
   {
-    "id": "poa342",
+    "id": "77e363f3-d9ac-40f5-b4b9-dbf41316bc37",
     "applicant": "두일월드",
     "shipper": "대한방직",
     "submittedDate": ""
   },
   {
-    "id": "poa343",
+    "id": "8ba218b0-24c0-4bbd-9549-42c9a91a33ae",
     "applicant": "관세법인 드림",
     "shipper": "IL SHIN WORLD일신",
     "submittedDate": ""
   },
   {
-    "id": "poa344",
+    "id": "9dc2e877-492d-4e3a-8bde-1f9f5661dae0",
     "applicant": "와이오엘",
     "shipper": "DUKSAN PURE CHEMICALS CO., LTD 덕산약품공업",
     "submittedDate": ""
   },
   {
-    "id": "poa345",
+    "id": "0bb31b32-00e9-4572-9f0c-ef01f9bcf231",
     "applicant": "흥아로지스틱스",
     "shipper": "켐트로스",
     "submittedDate": ""
   },
   {
-    "id": "poa346",
+    "id": "b1003963-6e37-4fbc-81ed-e7792f3c21ad",
     "applicant": "유토피아물류",
     "shipper": "JEMULPO METAL CO. LTD. 제물포금속",
     "submittedDate": ""
   },
   {
-    "id": "poa347",
+    "id": "79856830-96ba-443d-8b06-3e6ae8a12948",
     "applicant": "관세법인 드림",
     "shipper": "한불",
     "submittedDate": ""
   },
   {
-    "id": "poa348",
+    "id": "0a2848ef-754e-4575-a607-bbf3cbe63d36",
     "applicant": "대흥기업",
     "shipper": "공식엠케이유통",
     "submittedDate": ""
   },
   {
-    "id": "poa349",
+    "id": "1fcff942-e4af-4cb8-9c10-e8ce6224a39d",
     "applicant": "대신관세사무소",
     "shipper": "대창제지",
     "submittedDate": ""
   },
   {
-    "id": "poa350",
+    "id": "56c2cb36-a3e3-4c9b-aac2-645d9e171fdc",
     "applicant": "피에스해운항공",
     "shipper": "카본엑스리사이클링",
     "submittedDate": ""
   },
   {
-    "id": "poa351",
+    "id": "4e22c020-72c4-4005-9c2f-5ad7c857920f",
     "applicant": "진양지에스",
     "shipper": "열매마을",
     "submittedDate": ""
   },
   {
-    "id": "poa352",
+    "id": "3a9a3d33-3abc-4b58-9a9c-056a367df8e8",
     "applicant": "삼현INT",
     "shipper": "더맛있는하루 수도권사업본부",
     "submittedDate": ""
   },
   {
-    "id": "poa353",
+    "id": "827c066e-0cad-4ca1-83e4-bc637cf5f3cd",
     "applicant": "씨디엠해운항공",
     "shipper": "복주",
     "submittedDate": ""
   },
   {
-    "id": "poa354",
+    "id": "246dc077-6446-42d2-a356-5e840e05c996",
     "applicant": "하나로직스",
     "shipper": "에스디무역",
     "submittedDate": ""
   },
   {
-    "id": "poa355",
+    "id": "cdd7e1ab-0ed8-4974-9951-1c8c079e9765",
     "applicant": "엔케이로지스틱스",
     "shipper": "배터리솔루션즈",
     "submittedDate": ""
   },
   {
-    "id": "poa356",
+    "id": "f1d69d65-b072-4b60-8644-7044a673016b",
     "applicant": "팜한농 플라잉타이거즈",
     "shipper": "DONGJIN SEMICHEM",
     "submittedDate": ""
   },
   {
-    "id": "poa357",
+    "id": "af652efe-ef20-4fcf-b379-f459cd1bc693",
     "applicant": "삼영관세사",
     "shipper": "삼성에프씨",
     "submittedDate": ""
   },
   {
-    "id": "poa358",
+    "id": "e5db0cb2-991f-455b-a4c8-21019a3b73ac",
     "applicant": "고려물류컨설팅",
     "shipper": "뉴젠글로벌",
     "submittedDate": ""
   },
   {
-    "id": "poa359",
+    "id": "7439783a-1053-438e-b5f6-98987fe79b5b",
     "applicant": "대흥기업",
     "shipper": "주식회사 신진미트",
     "submittedDate": ""
   },
   {
-    "id": "poa360",
+    "id": "b91ab05f-ca75-46e9-9e4b-392f3ea10228",
     "applicant": "진성종합상운",
     "shipper": "PJ ENS CO., LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa361",
+    "id": "f1301bf2-a8f2-414f-b5ee-db5e18090b31",
     "applicant": "강산통운",
     "shipper": "한국알스트롬 AHILSTROM KOREA CO., LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa362",
+    "id": "288d243a-36ce-4e2c-85ca-a21f9f6c2a66",
     "applicant": "인터지스",
     "shipper": "후성",
     "submittedDate": ""
   },
   {
-    "id": "poa363",
+    "id": "da75c633-8d9b-4cf9-be9c-e44e24712e23",
     "applicant": "유신관세법인 삼현 INT",
     "shipper": "삼양사 판교",
     "submittedDate": ""
   },
   {
-    "id": "poa364",
+    "id": "6c549f1e-065d-4be0-bac7-d4b2246e139e",
     "applicant": "삼원관세사무소",
     "shipper": "제이앤드케이",
     "submittedDate": ""
   },
   {
-    "id": "poa365",
+    "id": "dee8eafd-100b-440e-863c-76f0acfdbdb6",
     "applicant": "동명에이엔관세사무소",
     "shipper": "피플스",
     "submittedDate": ""
   },
   {
-    "id": "poa366",
+    "id": "df12df42-6f60-45c4-926a-6c620730967f",
     "applicant": "대동종합물류",
     "shipper": "디아이동일",
     "submittedDate": ""
   },
   {
-    "id": "poa367",
+    "id": "f28dfe4b-2a9c-46fe-86c6-0574d497b845",
     "applicant": "동국로지스틱스",
     "shipper": "원익머트리얼즈",
     "submittedDate": ""
   },
   {
-    "id": "poa368",
+    "id": "6d899b78-1540-4324-b4ee-4fc28c780deb",
     "applicant": "관세법인 온유 인천지사",
     "shipper": "램플러스",
     "submittedDate": ""
   },
   {
-    "id": "poa369",
+    "id": "e9cc160a-18c2-4c8b-a6d0-b4f1f8fb79f1",
     "applicant": "삼성글로텍",
     "shipper": "HRM",
     "submittedDate": ""
   },
   {
-    "id": "poa370",
+    "id": "ecb7d15a-2c74-4d2d-8908-7f5329bd2fd3",
     "applicant": "씨티엘물류",
     "shipper": "금성건설",
     "submittedDate": ""
   },
   {
-    "id": "poa371",
+    "id": "78590cf9-ee6b-46d7-aa87-4adae4f2583c",
     "applicant": "디더블유로지스틱스",
     "shipper": "오영",
     "submittedDate": ""
   },
   {
-    "id": "poa372",
+    "id": "a27b209e-f58b-4832-8348-dae3f3654baf",
     "applicant": "관세법인한림",
     "shipper": "서해 TC",
     "submittedDate": ""
   },
   {
-    "id": "poa373",
+    "id": "4558782d-7e5c-4861-acc7-8673489aa0a5",
     "applicant": "관세법인진명",
     "shipper": "링스업",
     "submittedDate": ""
   },
   {
-    "id": "poa374",
+    "id": "dadf8145-e9b0-4093-8eb1-36bb4c099c98",
     "applicant": "동아관세법인",
     "shipper": "이음케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa375",
+    "id": "e5a1f1ca-d3b9-4e02-a810-d95faa99d15a",
     "applicant": "관세법인탑스",
     "shipper": "케미칼테크",
     "submittedDate": ""
   },
   {
-    "id": "poa376",
+    "id": "7de3121f-ccf5-4441-9bde-34ee776c9bc0",
     "applicant": "온로드로지스틱스",
     "shipper": "호산케미칼 HOSAN",
     "submittedDate": ""
   },
   {
-    "id": "poa377",
+    "id": "0532431a-0c3d-4708-aa90-ee607956305b",
     "applicant": "대산로지스틱스",
     "shipper": "산일파마",
     "submittedDate": ""
   },
   {
-    "id": "poa378",
+    "id": "8488776f-f50d-413d-a5a3-3a81692e6c60",
     "applicant": "인터지스",
     "shipper": "HANYANG INDUSTRIAL 한양특수",
     "submittedDate": ""
   },
   {
-    "id": "poa379",
+    "id": "8d313969-5646-4a3b-9f1a-fc2bacef97fb",
     "applicant": "은성로직스",
     "shipper": "우진종합상사",
     "submittedDate": ""
   },
   {
-    "id": "poa380",
+    "id": "ddade483-45be-40a9-ae00-9ffff7505180",
     "applicant": "한국종합물류",
     "shipper": "아이비티 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa381",
+    "id": "1d988916-4f61-492c-b1e6-b0af4ad360ab",
     "applicant": "금우기업",
     "shipper": "세주기업",
     "submittedDate": ""
   },
   {
-    "id": "poa382",
+    "id": "217bb826-130a-4dad-89c9-ffede1f59a19",
     "applicant": "태원종합물류",
     "shipper": "아이피케이",
     "submittedDate": ""
   },
   {
-    "id": "poa383",
+    "id": "6dce89fe-2b45-4ef6-b59c-8b0d751adfa6",
     "applicant": "광진종합물류",
     "shipper": "MOM'S TOUCH CO맘스터치",
     "submittedDate": ""
   },
   {
-    "id": "poa384",
+    "id": "adb246bf-9053-463d-acec-73d52521aa7c",
     "applicant": "평창무역",
     "shipper": "KOREA INDUSTRIAL CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa385",
+    "id": "f93b800f-8ac6-4a23-a6e9-dfcb9e93a942",
     "applicant": "고려물류컨설팅",
     "shipper": "굿스트레이딩",
     "submittedDate": ""
   },
   {
-    "id": "poa386",
+    "id": "84ecc417-ff0b-4ccb-8a8e-ecd9e18f841f",
     "applicant": "네스트씨앤에어",
     "shipper": "주식회사 하이베러",
     "submittedDate": ""
   },
   {
-    "id": "poa387",
+    "id": "cce2bdb3-7b07-4f7a-882e-e8f4c6d8b20b",
     "applicant": "삼현INT",
     "shipper": "현대코퍼레이션홀딩스(주) 경기지사",
     "submittedDate": ""
   },
   {
-    "id": "poa388",
+    "id": "c4b988c9-45b1-4c18-a4ec-8d52797f5572",
     "applicant": "아인종합물류",
     "shipper": "CHANMI",
     "submittedDate": ""
   },
   {
-    "id": "poa389",
+    "id": "0e7dfeee-2997-4e72-b74d-ec8d46e5757a",
     "applicant": "제이큐로지스틱스",
     "shipper": "코오롱바스프이노폼",
     "submittedDate": ""
   },
   {
-    "id": "poa390",
+    "id": "64245183-fd47-43fc-8bdc-0ad32b5c993e",
     "applicant": "제이큐로지스틱스",
     "shipper": "코오롱인더스트리",
     "submittedDate": ""
   },
   {
-    "id": "poa391",
+    "id": "affbf6be-fa06-4560-872a-35e3d3549318",
     "applicant": "화창합동관세사무소",
     "shipper": "씨티엔",
     "submittedDate": ""
   },
   {
-    "id": "poa392",
+    "id": "8d9d4938-8b13-473f-b9c6-022b12929970",
     "applicant": "세코글로벌로지스틱스코리아",
     "shipper": "백이무역 주식회사 BAEKYI TRADING CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa393",
+    "id": "349da7be-30ac-4d1f-a611-d289a1ecfb58",
     "applicant": "태흥글로벌",
     "shipper": "MASUNG LS마성엘에스",
     "submittedDate": ""
   },
   {
-    "id": "poa394",
+    "id": "557d40a3-1441-4d9b-9d5b-f4536806e28b",
     "applicant": "상록로지텍코리아",
     "shipper": "한국연식품현동조합연합회",
     "submittedDate": ""
   },
   {
-    "id": "poa395",
+    "id": "f6457ee9-13e9-4ea7-b198-33d9b8a307c1",
     "applicant": "정도관세사무소",
     "shipper": "태림팀버",
     "submittedDate": ""
   },
   {
-    "id": "poa396",
+    "id": "d78b039b-362a-4c5b-a13b-b4db60c978ed",
     "applicant": "주식회사 블리스로지스틱스",
     "shipper": "주식회사 슈가에코",
     "submittedDate": ""
   },
   {
-    "id": "poa397",
+    "id": "cb24e394-a845-4fe4-b64c-a8ba3414eac8",
     "applicant": "한국관세사무소",
     "shipper": "지오파티인터내셔날",
     "submittedDate": ""
   },
   {
-    "id": "poa398",
+    "id": "4ab1ccd3-2849-4e30-8888-31bbf5f441a8",
     "applicant": "송도신항관세사무소",
     "shipper": "이케이투르크",
     "submittedDate": ""
   },
   {
-    "id": "poa399",
+    "id": "d58056ec-f784-49d5-94ad-dd2abbd0ff34",
     "applicant": "대신관세사무소",
     "shipper": "실바코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa400",
+    "id": "990763e4-5cfd-4fef-914b-8dd6fdb80888",
     "applicant": "박사종합물류",
     "shipper": "KBI METAL CO.,LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa401",
+    "id": "359b0fb3-b65c-4832-9a69-64d70a3bea41",
     "applicant": "천일",
     "shipper": "화남피혁",
     "submittedDate": ""
   },
   {
-    "id": "poa402",
+    "id": "006e22f8-167d-46be-a070-a22a99f2c981",
     "applicant": "에이왓글로벌로지스틱스",
     "shipper": "한국필립모리스 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa403",
+    "id": "c75b690d-615f-41f3-ac4b-db87450182a2",
     "applicant": "유니온케미칼 익산",
     "shipper": "유니온케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa404",
+    "id": "f7c4bb74-42d8-4b02-8fd4-2482c2191c62",
     "applicant": "유월통상",
     "shipper": "승우목재",
     "submittedDate": ""
   },
   {
-    "id": "poa405",
+    "id": "29bf9fec-d895-4fa0-acf9-f9ec8de158e6",
     "applicant": "관세법인 대유",
     "shipper": "아로마솔루션",
     "submittedDate": ""
   },
   {
-    "id": "poa406",
+    "id": "a3f8424b-a80f-47a1-b748-def150735a26",
     "applicant": "신승종합물류",
     "shipper": "몽돌",
     "submittedDate": ""
   },
   {
-    "id": "poa407",
+    "id": "167dd51e-a4f8-4b28-a3c7-bfd50b6d7f76",
     "applicant": "한도종합물류",
     "shipper": "건보유통",
     "submittedDate": ""
   },
   {
-    "id": "poa408",
+    "id": "649a28f2-4060-44b0-ae61-9a38946c2d8b",
     "applicant": "로프트로지스틱스",
     "shipper": "AVANTOR PERFORMANCE",
     "submittedDate": ""
   },
   {
-    "id": "poa409",
+    "id": "28b49355-cf7a-4f68-8550-8b49db85d780",
     "applicant": "광진종합물류",
     "shipper": "SB SUNGBO CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa410",
+    "id": "9855e2e3-1373-466f-bd89-49879aca4cde",
     "applicant": "케이제이상사",
     "shipper": "한국팥류가공협동조합",
     "submittedDate": ""
   },
   {
-    "id": "poa411",
+    "id": "2b4a8df7-77d6-434c-8ce7-88d7794b4958",
     "applicant": "하나로티앤에스부산",
     "shipper": "삼진식품",
     "submittedDate": ""
   },
   {
-    "id": "poa412",
+    "id": "c1c97e19-1081-4332-a408-1e1fdf05cfb7",
     "applicant": "씨티아이글로벌",
     "shipper": "CSF CORPORATION",
     "submittedDate": ""
   },
   {
-    "id": "poa413",
+    "id": "91227f7a-b904-492b-82de-fa85e67022a4",
     "applicant": "씨제이대한통운",
     "shipper": "에쓰오일",
     "submittedDate": ""
   },
   {
-    "id": "poa414",
+    "id": "37040beb-cb34-4e0b-9391-f9c8b3098e52",
     "applicant": "천우관세사무소",
     "shipper": "서연우드",
     "submittedDate": ""
   },
   {
-    "id": "poa415",
+    "id": "3d571221-6d93-4f81-a49f-9b229ba99b59",
     "applicant": "한경합동관세사무소",
     "shipper": "지에프아이",
     "submittedDate": ""
   },
   {
-    "id": "poa416",
+    "id": "513b8614-6236-4025-9090-35ac79ab22d9",
     "applicant": "서울홍신관세사무소",
     "shipper": "동양에프티",
     "submittedDate": ""
   },
   {
-    "id": "poa417",
+    "id": "cf7b62c9-96ae-4e2a-9a7f-dc3443af2bbc",
     "applicant": "씨제이대한통운",
     "shipper": "서울우유협동조합SEOUL DAIRY",
     "submittedDate": ""
   },
   {
-    "id": "poa418",
+    "id": "fc6089d3-c6e4-413c-84fc-39b7dcbd5bc4",
     "applicant": "관세법인드림",
     "shipper": "피앤오케미칼P&O CHEMICAL CO LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa419",
+    "id": "4cc663cf-ba32-45d8-a5cd-8e1160a0d69b",
     "applicant": "한상기업",
     "shipper": "한솔케미칼 울산공장",
     "submittedDate": ""
   },
   {
-    "id": "poa420",
+    "id": "5b081a23-77bc-4a0b-8774-c8ba0748df16",
     "applicant": "나이스물류",
     "shipper": "ILCHOO CORPORATION 일주물산",
     "submittedDate": ""
   },
   {
-    "id": "poa421",
+    "id": "77d84ae6-78db-4d19-8ece-5b96dba8c3ce",
     "applicant": "세기특수",
     "shipper": "유한킴벌리",
     "submittedDate": ""
   },
   {
-    "id": "poa422",
+    "id": "7cef2ef6-b2de-4a8f-b0a9-1f09a6f88b98",
     "applicant": "관세법인 광장",
     "shipper": "태광산업",
     "submittedDate": ""
   },
   {
-    "id": "poa423",
+    "id": "20eba145-016a-4061-a55b-f9857572a80f",
     "applicant": "인천대림관세사무소",
     "shipper": "영림화학",
     "submittedDate": ""
   },
   {
-    "id": "poa424",
+    "id": "910b3286-8e17-4937-a12c-3f85106cc298",
     "applicant": "제이씨티엘에스",
     "shipper": "태봉",
     "submittedDate": ""
   },
   {
-    "id": "poa425",
+    "id": "0c559bbd-1627-4bc9-bcda-2cca992ad480",
     "applicant": "동진관세사법인",
     "shipper": "한국삼공",
     "submittedDate": ""
   },
   {
-    "id": "poa426",
+    "id": "fc899f2f-184d-456d-8578-2b61eb9e85c2",
     "applicant": "액세스월드코리아 유한회사",
     "shipper": "인천지방조달청 Public Procurement Service",
     "submittedDate": ""
   },
   {
-    "id": "poa427",
+    "id": "fa967254-69c5-4b0a-8c4d-58c09c496e81",
     "applicant": "삼현INT",
     "shipper": "롯데상사",
     "submittedDate": ""
   },
   {
-    "id": "poa428",
+    "id": "cf2ed631-25b3-40b9-8a36-26ca05384dc7",
     "applicant": "다원관세법인",
     "shipper": "신안포장산업",
     "submittedDate": ""
   },
   {
-    "id": "poa429",
+    "id": "5ff2dbdc-09b4-4f19-9bc3-37e551bf282f",
     "applicant": "(유)에이치엘로지스 액세스월드부산유한회사",
     "shipper": "대한전선 Taihan Cable & Solution Co.,",
     "submittedDate": ""
   },
   {
-    "id": "poa430",
+    "id": "c3d59662-3f57-4e30-a5d7-8e39bdca47da",
     "applicant": "Ltd 삼현int",
     "shipper": "주식회사 씨케이 인터내셔날",
     "submittedDate": ""
   },
   {
-    "id": "poa431",
+    "id": "2bd749da-64c0-46d8-9f33-985f463f682d",
     "applicant": "삼현INT",
     "shipper": "주식회사 세원푸드시스템",
     "submittedDate": ""
   },
   {
-    "id": "poa432",
+    "id": "b4d9114c-e2a9-43ac-aac2-75b00b65e4ba",
     "applicant": "비제이로지스틱스",
     "shipper": "(주)평안식품",
     "submittedDate": ""
   },
   {
-    "id": "poa433",
+    "id": "cae92167-1f86-40be-b791-95f6e13e60fa",
     "applicant": "띠아모관세사무소",
     "shipper": "썬시스템즈",
     "submittedDate": ""
   },
   {
-    "id": "poa434",
+    "id": "64533ba2-f6a9-4c06-a800-cf4f72fe8183",
     "applicant": "샤이닝스타씨엔에어코리아",
     "shipper": "아이엔에스",
     "submittedDate": ""
   },
   {
-    "id": "poa435",
+    "id": "7ce86034-2fd2-420b-bdab-d04c1642e016",
     "applicant": "에스티해운",
     "shipper": "영동특수목재",
     "submittedDate": ""
   },
   {
-    "id": "poa436",
+    "id": "faf16a77-2c80-49b6-9d59-e26a63e34102",
     "applicant": "동양관세사",
     "shipper": "CALS CORPORATION",
     "submittedDate": ""
   },
   {
-    "id": "poa437",
+    "id": "b4c2f4ee-0a28-4be8-81e3-866e39a37ac3",
     "applicant": "제이글로벌해운항공",
     "shipper": "크래프트브로스 주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa438",
+    "id": "d58f6b6b-0f68-4363-b154-8ceef33f8258",
     "applicant": "마이다스국제물류",
     "shipper": "OCI COMPANY LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa439",
+    "id": "2ad0ca9f-2bc5-44b7-8c55-8b077667a67d",
     "applicant": "제이에스글로벌해운항공",
     "shipper": "대한조선",
     "submittedDate": "2025-11-12"
   },
   {
-    "id": "poa440",
+    "id": "0c88d724-1776-4425-b018-cac14c1bf6cf",
     "applicant": "홍신로지스",
     "shipper": "지코ZIKO",
     "submittedDate": "2025-11-12"
   },
   {
-    "id": "poa441",
+    "id": "04711b94-d222-4700-bb05-922f7868f484",
     "applicant": "엘엑스판토스",
     "shipper": "한국바스프주식회사",
     "submittedDate": "2025-11-12"
   },
   {
-    "id": "poa442",
+    "id": "b4bb4d7d-4198-485a-bbe6-1c18f81e2d37",
     "applicant": "하나종합물류",
     "shipper": "(주)단팔코리아",
     "submittedDate": ""
   },
   {
-    "id": "poa443",
+    "id": "5578b0e6-6b2d-4b49-988c-2d0fd3a9cf7a",
     "applicant": "관세법인에스유",
     "shipper": "제이돔주식회사 25..11.14~",
     "submittedDate": ""
   },
   {
-    "id": "poa444",
+    "id": "a7368a90-bf21-420b-a23e-9daeba885392",
     "applicant": "부림교역",
     "shipper": "HH유통",
     "submittedDate": "2025-11-14"
   },
   {
-    "id": "poa445",
+    "id": "584a9edc-527b-49ae-bd05-c8ffc9e1c984",
     "applicant": "엘에스로직스",
     "shipper": "SEWON COMMERCIAL CO LTD세원종합상사",
     "submittedDate": "2025-11-18"
   },
   {
-    "id": "poa446",
+    "id": "f32b5704-ada4-4eaa-9e6a-a2a8b81f5ba6",
     "applicant": "강진부산관세사무소",
     "shipper": "우신금속",
     "submittedDate": "2025-12-03"
   },
   {
-    "id": "poa447",
+    "id": "e3d25dce-0df8-4f25-aa6d-29eb89cdd28f",
     "applicant": "대성로직스",
     "shipper": "광명금속",
     "submittedDate": "2025-12-04"
   },
   {
-    "id": "poa448",
+    "id": "05c84aca-5a8f-4996-b2e0-b528fe4af045",
     "applicant": "주식회사 청강",
     "shipper": "(주) 제이에이치엘코포레이션",
     "submittedDate": "2025-12-10"
   },
   {
-    "id": "poa449",
+    "id": "e4d7dba6-ae15-4abf-b3a8-471f77f9166b",
     "applicant": "은산해운항공",
     "shipper": "신일피앤에스",
     "submittedDate": "2025-12-12"
   },
   {
-    "id": "poa450",
+    "id": "a9930578-a2ad-4f6e-9b49-835fc101c2dc",
     "applicant": "아태물류",
     "shipper": "수일통상",
     "submittedDate": "2025-12-15"
   },
   {
-    "id": "poa451",
+    "id": "9dcb4dbe-3ffe-4a31-a44f-e03f2ab4ab2b",
     "applicant": "서한종합물류",
     "shipper": "라비오",
     "submittedDate": "2025-10-15"
   },
   {
-    "id": "poa452",
+    "id": "8349bc39-3ea1-4a8d-91c4-26198fb033ee",
     "applicant": "동신종합물류",
     "shipper": "(주) 케이피씨아이앤씨",
     "submittedDate": "2025-12-15"
   },
   {
-    "id": "poa453",
+    "id": "e1d3d254-2527-4607-91e7-2719dd350039",
     "applicant": "삼현INT",
     "shipper": "(주)미트내츄럴",
     "submittedDate": ""
   },
   {
-    "id": "poa454",
+    "id": "0767eb1d-8e54-45e0-8ce6-bb47e8d8936b",
     "applicant": "닥터물류",
     "shipper": "동현",
     "submittedDate": ""
   },
   {
-    "id": "poa455",
+    "id": "6ce7fbe6-ef2d-4f73-a7c9-68bf25df0dba",
     "applicant": "(주)클로버엔터프라이즈",
     "shipper": "(주) 산양미트",
     "submittedDate": ""
   },
   {
-    "id": "poa456",
+    "id": "70e5db83-7f80-4808-9bb7-533c57e40c18",
     "applicant": "하나로직스",
     "shipper": "주식회사 대한무역",
     "submittedDate": ""
   },
   {
-    "id": "poa457",
+    "id": "ce068dba-6e36-4d2b-81b0-ff5a3b2773dc",
     "applicant": "국제물류 주식회사",
     "shipper": "인터피드",
     "submittedDate": ""
   },
   {
-    "id": "poa458",
+    "id": "4517de7c-9a2e-49dc-8de6-6de5c0461a1a",
     "applicant": "(주)아태물류",
     "shipper": "피에스케이 인터내셔널 PSK International Inc.",
     "submittedDate": ""
   },
   {
-    "id": "poa459",
+    "id": "f7263a51-6222-42b2-88c4-3b9f069d49c8",
     "applicant": "한익스프레스",
     "shipper": "HANWHA AEROSPACE (주) 한화에어로스페이스",
     "submittedDate": ""
   },
   {
-    "id": "poa460",
+    "id": "7a4e792c-4f25-4c64-85b4-bdcae5d79698",
     "applicant": "명지합동관세사무소",
     "shipper": "참트레이딩 CHAM TRADING",
     "submittedDate": ""
   },
   {
-    "id": "poa461",
+    "id": "574e9704-b027-4eb2-87af-e99230584205",
     "applicant": "(주)클로버엔터프라이즈",
     "shipper": "(주)에스앤비무역",
     "submittedDate": ""
   },
   {
-    "id": "poa462",
+    "id": "636afec2-511d-4df8-bdd0-5e02d5ec5b85",
     "applicant": "대흥기업",
     "shipper": "시그마",
     "submittedDate": ""
   },
   {
-    "id": "poa463",
+    "id": "df380ba5-24f2-478c-ba86-87d6694c4488",
     "applicant": "메가쉬핑글로벌",
     "shipper": "광성특수목재상사",
     "submittedDate": ""
   },
   {
-    "id": "poa464",
+    "id": "d35b909d-16ff-4244-9243-80761364084c",
     "applicant": "대흥기업",
     "shipper": "(주)미아트레이딩",
     "submittedDate": "2026-01-02"
   },
   {
-    "id": "poa465",
+    "id": "5e2f07db-e75f-4952-861b-509edd75785c",
     "applicant": "씨제이대한통운",
     "shipper": "(주) 주피터",
     "submittedDate": ""
   },
   {
-    "id": "poa466",
+    "id": "2eefe005-293c-426d-8be0-3667e4903831",
     "applicant": "관세법인진명",
     "shipper": "주피터인터내셔널",
     "submittedDate": "2025-10-20"
   },
   {
-    "id": "poa467",
+    "id": "9f6528ae-ed38-4b49-af0a-8b8c0f3314eb",
     "applicant": "신승종합물류",
     "shipper": "(주)한성무역",
     "submittedDate": "2026-01-05"
   },
   {
-    "id": "poa468",
+    "id": "46f79837-6831-41a4-99b9-f474ac7a3851",
     "applicant": "씨티씨종합물류",
     "shipper": "노벨리스코리아",
     "submittedDate": "2026-01-06"
   },
   {
-    "id": "poa469",
+    "id": "a3555293-23f1-44b0-9908-d274fc6a0692",
     "applicant": "부경관세법인",
     "shipper": "(주) 유니메탈",
     "submittedDate": "2026-01-06"
   },
   {
-    "id": "poa470",
+    "id": "0885b533-6dc3-41e5-85e8-56da8d9e73d8",
     "applicant": "경기관세법인",
     "shipper": "(주)오뚜기",
     "submittedDate": "2026-01-07"
   },
   {
-    "id": "poa471",
+    "id": "7f720037-aba9-4c19-a066-67132a5d68ac",
     "applicant": "관세법인지오",
     "shipper": "대한뉴팜",
     "submittedDate": "2026-01-08"
   },
   {
-    "id": "poa472",
+    "id": "09c5209d-9579-442b-a2a6-a764c90d1959",
     "applicant": "영로지스",
     "shipper": "주식회사 나무",
     "submittedDate": ""
   },
   {
-    "id": "poa473",
+    "id": "65fcdc06-651d-4937-8db7-82ca1e46fd87",
     "applicant": "동북관세법인",
     "shipper": "천우물산",
     "submittedDate": "2026-01-09"
   },
   {
-    "id": "poa474",
+    "id": "76143b7b-809f-4d24-9cdc-e632a931855d",
     "applicant": "씨제이대한통운",
     "shipper": "PPG INDUSTRIES KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa475",
+    "id": "cb3a2508-89c8-4841-8c2b-90fe1ec96624",
     "applicant": "농물류",
     "shipper": "미쉐린코리아 michelinkoera",
     "submittedDate": ""
   },
   {
-    "id": "poa476",
+    "id": "f7d8249c-5e54-49b9-a817-b3ea0e1b6cc5",
     "applicant": "(주)보성",
     "shipper": "주식회사 엔에이치농협무역",
     "submittedDate": ""
   },
   {
-    "id": "poa477",
+    "id": "09ad2467-b8fd-4628-8dd1-aa54f10cc999",
     "applicant": "(주)씨앤아이 해운항공",
     "shipper": "SEOWON 서원양행",
     "submittedDate": "2026-01-13"
   },
   {
-    "id": "poa478",
+    "id": "90ce2ae9-ede8-4470-b0c2-3a035706ab72",
     "applicant": "(주)클로버엔터프라이즈",
     "shipper": "(주)미트뱅크",
     "submittedDate": ""
   },
   {
-    "id": "poa479",
+    "id": "029e4864-efe5-4a5f-ab74-13d0e9db1acc",
     "applicant": "우양익스프레스",
     "shipper": "모두스(주)",
     "submittedDate": ""
   },
   {
-    "id": "poa480",
+    "id": "b7ce4e5f-7d9f-4ddd-93bd-9d985aa5f8d8",
     "applicant": "정트랜스월드 주식회사",
     "shipper": "KUKJE HOUSING CO L",
     "submittedDate": "2026-01-21"
   },
   {
-    "id": "poa481",
+    "id": "6d9a4d50-aa20-4d4a-a748-d746906dd2c2",
     "applicant": "대흥기업",
     "shipper": "(주)동이무역",
     "submittedDate": "2026-01-15"
   },
   {
-    "id": "poa482",
+    "id": "8c732e6c-3d96-401e-87d2-ce6cf39b00a4",
     "applicant": "우신로지스틱",
     "shipper": "(주)오엠씨해외통상",
     "submittedDate": "2026-01-16"
   },
   {
-    "id": "poa483",
+    "id": "fd3284fe-1208-481b-8f7e-936536db9978",
     "applicant": "(주) 네원로지스틱스",
     "shipper": "주식회사 비에이 BAKOREA",
     "submittedDate": "2026-01-19"
   },
   {
-    "id": "poa484",
+    "id": "ad8c8ac4-61e3-47b5-b922-b92cf4831fb4",
     "applicant": "한경합동관세사무소",
     "shipper": "(주)오피아이",
     "submittedDate": "2026-01-19"
   },
   {
-    "id": "poa485",
+    "id": "da98a9d7-5c8e-4396-9ca1-07d79af131b8",
     "applicant": "한국프라켐",
     "shipper": "(주)마이다스유나이티드",
     "submittedDate": "2026-01-19"
   },
   {
-    "id": "poa486",
+    "id": "5b9bdb15-0604-46df-8582-93912fce7342",
     "applicant": "원진티엘에스",
     "shipper": "코리아카고 KOREA CARGO",
     "submittedDate": "2026-01-20"
   },
   {
-    "id": "poa487",
+    "id": "a379db77-91d8-4603-aa92-4a6cab3d1383",
     "applicant": "성지관세사",
     "shipper": "(주) 대중종합목재",
     "submittedDate": "2026-01-20"
   },
   {
-    "id": "poa488",
+    "id": "e799a881-3171-4637-a301-c5eadc4056c5",
     "applicant": "지원관세법인",
     "shipper": "주식회사",
     "submittedDate": ""
   },
   {
-    "id": "poa489",
+    "id": "b833c548-8a9a-4b37-aaf9-42b42e2562ab",
     "applicant": "화진국제물류",
     "shipper": "(주)하나윈 사료사업부",
     "submittedDate": "2026-01-20"
   },
   {
-    "id": "poa490",
+    "id": "c8a3054d-663e-4d2d-b384-aad914c7656e",
     "applicant": "(주)금강로지스틱스",
     "shipper": "(주)청우테크",
     "submittedDate": "2026-01-20"
   },
   {
-    "id": "poa491",
+    "id": "46611e41-994e-4510-8ade-79ccd428a519",
     "applicant": "스타콩코드코리아(주)",
     "shipper": "웰크론헬스케어",
     "submittedDate": "2026-01-21"
   },
   {
-    "id": "poa492",
+    "id": "250d84b1-860d-46ce-9536-aa3b027ab662",
     "applicant": "(주)대하프리존",
     "shipper": "대한뉴팜",
     "submittedDate": "2026-01-21"
   },
   {
-    "id": "poa493",
+    "id": "e044cef8-6c41-43ee-a3da-e814d09eeaec",
     "applicant": "관세법인 다함광양지사",
     "shipper": "대한싸이로(주)",
     "submittedDate": "2026-01-21"
   },
   {
-    "id": "poa494",
+    "id": "8704deeb-6b8b-4443-a6e1-68555e04499f",
     "applicant": "한솔로지스틱스",
     "shipper": "한솔제지",
     "submittedDate": "2026-01-22"
   },
   {
-    "id": "poa495",
+    "id": "d093f5e3-b019-4ed9-b583-88af5e44ff88",
     "applicant": "영로지스(주)",
     "shipper": "주식회사 나무",
     "submittedDate": "2025-12-16"
   },
   {
-    "id": "poa496",
+    "id": "1e080d10-3665-403b-94b3-8f5b2c213816",
     "applicant": "혜성물류",
     "shipper": "비즈랩",
     "submittedDate": ""
   },
   {
-    "id": "poa497",
+    "id": "67719b36-c59a-40d2-a8e3-6703085c13da",
     "applicant": "디와이디해운항공",
     "shipper": "CHLLITE KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa498",
+    "id": "24d44283-e5f2-4236-b2ed-b5f7b0300039",
     "applicant": "(주)해양로지텍",
     "shipper": "(주)제이앤이",
     "submittedDate": ""
   },
   {
-    "id": "poa499",
+    "id": "f2f9c2cf-ae30-4f71-8b66-1839cf41afc8",
     "applicant": "맥스글로벌(주)",
     "shipper": "(주)에이치엔아이",
     "submittedDate": ""
   },
   {
-    "id": "poa500",
+    "id": "cec98a4b-2315-4c18-854d-6f97bcdaa816",
     "applicant": "성지관세사",
     "shipper": "(주)대중종합목재",
     "submittedDate": ""
   },
   {
-    "id": "poa501",
+    "id": "1a6d31a6-7ee2-4d50-aeea-88c860cd4e45",
     "applicant": "지에스칼텍스",
     "shipper": "세진통운",
     "submittedDate": ""
   },
   {
-    "id": "poa502",
+    "id": "1bb93317-0064-434d-9cc4-3545b0c85a42",
     "applicant": "대경글로벌로지텍",
     "shipper": "MIWON COMMERCIAL CO.,LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa503",
+    "id": "4541f449-e775-4c2e-a7ef-8ae928c147f4",
     "applicant": "국일제지",
     "shipper": "창해지엘에스",
     "submittedDate": ""
   },
   {
-    "id": "poa504",
+    "id": "916bd2f8-2a0b-4028-9a5d-cc9855e10c67",
     "applicant": "(주)시나몬랩",
     "shipper": "해봄관세사무소",
     "submittedDate": ""
   },
   {
-    "id": "poa505",
+    "id": "ea15cd75-b446-4de6-9ba4-a3b5ee0edae7",
     "applicant": "관세법인 온유 인천지사",
     "shipper": "(주)인터리빙",
     "submittedDate": ""
   },
   {
-    "id": "poa506",
+    "id": "896a034c-2b91-4e0d-a7bf-82b8d9613acd",
     "applicant": "(주)씨엔에스로직스",
     "shipper": "SHINKWANG FOOD",
     "submittedDate": ""
   },
   {
-    "id": "poa507",
+    "id": "3a92f2af-f602-40c0-b870-c74bb9c6e582",
     "applicant": "관세법인진명",
     "shipper": "주식회사 마리",
     "submittedDate": ""
   },
   {
-    "id": "poa508",
+    "id": "b79319e3-9aca-4eb7-9adb-d0bda0e3ec8f",
     "applicant": "천로지스틱스",
     "shipper": "동암식품",
     "submittedDate": ""
   },
   {
-    "id": "poa509",
+    "id": "52151d57-babc-4898-b14d-e57a792c68ff",
     "applicant": "(SYNGENTA)신젠타코리아(주)",
     "shipper": "엠트랜스해운항공",
     "submittedDate": "2026-01-23"
   },
   {
-    "id": "poa510",
+    "id": "7b8ef356-fa38-49a9-82ee-3fc291e0b05c",
     "applicant": "진성관세법인",
     "shipper": "(주)케이에스우드",
     "submittedDate": "2026-01-23"
   },
   {
-    "id": "poa511",
+    "id": "4db58215-63ab-4639-9c3c-6ede85e79da7",
     "applicant": "수정합동관세사무소",
     "shipper": "DONG IL COLD STORAGE CO.LTD",
     "submittedDate": "2026-01-23"
   },
   {
-    "id": "poa512",
+    "id": "d97d3e53-5957-436a-a3eb-7c2d2a920ed6",
     "applicant": "(주)오이씨월드와이드코리아",
     "shipper": "한국알미늄",
     "submittedDate": "2026-01-26"
   },
   {
-    "id": "poa513",
+    "id": "dec4c155-5beb-4599-9e63-9f5bc5cfef7e",
     "applicant": "보네코",
     "shipper": "(주)클로버엔터프라이즈",
     "submittedDate": "2026-01-26"
   },
   {
-    "id": "poa514",
+    "id": "f6995ed9-b4a2-4f7b-94b8-e7f0072e9b92",
     "applicant": "인터지스(주)",
     "shipper": "후성",
     "submittedDate": "2026-01-27"
   },
   {
-    "id": "poa515",
+    "id": "00c802f1-4070-462b-ac8c-9ab6ac78dd2e",
     "applicant": "세방익스프레스(주)",
     "shipper": "NEW HOUSING HOME 뉴하우징홈",
     "submittedDate": "2026-01-27"
   },
   {
-    "id": "poa516",
+    "id": "82b98380-5ffd-4c18-9863-a7cde7d3f7c7",
     "applicant": "PRIME GLOBAL LOGISTICS CO., LTD 프라임글로벌로지스틱스",
     "shipper": "한국미래소재",
     "submittedDate": ""
   },
   {
-    "id": "poa517",
+    "id": "42329c34-decc-4931-b128-3d4000d91bc1",
     "applicant": "(주) 삼영관세사",
     "shipper": "(주)한국특수잉크공업",
     "submittedDate": "2026-01-27"
   },
   {
-    "id": "poa518",
+    "id": "83ca8ff8-b1f5-4400-8143-211963a333b9",
     "applicant": "하나로직스",
     "shipper": "신선메탈무역",
     "submittedDate": "2026-01-27"
   },
   {
-    "id": "poa519",
+    "id": "3ad5e0b7-ce86-4b68-9e7c-8cb7dd61eed4",
     "applicant": "관세법인 티비엔",
     "shipper": "리펄트레이딩",
     "submittedDate": "2026-01-28"
   },
   {
-    "id": "poa520",
+    "id": "af5b5e5d-97a6-4828-bc99-18312c49bdcf",
     "applicant": "신한관세법인",
     "shipper": "세창수산",
     "submittedDate": "2026-01-29"
   },
   {
-    "id": "poa521",
+    "id": "e80cfa02-626b-4ef6-bce7-37067aaeae75",
     "applicant": "관세법인 한림",
     "shipper": "(주)태영팀버",
     "submittedDate": "2026-01-30"
   },
   {
-    "id": "poa522",
+    "id": "1151bc8f-1ec6-4e22-88fb-44be8cfcf92c",
     "applicant": "대신관세사무소",
     "shipper": "코스텍 (주)",
     "submittedDate": "2026-01-30"
   },
   {
-    "id": "poa523",
+    "id": "d4509679-176b-44cc-b2fa-78a02fcdbe6c",
     "applicant": "마이다스로지스틱스",
     "shipper": "오씨아이 2025.06.30 (위임장 1년)",
     "submittedDate": ""
   },
   {
-    "id": "poa524",
+    "id": "2d5ed279-7dc6-448c-af2d-92ed2d854b27",
     "applicant": "삼현INT",
     "shipper": "(주)엘에스티씨",
     "submittedDate": "2026-01-30"
   },
   {
-    "id": "poa525",
+    "id": "6526db3a-df5c-4d15-a107-54905aca5be9",
     "applicant": "화평관세사",
     "shipper": "(주)산일약품",
     "submittedDate": "2026-02-02"
   },
   {
-    "id": "poa526",
+    "id": "a7fe97a3-e447-42a1-aa59-0b86253528b6",
     "applicant": "칠성섬유(주)",
     "shipper": "진선해운(주)",
     "submittedDate": "2026-02-02"
   },
   {
-    "id": "poa527",
+    "id": "84c84b64-6e9d-4492-a15a-fd8c3b963531",
     "applicant": "(주) 동영",
     "shipper": "바스프퍼포먼스폴리아마이드코리아 BASF PERFORMANCE POLYAMIDES",
     "submittedDate": ""
   },
   {
-    "id": "poa528",
+    "id": "ca8c8afc-b331-41cd-808c-700ff9774ab8",
     "applicant": "(주)마레콘솔리데이션",
     "shipper": "한국유미코아촉매 유한책임회사",
     "submittedDate": "2026-02-02"
   },
   {
-    "id": "poa529",
+    "id": "41aa1b5a-ae69-401f-8743-4fd8ac76e33f",
     "applicant": "해덕로지스",
     "shipper": "(주)오앤에스",
     "submittedDate": "2026-02-02"
   },
   {
-    "id": "poa530",
+    "id": "90e02c34-3821-4d0b-a7e8-d04f34e43723",
     "applicant": "비디피로지스틱스코리아 유한회사",
     "shipper": "MOBIL KOREA LUBE OIL INC",
     "submittedDate": "2005-11-18"
   },
   {
-    "id": "poa531",
+    "id": "80654e48-cbc3-4a69-8bfe-9be05c6768eb",
     "applicant": "태림 상운",
     "shipper": "스타플렉스",
     "submittedDate": ""
   },
   {
-    "id": "poa532",
+    "id": "5b20e723-5372-4890-9155-9a744b4bb98e",
     "applicant": "(주)예일해운항공",
     "shipper": "주식회사이레케미칼",
     "submittedDate": "2026-02-02"
   },
   {
-    "id": "poa533",
+    "id": "b4887959-4944-4d2f-b887-c2454afedd23",
     "applicant": "선민관세사무소",
     "shipper": "디앤엘코리아(주)",
     "submittedDate": "2026-01-29"
   },
   {
-    "id": "poa534",
+    "id": "adcfbcea-0468-42e9-9ed5-73846d77d23f",
     "applicant": "한익스프레스",
     "shipper": "BASF COMPANY LTD. YEOSU",
     "submittedDate": "2026-01-22"
   },
   {
-    "id": "poa535",
+    "id": "0af38700-7f94-45d2-ae67-e43ca8dfd8d6",
     "applicant": "관세법인한림",
     "shipper": "고려목재산업",
     "submittedDate": "2026-02-02"
   },
   {
-    "id": "poa536",
+    "id": "c1d06a81-427e-41b3-bf97-cc1f789f5029",
     "applicant": "유로라인글로벌(주)",
     "shipper": "ILSHIN CHEMICAL INC.",
     "submittedDate": ""
   },
   {
-    "id": "poa537",
+    "id": "022d3211-5464-48c8-937b-bf063c7fe2b7",
     "applicant": "대흥기업",
     "shipper": "(주)사세부산지점",
     "submittedDate": "2026-02-03"
   },
   {
-    "id": "poa538",
+    "id": "35336b06-0c0c-4a9a-a220-0c3419fb86cb",
     "applicant": "한타특수운송",
     "shipper": "POSCOMTECH",
     "submittedDate": "2026-02-03"
   },
   {
-    "id": "poa539",
+    "id": "d3cc8552-5b86-4933-a1cf-be69b379f309",
     "applicant": "에임하이코리아",
     "shipper": "하이원해운항공",
     "submittedDate": "2026-02-04"
   },
   {
-    "id": "poa540",
+    "id": "a01c8b5e-bde4-4636-94c8-ba7be66ef955",
     "applicant": "(주)케니황월드에이젼시",
     "shipper": "PROCHEM KOREA CO.,LTD.",
     "submittedDate": "2026-02-04"
   },
   {
-    "id": "poa541",
+    "id": "35b6445b-5029-4d45-bf15-faac5e35db8c",
     "applicant": "선두관세사",
     "shipper": "(주)녹산에프엔티",
     "submittedDate": "2026-02-05"
   },
   {
-    "id": "poa542",
+    "id": "e9aaa02d-0b35-4e08-902a-d58ab11b748a",
     "applicant": "하나로직스",
     "shipper": "정안무역",
     "submittedDate": "2026-02-06"
   },
   {
-    "id": "poa543",
+    "id": "568b4342-dfa8-49ab-a17a-e215c142179d",
     "applicant": "경기관세법인",
     "shipper": "(주) 에크만",
     "submittedDate": "2026-02-06"
   },
   {
-    "id": "poa544",
+    "id": "7280cb75-875c-4e8d-90ac-c8b668e2765f",
     "applicant": "유신관세법인",
     "shipper": "OPMOBILIEY C POWER CO LTD 오피모빌리티",
     "submittedDate": ""
   },
   {
-    "id": "poa545",
+    "id": "8c6fac9b-1690-47c6-91de-419462e2f17e",
     "applicant": "세방익스프레스 (주)",
     "shipper": "세방메탈 SEBANG METAL TRADING CO., LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa546",
+    "id": "7f402fed-a8d3-4a89-80bb-69e431635c52",
     "applicant": "씨제이대한통운(주)",
     "shipper": "무림피앤피",
     "submittedDate": "2026-02-09"
   },
   {
-    "id": "poa547",
+    "id": "be53eb91-2f2c-4483-8846-333bdf854747",
     "applicant": "(주)제이앤미",
     "shipper": "서원코리아관세법인",
     "submittedDate": "2026-02-09"
   },
   {
-    "id": "poa548",
+    "id": "4d00e23c-514f-4a1e-b5fe-7d482c1534f6",
     "applicant": "대흥기업",
     "shipper": "청명미트",
     "submittedDate": "2026-02-09"
   },
   {
-    "id": "poa549",
+    "id": "28821456-f516-4dd8-8db3-f8e77c6b593a",
     "applicant": "KPCC",
     "shipper": "케이비관세법인",
     "submittedDate": ""
   },
   {
-    "id": "poa550",
+    "id": "0801deaf-cc43-445b-8b91-0d0993e2f9bf",
     "applicant": "(주)씨앤아이 해운항공",
     "shipper": "태성",
     "submittedDate": "2026-02-10"
   },
   {
-    "id": "poa551",
+    "id": "c4fc615c-dc28-49fb-9ed6-b65dea47c655",
     "applicant": "(유)에이치엘로지스",
     "shipper": "(주)한솔케미칼",
     "submittedDate": "2026-02-10"
   },
   {
-    "id": "poa552",
+    "id": "a2e59d05-49ed-496e-a554-e500e7166cac",
     "applicant": "한성인터내셔널",
     "shipper": "M&B COMPANY (앰엔비)",
     "submittedDate": "2026-02-12"
   },
   {
-    "id": "poa553",
+    "id": "3ba0a1a4-d702-4b6e-8e37-7f4c044e54af",
     "applicant": "와이엔제이코리아 Y & J KOREA CO., LTD.",
     "shipper": "에스더블유로지스틱스",
     "submittedDate": ""
   },
   {
-    "id": "poa554",
+    "id": "389372b2-d402-49a5-acc7-c91695d74862",
     "applicant": "(주)한성인터내셔널",
     "shipper": "M&B COMPANY CO.,LTD",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa555",
+    "id": "1a84aea3-115e-4c26-a8d9-574b881d250d",
     "applicant": "한국삼공(주)",
     "shipper": "부산세원관세사무소",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa556",
+    "id": "281ceaf6-2329-4f4f-a1b0-66c0deb09f19",
     "applicant": "동명에이엔관세사무소",
     "shipper": "대림우드(주)",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa557",
+    "id": "3873e5a5-fbb1-49b0-a9b5-5996f0b8f4ed",
     "applicant": "(주)한성인터내셔널",
     "shipper": "(주)그럴사 (GRULSA)",
     "submittedDate": "2026-01-01"
   },
   {
-    "id": "poa558",
+    "id": "31c45a6f-855f-4929-b8e1-df3e30e03f06",
     "applicant": "남경",
     "shipper": "협성기업",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa559",
+    "id": "c8fae23c-5208-4d5b-878b-80869c24540c",
     "applicant": "서정상사",
     "shipper": "정도관세사무소",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa560",
+    "id": "a03d54b1-ec1f-42eb-b72e-297c7a03a0c9",
     "applicant": "(주)인트란스지엘에스",
     "shipper": "타미나가구 TAMINAGAGU",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa561",
+    "id": "b5fd21ab-8c27-4b5f-8520-2abfd487f0b5",
     "applicant": "주식회사 한의코퍼레이션 HANYI CORPORATION CO., LTD.",
     "shipper": "(주)래온로지스틱스",
     "submittedDate": ""
   },
   {
-    "id": "poa562",
+    "id": "43cad24a-41aa-4ce3-b915-d417e6b4bb00",
     "applicant": "토마스로지스틱스",
     "shipper": "WELLDI,INC 웰디",
     "submittedDate": "2026-02-13"
   },
   {
-    "id": "poa563",
+    "id": "baed0fe3-11c1-4874-a6ab-f1c26cd8a779",
     "applicant": "오성화학공업(주)",
     "shipper": "정진로지스",
     "submittedDate": "2026-02-19"
   },
   {
-    "id": "poa564",
+    "id": "08846144-4ec9-46fa-bc39-6561a848c6bf",
     "applicant": "디에스무역",
     "shipper": "칠도관세사무소",
     "submittedDate": ""
   },
   {
-    "id": "poa565",
+    "id": "cf9e0981-50b3-4406-93f9-7bdc595d4353",
     "applicant": "셀러노트",
     "shipper": "플록스토리 FLOCKSTORY CO., LTD.",
     "submittedDate": "2026-02-19"
   },
   {
-    "id": "poa566",
+    "id": "8e77f26a-560a-4b8f-b6ec-06f4662dcdf9",
     "applicant": "로드스타씨앤에어",
     "shipper": "더맨 THE MAN",
     "submittedDate": "2026-02-19"
   },
   {
-    "id": "poa567",
+    "id": "98817ce7-cd64-4253-8919-cc1d6ea28079",
     "applicant": "대도합동관세사무소",
     "shipper": "씨맥",
     "submittedDate": "2026-02-19"
   },
   {
-    "id": "poa568",
+    "id": "aec49ad4-8e94-41f0-9b91-60ea7eb94cca",
     "applicant": "제니스로직스",
     "shipper": "무림에스앤피 MOORIM SP CO.,LTD.",
     "submittedDate": "2026-02-19"
   },
   {
-    "id": "poa569",
+    "id": "4dd8feb8-404c-4b4a-b273-53ef28cf5bb2",
     "applicant": "경향산업",
     "shipper": "태화엘앤씨",
     "submittedDate": "2026-02-20"
   },
   {
-    "id": "poa570",
+    "id": "a823d407-6374-4732-bbca-39e455f8821c",
     "applicant": "(주)화창",
     "shipper": "(주)진성종합상운",
     "submittedDate": "2026-02-20"
   },
   {
-    "id": "poa571",
+    "id": "f2af1edd-2105-401c-8eda-a6779abe6722",
     "applicant": "(주)하이웨이로지스틱",
     "shipper": "(주) 농협케미칼 NONGHYUP CHEMICAL",
     "submittedDate": "2026-02-20"
   },
   {
-    "id": "poa572",
+    "id": "ca761d21-ca87-49ff-86f8-7bcbc601ccd5",
     "applicant": "(주) 디에이치물류",
     "shipper": "(주) 한불",
     "submittedDate": ""
   },
   {
-    "id": "poa573",
+    "id": "410bebcf-81b1-456e-aba5-e3c0f08df7cd",
     "applicant": "인터지스",
     "shipper": "티와이엠 TYM CORPORATION",
     "submittedDate": "2026-02-23"
   },
   {
-    "id": "poa574",
+    "id": "8e59e440-6085-4821-9a12-b9d3df2f2db3",
     "applicant": "대동모빌리티",
     "shipper": "세방익스프레스",
     "submittedDate": "2026-02-23"
   },
   {
-    "id": "poa575",
+    "id": "a5d7eb7a-18c0-4d58-9b57-5276879e364c",
     "applicant": "대기종합물류",
     "shipper": "이보드 E-BOARD CO.,LTD",
     "submittedDate": "2026-02-23"
   },
   {
-    "id": "poa576",
+    "id": "dec434c8-540d-47b4-a645-fd91d892b136",
     "applicant": "오투켐(OTWOCHEMICAL)",
     "shipper": "에이키차나",
     "submittedDate": "2026-02-23"
   },
   {
-    "id": "poa577",
+    "id": "f2ce901f-5713-4bab-a854-bb60f0c452bb",
     "applicant": "천일정기화물자동차",
     "shipper": "TYM",
     "submittedDate": "2026-02-23"
   },
   {
-    "id": "poa578",
+    "id": "4cef8185-8447-4c6e-b0af-4e995bbc20c4",
     "applicant": "롯데쇼핑(주)",
     "shipper": "롯데글로벌로지스",
     "submittedDate": ""
   },
   {
-    "id": "poa579",
+    "id": "04b2f580-e4ac-446c-9f86-d4d244aede3d",
     "applicant": "(주) 태영푸드커머스",
     "shipper": "(주)부건물류",
     "submittedDate": "2026-02-11"
   },
   {
-    "id": "poa580",
+    "id": "c89673d1-b844-49bc-a79d-6b45d1e920e3",
     "applicant": "태양테크",
     "shipper": "대한관세법인",
     "submittedDate": "2026-02-24"
   },
   {
-    "id": "poa581",
+    "id": "16ac878a-2bc1-40a5-8099-c45dfd96ceb6",
     "applicant": "선두트레이드주식회사",
     "shipper": "바라관세사무소",
     "submittedDate": "2026-02-24"
   },
   {
-    "id": "poa582",
+    "id": "6f4058bd-834d-405e-9794-ff375f9b64a7",
     "applicant": "삼영관세사",
     "shipper": "우리",
     "submittedDate": "2026-02-24"
   },
   {
-    "id": "poa583",
+    "id": "86ef37b3-e619-46ca-af46-5014a228dc92",
     "applicant": "(주)누리온",
     "shipper": "세경합동관세사무소",
     "submittedDate": "2026-02-24"
   },
   {
-    "id": "poa584",
+    "id": "4744f955-bc7f-4c7a-86e5-625deaadd003",
     "applicant": "관세법인 대유",
     "shipper": "넥스젠 (NEXGEN)",
     "submittedDate": "2026-02-24"
   },
   {
-    "id": "poa585",
+    "id": "0764bf66-2c4f-45d4-9430-22967e3407c2",
     "applicant": "주식회사 피노",
     "shipper": "세다해운",
     "submittedDate": "2026-02-24"
   },
   {
-    "id": "poa586",
+    "id": "6e02fc49-884b-45d1-b299-a819e592b54a",
     "applicant": "유평관세사무소",
     "shipper": "포스코에이치와이클린메탈 POSCO HY CLEAN METALS",
     "submittedDate": ""
   },
   {
-    "id": "poa587",
+    "id": "43658746-0a3b-4f17-86a0-83eeae1bf995",
     "applicant": "2026.02.24 (주)대경씨앤티",
     "shipper": "푸푸",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa588",
+    "id": "d074db59-cd3a-4739-9c66-c625bb00e49c",
     "applicant": "동보유화(주)",
     "shipper": "(주)동신종합물류 2026 02.25~",
     "submittedDate": ""
   },
   {
-    "id": "poa589",
+    "id": "b2b03b92-cf5c-4e53-b599-6242fd388f2a",
     "applicant": "평신트레이드주식회사",
     "shipper": "코리아",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa590",
+    "id": "5ffb2f74-909d-4f88-9dc1-5355684ff062",
     "applicant": "삼현INT",
     "shipper": "(주)혜성프로비젼",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa591",
+    "id": "e3d7d68e-8815-4ea5-b3ea-63ed263d5cb9",
     "applicant": "(주)혜인",
     "shipper": "관세법인 샤인",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa592",
+    "id": "96a35b96-cbec-4557-baf2-a39580540217",
     "applicant": "(주)참존박스",
     "shipper": "(주)하나탑카고라인",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa593",
+    "id": "1679d438-ec48-4f3e-bd34-aeb74855ce60",
     "applicant": "관세법인진명",
     "shipper": "(주)글로벌광해",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa594",
+    "id": "4450e2b6-d7e6-44e9-b82c-e6ff5fdd713e",
     "applicant": "(주)한국윈텍",
     "shipper": "협진관세사",
     "submittedDate": "2026-02-25"
   },
   {
-    "id": "poa595",
+    "id": "45b30c65-19f2-4083-aa30-e4c20e98cd34",
     "applicant": "에이스관세법인",
     "shipper": "SAMWHAPAPER",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa596",
+    "id": "e2d0610b-a893-43ec-8965-e0ec5c6b8f35",
     "applicant": "한윤관세사",
     "shipper": "(주)혀니별인더스트리",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa597",
+    "id": "8130fbeb-4b44-4f5c-914c-c7965da12c1a",
     "applicant": "세경합동관세사무소",
     "shipper": "(주)성신엘텍",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa598",
+    "id": "608e1a46-ce84-4877-8e88-6f91c92245ab",
     "applicant": "명지합동관세사무소",
     "shipper": "(주)네오푸드",
     "submittedDate": "2025-11-19"
   },
   {
-    "id": "poa599",
+    "id": "a68773ad-3297-4178-ad88-a34a7e438003",
     "applicant": "(주)씨에스미디어",
     "shipper": "뉴서강관세사무소",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa600",
+    "id": "bbdecf65-f69f-4b58-bced-a076f804491c",
     "applicant": "SP해운항공",
     "shipper": "에이지텍 주식회사",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa601",
+    "id": "680d1f14-59c6-4e4f-b569-e48e6961c714",
     "applicant": "관세법인흥신인천지사",
     "shipper": "(주)오랑오랑 더우드팩토리 더우드팩토",
     "submittedDate": ""
   },
   {
-    "id": "poa602",
+    "id": "133d7030-78fe-47c2-825e-1881f7d360b8",
     "applicant": "(주)에이치앤알로지스틱스",
     "shipper": "애경산업 (주) 청양공장 AEKYUNG IND. CO.,",
     "submittedDate": ""
   },
   {
-    "id": "poa603",
+    "id": "de1f5ed5-eb3b-4caa-b0a3-b42c943f0254",
     "applicant": "효신통상(주)",
     "shipper": "고려은단헬스케어",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa604",
+    "id": "1b7f8258-6d0b-4e8c-9aeb-a2191553328a",
     "applicant": "(주)에프앤에스로직스",
     "shipper": "서브올",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa605",
+    "id": "f04691f8-1fac-4eb1-a65f-051a9c020cc9",
     "applicant": "(주)아라무역",
     "shipper": "(주)제이씨티엘에스",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa606",
+    "id": "c00e8ed5-22b3-4205-9ad1-ebaec4bde2e1",
     "applicant": "(주)원월드",
     "shipper": "(주)제이씨티엘에스",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa607",
+    "id": "dc8d1375-23a1-4aa7-85b0-2e3b710da324",
     "applicant": "세주인터내셔날 유한책임회사",
     "shipper": "HITE JINRO",
     "submittedDate": "2026-02-26"
   },
   {
-    "id": "poa608",
+    "id": "8993f79f-d23c-42f3-9dc4-38e56894900b",
     "applicant": "국보물류주식회사",
     "shipper": "대구농산 인천지점",
     "submittedDate": ""
   },
   {
-    "id": "poa609",
+    "id": "2db0681c-f538-41bc-98c7-de1c4e038742",
     "applicant": "허싱카고코리아",
     "shipper": "주식회사 유니콘인터네셔널",
     "submittedDate": "2026-02-27"
   },
   {
-    "id": "poa610",
+    "id": "ada9950d-e7fe-42df-9848-586c6a84828c",
     "applicant": "디케이퍼니처",
     "shipper": "SWC관세사무소",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa611",
+    "id": "32d2353c-4847-46b8-90fb-5b11e928a8ca",
     "applicant": "삼현INT",
     "shipper": "주식회사 와이비푸드",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa612",
+    "id": "774b67e9-b041-4ded-96b7-71ab4011d35b",
     "applicant": "삼현INT",
     "shipper": "샘미트 주식회사",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa613",
+    "id": "d06d6927-5304-4e2e-8a23-7f9558744f8e",
     "applicant": "대흥기업",
     "shipper": "(주)오케이미트",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa614",
+    "id": "81c9006e-173f-44c1-a523-1fac9cb29a8f",
     "applicant": "주식회사 선우프레시",
     "shipper": "대흥기업",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa615",
+    "id": "41516440-cc07-4dea-a60f-cf99b6b53a92",
     "applicant": "(주)제니스유통",
     "shipper": "대흥기업",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa616",
+    "id": "9e46468d-9594-4e54-bcd3-46ea6b5d859d",
     "applicant": "인천관세사법인",
     "shipper": "태랑물산",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa617",
+    "id": "f3fc756d-1c73-4ef9-a60b-d3da591144c2",
     "applicant": "시드니쿠키",
     "shipper": "선우관세사무소",
     "submittedDate": "2026-03-03"
   },
   {
-    "id": "poa618",
+    "id": "46d75b6d-a030-4f99-8747-40cde9e27f4e",
     "applicant": "씨제이대한통운(주)",
     "shipper": "이마트",
     "submittedDate": "2026-03-04"
   },
   {
-    "id": "poa619",
+    "id": "88c0b765-1d52-4fd7-a9ca-2b264c8d9564",
     "applicant": "서문팀버 주식회사",
     "shipper": "스카이 관세법인",
     "submittedDate": "2026-03-04"
   },
   {
-    "id": "poa620",
+    "id": "657c61b0-19cc-4edd-92e1-12dadd9999c2",
     "applicant": "일만관세사무소",
     "shipper": "주식회사 성도",
     "submittedDate": "2026-03-04"
   },
   {
-    "id": "poa621",
+    "id": "45d42354-c975-47fa-9512-d5aa18473c7e",
     "applicant": "대흥기업",
     "shipper": "(주)참비앤피",
     "submittedDate": "2026-03-04"
   },
   {
-    "id": "poa622",
+    "id": "89faf992-f11c-40ae-acc0-8e09d9e9ef57",
     "applicant": "한결종합물류",
     "shipper": "인더스트리얼테크놀로지",
     "submittedDate": "2026-03-04"
   },
   {
-    "id": "poa623",
+    "id": "267250db-bea9-4990-8048-78af9d243057",
     "applicant": "(주)아태물류",
     "shipper": "주식회사 월드마케팅",
     "submittedDate": "2026-03-05"
   },
   {
-    "id": "poa624",
+    "id": "b66eca51-252a-468f-afb1-1ef5a08f4c56",
     "applicant": "(주)아태물류",
     "shipper": "순수유통",
     "submittedDate": "2026-03-05"
   },
   {
-    "id": "poa625",
+    "id": "f071bf4e-71c6-4265-a4ef-5da8297be5dc",
     "applicant": "케이엘씨",
     "shipper": "한국에이 - 버리데니슨(유)",
     "submittedDate": "2026-03-05"
   },
   {
-    "id": "poa626",
+    "id": "905244b2-86c7-44c9-a5c1-0df425b4a732",
     "applicant": "가리온종합물류",
     "shipper": "주식회사 비앤엠",
     "submittedDate": "2026-03-05"
   },
   {
-    "id": "poa627",
+    "id": "0b426ccb-7e9b-4a98-b9e5-1ee3ff84d7b2",
     "applicant": "삼현INT",
     "shipper": "(주)케이지에프앤비(KG F&B Co.,ltd)",
     "submittedDate": "2026-03-05"
   },
   {
-    "id": "poa628",
+    "id": "19c22a1c-6879-42bc-90d2-2c25c81e9c57",
     "applicant": "(주)아태물류",
     "shipper": "진원무역(주)",
     "submittedDate": "2026-03-05"
   },
   {
-    "id": "poa629",
+    "id": "f50e7e7d-30d9-4aae-8d88-93d97a836a9c",
     "applicant": "협진트랙터",
     "shipper": "SK ON CO., LTD",
     "submittedDate": "2026-03-06"
   },
   {
-    "id": "poa630",
+    "id": "fa9a8c48-d13a-4111-a4ee-c695027035cb",
     "applicant": "인천대림관세사무소",
     "shipper": "피피아이파이프",
     "submittedDate": "2026-03-09"
   },
   {
-    "id": "poa631",
+    "id": "f148d4fb-a236-4829-b9de-1b682442f38e",
     "applicant": "관세법인 대하",
     "shipper": "선우금속 영천지점",
     "submittedDate": "2026-03-09"
   },
   {
-    "id": "poa632",
+    "id": "e63b3bec-227d-456e-8df9-e5cde24fc750",
     "applicant": "주식회사 아라무역",
     "shipper": "위즈로지스틱스",
     "submittedDate": "2026-03-09"
   },
   {
-    "id": "poa633",
+    "id": "658f90db-62e8-47ee-ad88-f35aa5acfd38",
     "applicant": "주식회사 제이하베스트",
     "shipper": "위즈로지스틱스",
     "submittedDate": "2026-03-09"
   },
   {
-    "id": "poa634",
+    "id": "247a3fce-17bf-4800-b95d-1b435a897b68",
     "applicant": "중앙이호상사",
     "shipper": "유하물류",
     "submittedDate": "2026-03-09"
   },
   {
-    "id": "poa635",
+    "id": "cc431348-ce3e-4ed2-abfa-10da9f6ed5c8",
     "applicant": "에이지텍 주식회사",
     "shipper": "에스피해운항공(SP해운항공)",
     "submittedDate": "2026-03-10"
   },
   {
-    "id": "poa636",
+    "id": "4a2e673d-345d-4c22-9b39-e7b46d05b1f0",
     "applicant": "주식회사 유앤아이프로듀스",
     "shipper": "(주)아태물류",
     "submittedDate": "2026-03-10"
   },
   {
-    "id": "poa637",
+    "id": "5a3a8b14-b61f-4c2f-b363-402b6699f0fc",
     "applicant": "주식회사 엠티지코리아",
     "shipper": "엠케이컴퍼니",
     "submittedDate": "2026-03-10"
   },
   {
-    "id": "poa638",
+    "id": "7e3abba0-7419-46ab-9160-053b89338557",
     "applicant": "(주)해빈",
     "shipper": "고려물류컨설팅",
     "submittedDate": "2026-03-10"
   },
   {
-    "id": "poa639",
+    "id": "0e61e062-d5d6-4ffa-8f73-4d065b35ed36",
     "applicant": "한국미쓰이물산(주)",
     "shipper": "고려물류컨설팅",
     "submittedDate": "2026-03-10"
   },
   {
-    "id": "poa640",
+    "id": "edddd0e0-7d7b-479c-b552-630116524468",
     "applicant": "(주)에이치앤알로지스틱스",
     "shipper": "FARM HANNONG 2026.02~",
     "submittedDate": ""
   },
   {
-    "id": "poa641",
+    "id": "b5f6472c-b659-42bf-8ed5-1fff139f7f4c",
     "applicant": "인천관세사법인",
     "shipper": "엠에스인터내셔널",
     "submittedDate": "2026-03-11"
   },
   {
-    "id": "poa642",
+    "id": "ac8ecda0-aae0-4ce4-a4cf-8312f2991649",
     "applicant": "대로물류",
     "shipper": "서강유업",
     "submittedDate": "2026-03-11"
   },
   {
-    "id": "poa643",
+    "id": "29f71502-9ec9-44b4-bc68-35fcf9e24d85",
     "applicant": "(주)삼림물산",
     "shipper": "제우물류",
     "submittedDate": "2026-03-11"
   },
   {
-    "id": "poa644",
+    "id": "006b5b27-d986-4862-a017-beeef763d04d",
     "applicant": "(주)파르마코리아",
     "shipper": "세중종합물류",
     "submittedDate": "2026-03-11"
   },
   {
-    "id": "poa645",
+    "id": "8566adb9-9e9b-4617-adf0-74c15d2bf34a",
     "applicant": "클로버엔터프라이즈",
     "shipper": "로드프리미엄",
     "submittedDate": "2026-03-11"
   },
   {
-    "id": "poa646",
+    "id": "3f649c7a-e72a-49b9-9b7f-3d6aeda134fa",
     "applicant": "(주)위블루",
     "shipper": "GUNWOO INTRA INC.",
     "submittedDate": "2026-03-12"
   },
   {
-    "id": "poa647",
+    "id": "db2d3918-800d-4d49-b85d-7011953a1f37",
     "applicant": "(주)에버굿인터내셔날",
     "shipper": "삼현INT",
     "submittedDate": "2026-03-12"
   },
   {
-    "id": "poa648",
+    "id": "dbcb13a5-5ee6-4074-a3dc-e0d92fde9493",
     "applicant": "삼성글로텍",
     "shipper": "한국미래소재 주식회사",
     "submittedDate": "2026-03-12"
   },
   {
-    "id": "poa649",
+    "id": "35eb9380-2b5e-4a07-99bc-a17b798f788e",
     "applicant": "삼현INT",
     "shipper": "주식회사 한결엘에스",
     "submittedDate": "2026-03-12"
   },
   {
-    "id": "poa650",
+    "id": "dc6513d3-680a-4d33-a054-c6481c85a127",
     "applicant": "(주)에스더블유마린 SW MARINE CO., LTD",
     "shipper": "WALLEM SHIPPING KOREA",
     "submittedDate": ""
   },
   {
-    "id": "poa651",
+    "id": "e6601343-1d77-4264-89d1-e3c8cce875f2",
     "applicant": "글로벌통상주식회사",
     "shipper": "(주)동신종합물류",
     "submittedDate": "2026-03-13"
   },
   {
-    "id": "poa652",
+    "id": "86315468-198d-4209-af21-7d0a457731f3",
     "applicant": "(주)디에이치물류",
     "shipper": "디카본(주)",
     "submittedDate": "2026-03-13"
   },
   {
-    "id": "poa653",
+    "id": "dd9a6a28-8e7d-4211-a11b-078db6fbf937",
     "applicant": "고려물류컨설팅",
     "shipper": "프레리무역",
     "submittedDate": "2026-03-13"
   },
   {
-    "id": "poa654",
+    "id": "5ec86c74-a1c8-46b5-a225-b932d4bb8fed",
     "applicant": "(주) 신원글로벌로직스",
     "shipper": "YJ INTERNATIONAL TRADE CO.,LTD",
     "submittedDate": "2026-03-13"
   },
   {
-    "id": "poa655",
+    "id": "445e2f37-55e0-462a-9bfe-3fb0abf1292d",
     "applicant": "한영해운",
     "shipper": "업텍",
     "submittedDate": "2026-03-16"
   },
   {
-    "id": "poa656",
+    "id": "b3699930-b0d4-4c7c-b680-e134889725c2",
     "applicant": "제이에스로지스틱스",
     "shipper": "주식회사 코웍커피",
     "submittedDate": "2026-03-16"
   },
   {
-    "id": "poa657",
+    "id": "7dac1505-285d-439a-bb11-3674da123f33",
     "applicant": "관세법인 에이치앤알 (HNR)",
     "shipper": "(주)참트레이딩",
     "submittedDate": "2026-03-16"
   },
   {
-    "id": "poa658",
+    "id": "9aa01d4c-01bc-4eff-891f-b9b5e0941418",
     "applicant": "로릭코리아",
     "shipper": "DSM NUTRITION KOREA LTD",
     "submittedDate": "2026-03-17"
   },
   {
-    "id": "poa659",
+    "id": "8f27bceb-fd18-42e8-be79-515585f17595",
     "applicant": "로그팩토리",
     "shipper": "카고맥스",
     "submittedDate": "2026-03-17"
   },
   {
-    "id": "poa660",
+    "id": "e2a7310f-eca0-4387-908a-b93d8a452d46",
     "applicant": "씨제이대한통운(주)",
     "shipper": "(주)케이씨씨",
     "submittedDate": "2026-03-17"
   },
   {
-    "id": "poa661",
+    "id": "0998de45-7df2-48ad-8625-03f563b7c0f4",
     "applicant": "(주)서울웰푸드",
     "shipper": "대흥기업",
     "submittedDate": "2026-03-17"
   },
   {
-    "id": "poa662",
+    "id": "9c6b183f-f0df-44e5-92f5-ac9ebeb1c36d",
     "applicant": "주식회사 세인티앤엘코리아",
     "shipper": "KT&G CORP (주)케이티앤지",
     "submittedDate": "2026-03-17"
   },
   {
-    "id": "poa663",
+    "id": "3cd42623-379b-40ca-bb9f-bcca63d5f4d5",
     "applicant": "진성관세법인",
     "shipper": "(주)제이에스케이무역",
     "submittedDate": "2026-03-17"
   },
   {
-    "id": "poa664",
+    "id": "97326c41-ece8-4e5a-ad4e-5a3ef3659619",
     "applicant": "웰크혼헬스케어",
     "shipper": "스타콩코드코리아(주)",
     "submittedDate": ""
   },
   {
-    "id": "poa665",
+    "id": "a66ff226-4b13-40b9-b4ae-80f08d3d9912",
     "applicant": "화성피앤지",
     "shipper": "마하통운",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa666",
+    "id": "bf92f53f-2b8d-4f89-9472-438e9aca5b66",
     "applicant": "마하통운",
     "shipper": "덕수산업",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa667",
+    "id": "7deed3ef-754c-4263-bb75-a1fc20933c5c",
     "applicant": "(주)에이치아이로지스틱스",
     "shipper": "(주)성원목재",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa668",
+    "id": "fe97eaca-a71f-4917-9067-8ebf423df0a4",
     "applicant": "(주)제이엘상사",
     "shipper": "(주)제이투케이글로벌",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa669",
+    "id": "766ed58b-b236-4faa-ad26-e0eff62add0f",
     "applicant": "마하통운",
     "shipper": "(주)동양엘앤피",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa670",
+    "id": "af86e78d-3ec8-418e-bd08-5435cc539237",
     "applicant": "주식회사 에이치카나",
     "shipper": "OTWOCHEMICAL CO., LTD.",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa671",
+    "id": "a6cf4331-a620-4b66-90c1-b39390a79a2e",
     "applicant": "스칸웰항운",
     "shipper": "보쉐코리아 주식회사",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa672",
+    "id": "7345aceb-b2fc-4072-8d43-7450d9ecb46b",
     "applicant": "해오름관세사무소",
     "shipper": "33(삼삼)커머스",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa673",
+    "id": "99585697-6f66-4378-8851-7b89f8f08a19",
     "applicant": "자두관세사",
     "shipper": "(주)새롬푸드 농업회사법인",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa674",
+    "id": "797f1263-7cb6-4e10-84f9-9541f2450598",
     "applicant": "씨원글로벌네트웍스",
     "shipper": "남도전기공업 NAMDO ELECTRIC CO., LTD",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa675",
+    "id": "2c8d3580-2178-44b3-83ec-396e5cddca18",
     "applicant": "원스탑관세법인",
     "shipper": "INTERGRAIN INC",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa676",
+    "id": "22adef2f-1d44-437d-967f-0a5accf2719c",
     "applicant": "화신해운항공(주)",
     "shipper": "KOREA TOURIST SUPPLY CENTR INC.",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa677",
+    "id": "bad5e813-d077-4f2c-8652-2a2c9ceb9e81",
     "applicant": "현대첨단소재",
     "shipper": "(주)디와이유엘씨",
     "submittedDate": "2026-03-19"
   },
   {
-    "id": "poa678",
+    "id": "c5dea23a-23af-42b2-9554-cc2efe8c0f32",
     "applicant": "주식회사지피글로벌",
     "shipper": "강슬기",
     "submittedDate": "2026-03-20"
   },
   {
-    "id": "poa679",
+    "id": "d1dcd46a-e6d0-4de5-b67e-f086c278aca0",
     "applicant": "제이큐로지스틱스",
     "shipper": "코오롱이앤피",
     "submittedDate": "2026-03-20"
   },
   {
-    "id": "poa680",
+    "id": "81b221c1-55bc-420a-ac7c-9b5804bc36b7",
     "applicant": "주식회사 에스엠에이치",
     "shipper": "(주)이에프켐",
     "submittedDate": "2026-03-20"
   },
   {
-    "id": "poa681",
+    "id": "88649b06-5b7a-4cf8-a6ba-3808b8c4062c",
     "applicant": "용마로지스",
     "shipper": "(주)우성엠에프",
     "submittedDate": "2026-03-23"
   },
   {
-    "id": "poa682",
+    "id": "a3d3b512-72fe-441e-a8b0-53a41afa1ac4",
     "applicant": "한진",
     "shipper": "미쉐린코리아",
     "submittedDate": "2026-03-23"
   },
   {
-    "id": "poa683",
+    "id": "ce29473e-1922-4dac-984f-479bb1a52532",
     "applicant": "주식회사 미가발리",
     "shipper": "해인관세사무소",
     "submittedDate": "2026-03-23"
   },
   {
-    "id": "poa684",
+    "id": "d3229a95-7d2a-4951-93be-7549cfa0526c",
     "applicant": "주식회사 골드팡",
     "shipper": "(주)제이와이로지스틱스",
     "submittedDate": "2026-03-23"
   },
   {
-    "id": "poa685",
+    "id": "1b81ffac-767b-4277-934a-b270d37ee194",
     "applicant": "(주)케이피아이씨코포레이션",
     "shipper": "주식회사 일렉트로엠 ELECTRO M CO., LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa686",
+    "id": "45fd8cbb-2108-4523-9f30-2a21403a9a2e",
     "applicant": "성림종합물류",
     "shipper": "LS MTRON LTD",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa687",
+    "id": "0beb5f9f-722a-4298-96a3-e0604c21ba0f",
     "applicant": "(주)삼양사 판교",
     "shipper": "세방(주)",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa688",
+    "id": "9f4b7632-e68e-4267-aa7a-2d5bf8a5f158",
     "applicant": "천하코퍼레이션",
     "shipper": "동원로엑스",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa689",
+    "id": "09f22d59-9e40-436f-8d01-57683219e7c3",
     "applicant": "엠트랜스주식회사",
     "shipper": "씨제이에이치디씨비오솔 CJ HDC BIOSOL",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa690",
+    "id": "6b440b7f-9bcd-4a6b-9805-df43ec167f0d",
     "applicant": "코레일로지스",
     "shipper": "한국시노붐 -",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa691",
+    "id": "cd095757-d7de-46a3-96a7-b7d339c676b9",
     "applicant": "롯데글로벌로지스",
     "shipper": "제이와이로지스틱스 -",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa692",
+    "id": "b550e1f7-941e-4dbb-b5cd-c804133d8c2b",
     "applicant": "쿠쿠전자 주식회사",
     "shipper": "(주)카고솔루션부산 -",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa693",
+    "id": "7ca3b6e2-08fd-46be-921d-cae124bc6289",
     "applicant": "온누리해운항공",
     "shipper": "영테크 -",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa694",
+    "id": "820e7d56-c29e-41c3-9fa9-17e8e80ed001",
     "applicant": "관세법인 신보성",
     "shipper": "주)리버티인터내셔널 -",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa695",
+    "id": "68ad3c02-5585-4598-8089-436c9ea3b249",
     "applicant": "고려종합국제운송(주)",
     "shipper": "대한제당 -",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa696",
+    "id": "12216617-8b9e-4ff5-91de-3475f07b73b8",
     "applicant": "지티에스국제물류 주식회사",
     "shipper": "성화테크 SUNGHWATECH CO.,LTD.",
     "submittedDate": "2026-03-20"
   },
   {
-    "id": "poa697",
+    "id": "95686c15-4c19-44ff-bf63-d02c87145655",
     "applicant": "주식회사 아이비티",
     "shipper": "(주)삼미국제로지스",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa698",
+    "id": "a68bb911-2aff-499e-8a15-ee030f8ecbe6",
     "applicant": "동신씨앤에어",
     "shipper": "그린원일 GREENWONIL CO LTD",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa699",
+    "id": "0e541723-a7fb-41eb-bcf7-700d059c6a0a",
     "applicant": "로지피아 LOGIPIA CO.,LTD.",
     "shipper": "에스티엠 STM",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa700",
+    "id": "38545429-f03b-400c-9ab6-4845abf636c4",
     "applicant": "한일관세법인",
     "shipper": "(주)백조씽크",
     "submittedDate": "2026-03-26"
   },
   {
-    "id": "poa701",
+    "id": "39d6b5ac-083d-4d61-89fe-839083d5e1a0",
     "applicant": "주식회사 99업사이클",
     "shipper": "(주)한원로지스틱",
     "submittedDate": "2026-03-26"
   },
   {
-    "id": "poa702",
+    "id": "ac015950-6535-4641-ac98-4f1192b0cc00",
     "applicant": "지앙치앙 무역 유한회사",
     "shipper": "허싱카고코리아",
     "submittedDate": "2026-03-25"
   },
   {
-    "id": "poa703",
+    "id": "ede4c220-1e3b-414e-91cc-0cb64050cdaf",
     "applicant": "태양당인쇄",
     "shipper": "마하통운",
     "submittedDate": "2026-03-18"
   },
   {
-    "id": "poa704",
+    "id": "ecf7df93-b6fa-4935-a9d7-adeb3ed2e184",
     "applicant": "세방익스프레스(주)",
     "shipper": "대동 DAEDONG CORPORATION",
     "submittedDate": "2026-03-26"
   },
   {
-    "id": "poa705",
+    "id": "f36335b6-1ac0-422e-89b4-42e2953763f6",
     "applicant": "(주)엘케이로지스틱",
     "shipper": "(주)와이지-원 YG-1 CO.,LTD.",
     "submittedDate": "2026-03-26"
   },
   {
-    "id": "poa706",
+    "id": "2b7ca5d0-bb3d-4b52-ae36-5eec56144715",
     "applicant": "우암티앤디(주) WOO",
     "shipper": "ARM T&D CO., LTD. - 관세법인 씨티엘",
     "submittedDate": ""
   },
   {
-    "id": "poa707",
+    "id": "7589166b-69d8-47e8-8d54-8783f089ff26",
     "applicant": "현진로지스틱스",
     "shipper": "주식회사 이노보떼",
     "submittedDate": ""
   },
   {
-    "id": "poa708",
+    "id": "fdb48ed2-ea79-421d-9322-29a144d593d2",
     "applicant": "(주)용호지대",
     "shipper": "관세법인 우신",
     "submittedDate": "2026-03-27"
   },
   {
-    "id": "poa709",
+    "id": "3e07b884-a404-4236-98ce-810545fab38f",
     "applicant": "(주)뜨리에",
     "shipper": "(주)코리아포디",
     "submittedDate": "2026-03-27"
   },
   {
-    "id": "poa710",
+    "id": "e6223275-cff1-457e-9f82-f312a2a2a20a",
     "applicant": "인우관세사무소",
     "shipper": "하나로푸드 하나로팩",
     "submittedDate": "2026-03-24"
   },
   {
-    "id": "poa711",
+    "id": "4ae36d4b-0db3-4482-a2c1-681db2d4ffe4",
     "applicant": "(주)와이엔케이 로지스틱스",
     "shipper": "제이아그로",
     "submittedDate": "2026-03-27"
   },
   {
-    "id": "poa712",
+    "id": "4846788e-9858-48b1-bcc6-e1b2195554ca",
     "applicant": "(주)한진",
     "shipper": "포스코인터내셔널",
     "submittedDate": "2026-03-27"
   },
   {
-    "id": "poa713",
+    "id": "bf9c2905-2f00-4716-83f2-9a43a30dd400",
     "applicant": "경원운수(주)",
     "shipper": "HANKUK PAPER",
     "submittedDate": ""
   },
   {
-    "id": "poa714",
+    "id": "4e779c6d-db12-4b8e-a671-0e8ae50e2863",
     "applicant": "준스마케팅",
     "shipper": "(주)아태물류",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa715",
+    "id": "2f0a4c96-a892-44cf-9778-e01dfe808cb1",
     "applicant": "(주)뉴지상사",
     "shipper": "동북관세법인",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa716",
+    "id": "fc3d0347-9e6b-429d-a7fc-6ec1323f1fff",
     "applicant": "이조원종합상사",
     "shipper": "(주)성림종합물류",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa717",
+    "id": "9c1dfee3-f532-4503-afd4-ea11429bf0a6",
     "applicant": "수석해운(주)",
     "shipper": "신안통상",
     "submittedDate": "2026-03-26"
   },
   {
-    "id": "poa718",
+    "id": "5f279667-2ace-4bec-aa85-1a26a39c590c",
     "applicant": "문바이오텍",
     "shipper": "(주)중앙",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa719",
+    "id": "6fa660e9-acf6-4b96-8a7e-743f0cf3df62",
     "applicant": "진성종합상운(주)",
     "shipper": "AIMHIGH KOREA INC",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa720",
+    "id": "6d4f3168-5f73-45e8-ae8e-c8e7a237b22b",
     "applicant": "위즈로지스틱",
     "shipper": "아이원후르츠주식회사",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa721",
+    "id": "67e3b48c-b8c9-4edb-ae2b-f7acb80c309a",
     "applicant": "엘에스로직스",
     "shipper": "줌미트트레이딩",
     "submittedDate": "2026-03-30"
   },
   {
-    "id": "poa722",
+    "id": "be1964f8-f5ba-43f3-8c69-12a781a4609d",
     "applicant": "관세법인 진솔",
     "shipper": "(주)서흥",
     "submittedDate": "2026-03-31"
   },
   {
-    "id": "poa723",
+    "id": "8e1cf833-9c98-40a1-b0e9-e876055d9c87",
     "applicant": "(주)원스탑로지스광주",
     "shipper": "베스타주식회사",
     "submittedDate": "2026-03-23"
   },
   {
-    "id": "poa724",
+    "id": "4b97ac2f-a779-42da-ac7b-e84f2772ad9c",
     "applicant": "홍원국제물류",
     "shipper": "서광산업",
     "submittedDate": "2026-03-31"
   },
   {
-    "id": "poa725",
+    "id": "da171da6-ee8c-48ce-95d6-bcf4f1025928",
     "applicant": "삼현INT",
     "shipper": "엘제이인터내셔날",
     "submittedDate": "2026-03-31"
   },
   {
-    "id": "poa726",
+    "id": "36212aff-c2d6-4322-9628-b15f097e108b",
     "applicant": "유니코로지스틱스",
     "shipper": "KOREA KUMHO PETROCHEMICALS, CO., LT",
     "submittedDate": "2026-03-31"
   },
   {
-    "id": "poa727",
+    "id": "c351cb79-3550-4b7a-a000-3f04a4ba39e5",
     "applicant": "주식회사 동우로직스",
     "shipper": "(주) 라미플 렉스코리아",
     "submittedDate": "2026-04-01"
   },
   {
-    "id": "poa728",
+    "id": "9eae37d8-18f5-49b3-bfbf-8d1b4314804b",
     "applicant": "(주) 에어웨이익스프레스",
     "shipper": "한나케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa729",
+    "id": "edfae8ed-16da-46bc-bb86-2de80fd3d116",
     "applicant": "동원로엑스(주)",
     "shipper": "동원에프앤비(주) DONGON F&B",
     "submittedDate": ""
   },
   {
-    "id": "poa730",
+    "id": "20e8da71-108d-43fb-9cc7-4ce7100a2485",
     "applicant": "(주)에스아이지",
     "shipper": "리파코 주식회사",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa731",
+    "id": "a0d9191d-1cec-43bb-a77d-8929846be6ef",
     "applicant": "원스탑관세법인인천항점",
     "shipper": "(주)안코바이오플라스틱스",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa732",
+    "id": "24874ab1-a5da-4444-b7fa-2ea1735ee0d1",
     "applicant": "관세법인 선율",
     "shipper": "코리아머신",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa733",
+    "id": "d1747865-65b8-4440-bc10-f186b2e3dae4",
     "applicant": "진선해운(주)",
     "shipper": "위너스켐",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa734",
+    "id": "96cc4bc5-dec3-4346-b785-2a3d5d3dd509",
     "applicant": "해천글로벌 주식회사",
     "shipper": "주식회사 정진코리아로지스",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa735",
+    "id": "37cce8af-96ba-48ad-993a-c88dd04dd7c5",
     "applicant": "(주)에스더블유로지스틱스",
     "shipper": "에이팩",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa736",
+    "id": "78d192c0-f65a-4e1f-97ea-027f3ab7f190",
     "applicant": "관세법인대유",
     "shipper": "(주)엠에스티통상",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa737",
+    "id": "17a0dd35-f312-49ca-a843-175d0e2d6128",
     "applicant": "하이랜드푸드",
     "shipper": "동원로엑스",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa738",
+    "id": "311ae853-5214-49aa-a45e-8156b5e9f335",
     "applicant": "주식회사 아크로",
     "shipper": "(주)한일해운항공",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa739",
+    "id": "41b7f9d3-a9b5-4f4a-b09c-b9a2ae3b986a",
     "applicant": "에이치투로지스틱스",
     "shipper": "송원산업(주)",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa740",
+    "id": "a98d893c-bd0d-4cf5-8e73-c8f3abf1ccf1",
     "applicant": "에이프레이트코리아",
     "shipper": "세종산업",
     "submittedDate": "2026-04-02"
   },
   {
-    "id": "poa741",
+    "id": "7fbc5181-0e82-4b56-b5ae-0f06fe50fced",
     "applicant": "(주)금강로지스틱스",
     "shipper": "CHEONGWOO TECH CO., LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa742",
+    "id": "21095e3a-f4ea-4d34-b23a-07ec55843714",
     "applicant": "영원관세법인",
     "shipper": "주식회사 디엘인더스트리",
     "submittedDate": ""
   },
   {
-    "id": "poa743",
+    "id": "7fadc2ed-97ed-449b-9fbb-681e437f4eb0",
     "applicant": "에스앤에스로지스틱스",
     "shipper": "유 앤유앤무역 유한회사",
     "submittedDate": ""
   },
   {
-    "id": "poa744",
+    "id": "aa0320ab-8c17-43ed-bee6-87468af642fc",
     "applicant": "지성 물류",
     "shipper": "지오멧",
     "submittedDate": ""
   },
   {
-    "id": "poa745",
+    "id": "9f0fa683-e9cd-4e58-80d0-80805ecf7a5a",
     "applicant": "㈜피앤씨랩스",
     "shipper": "㈜메이플로지스",
     "submittedDate": "2026-04-03"
   },
   {
-    "id": "poa746",
+    "id": "6b66c398-5728-487d-909a-f54a68bd4175",
     "applicant": "(주)에이치에스세라믹",
     "shipper": "이정관세법인 부산",
     "submittedDate": "2026-04-03"
   },
   {
-    "id": "poa747",
+    "id": "779b2ef4-fde7-4cc9-a167-c6359745e90c",
     "applicant": "(주)화신세라믹",
     "shipper": "이정관세법인 부산",
     "submittedDate": "2026-04-03"
   },
   {
-    "id": "poa748",
+    "id": "a584da5b-4993-4e65-a591-aac8efc5bdbb",
     "applicant": "제이글로벌해운항공",
     "shipper": "메리토",
     "submittedDate": "2026-04-06"
   },
   {
-    "id": "poa749",
+    "id": "cef40618-96d0-48f9-b88a-299fb3364107",
     "applicant": "인천대림관세사무소",
     "shipper": "상암",
     "submittedDate": "2026-04-06"
   },
   {
-    "id": "poa750",
+    "id": "839c3042-ebe6-4ee2-9590-b884d57d8431",
     "applicant": "씨제이대한통운",
     "shipper": "SCK Company",
     "submittedDate": "2026-04-06"
   },
   {
-    "id": "poa751",
+    "id": "b20f67f7-42b9-402c-b3e4-0f9c4f4224fa",
     "applicant": "한신관세사무소",
     "shipper": "세명우드",
     "submittedDate": "2026-04-06"
   },
   {
-    "id": "poa752",
+    "id": "d17224d1-d25a-41b8-8cc7-0f119321d882",
     "applicant": "(주)파트너이앤지",
     "shipper": "FINE관세사",
     "submittedDate": "2026-04-06"
   },
   {
-    "id": "poa753",
+    "id": "856f73dd-d298-4833-b875-b17884c171c7",
     "applicant": "주식회사 엠씨인터내셔널 INC. MC INTERNATIONAL",
     "shipper": "(주)엔엔알글로발로지스틱스코리아",
     "submittedDate": "2026-04-06"
   },
   {
-    "id": "poa754",
+    "id": "2d9dc4e5-fec9-46d4-9ade-2d0361906c67",
     "applicant": "충남특수무늬목재",
     "shipper": "메가쉬핑글로벌",
     "submittedDate": "2025-12-23"
   },
   {
-    "id": "poa755",
+    "id": "f731dab5-c16b-4790-af83-16d68428154e",
     "applicant": "AIM HIGH KOREA INC",
     "shipper": "주식회사 씨앤씨글로벌",
     "submittedDate": ""
   },
   {
-    "id": "poa756",
+    "id": "18126b74-caa7-4614-8487-2fe6411e199b",
     "applicant": "태백티앤씨 TAEBAEK TNC (TIMBER & CONSTRUCTION)",
     "shipper": "동명에이엔관세사무소",
     "submittedDate": ""
   },
   {
-    "id": "poa757",
+    "id": "353ff8e1-97bb-42cc-9d63-d0d37c6a5ba7",
     "applicant": "(주)피드윌",
     "shipper": "한강관세법인",
     "submittedDate": "2026-04-07"
   },
   {
-    "id": "poa758",
+    "id": "b5058243-9358-4e73-8a08-120d3ace18c5",
     "applicant": "능원금속공업(주)",
     "shipper": "관세법인더블유",
     "submittedDate": "2026-04-07"
   },
   {
-    "id": "poa759",
+    "id": "99254b49-aa4f-47ad-97bb-9c2f6ccaa8ad",
     "applicant": "주식회사 원아",
     "shipper": "(주)예일해운항공",
     "submittedDate": "2026-04-07"
   },
   {
-    "id": "poa760",
+    "id": "663fa31b-2420-4e64-8563-045cdb145a3d",
     "applicant": "디에이관세사무소",
     "shipper": "다구해",
     "submittedDate": "2026-04-07"
   },
   {
-    "id": "poa761",
+    "id": "09192a4f-4fba-441c-a256-14c30c6d950b",
     "applicant": "쿨스",
     "shipper": "한성산업",
     "submittedDate": "2026-04-08"
   },
   {
-    "id": "poa762",
+    "id": "e30012e6-703c-4b7e-880f-5831d2eb9f0c",
     "applicant": "유성특송영업소",
     "shipper": "효성 화학",
     "submittedDate": "2026-04-09"
   },
   {
-    "id": "poa763",
+    "id": "bd6557fc-e81c-4ec9-a48c-67645dfa593a",
     "applicant": "관세법인서우부산지사",
     "shipper": "동우티엠씨",
     "submittedDate": "2026-04-08"
   },
   {
-    "id": "poa764",
+    "id": "a564506b-7623-41aa-8d54-384f00b47fbd",
     "applicant": "액세스월드코리아유한회사",
     "shipper": "PUBLIC PROCUREMENT SERVICE THE REPUBLIC OF",
     "submittedDate": ""
   },
   {
-    "id": "poa765",
+    "id": "25f99ffe-553c-46e3-b704-f7e7dc4f8138",
     "applicant": "윌로직스(주)",
     "shipper": "사파이어 SAPPHIRE CO.,LTD",
     "submittedDate": "2026-04-08"
   },
   {
-    "id": "poa766",
+    "id": "0905c7ad-0713-4c38-92fa-ddf71ca6f171",
     "applicant": "(주)삼강사",
     "shipper": "(주)평화발레오 VALEO PYEONG HWA CO.,LTD",
     "submittedDate": ""
   },
   {
-    "id": "poa767",
+    "id": "4bfc9cf0-b9ca-4538-a1bd-75297a485d03",
     "applicant": "삼현INT",
     "shipper": "주식회사 푸디버스",
     "submittedDate": ""
   },
   {
-    "id": "poa768",
+    "id": "fb977d69-dee2-4e89-a416-c03ded7ee8e8",
     "applicant": "서린관세사",
     "shipper": "오성테크",
     "submittedDate": ""
   },
   {
-    "id": "poa769",
+    "id": "53f41fba-3b31-4538-a1e6-cefb078cc850",
     "applicant": "티아이오토모티브",
     "shipper": "대경로직스",
     "submittedDate": ""
   },
   {
-    "id": "poa770",
+    "id": "dec0c8e3-8b90-48cf-a34a-11e0630c4f4e",
     "applicant": "주식회사 티엘엑스",
     "shipper": "주식회사 푸른이엔티(E.N.T)",
     "submittedDate": ""
   },
   {
-    "id": "poa771",
+    "id": "07121803-1eba-460f-9cff-9c18a6363a0a",
     "applicant": "티엔비글로벌",
     "shipper": "오투관세사무소",
     "submittedDate": "2026-04-09"
   },
   {
-    "id": "poa772",
+    "id": "3d4ac46f-5ca8-4f81-bd3b-f80141752ee5",
     "applicant": "KL관세사무소",
     "shipper": "이제이스토어 EJSTORE",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa773",
+    "id": "78c74296-a73f-44ff-8dbd-1f995a6105a3",
     "applicant": "(주)월드크로스",
     "shipper": "한성통상",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa774",
+    "id": "575b885c-7c8b-41e7-ad88-ca7bc5a541f9",
     "applicant": "자유무역관세사무소",
     "shipper": "사오퐁",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa775",
+    "id": "d6dcd36a-97a9-4967-bd78-0050773aea8b",
     "applicant": "웨이츠",
     "shipper": "(주)케이피씨 씨앤에어",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa776",
+    "id": "001470c8-58d7-4fb7-bcd5-be91e4034346",
     "applicant": "유한킴벌리(주)대전공장",
     "shipper": "동원로엑스",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa777",
+    "id": "68b4dbc8-97d9-4956-9a56-69323b07d6a2",
     "applicant": "농업회사법인주식회사씨엔푸드",
     "shipper": "정운관세법인",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa778",
+    "id": "67ba04d1-0193-4237-877b-074bd31f7fdf",
     "applicant": "주식회사 디케이켈슨",
     "shipper": "관세법인흥신 인천지사",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa779",
+    "id": "0f006127-ca4d-4604-a6c7-4d2ef1fe2dc6",
     "applicant": "주식회사 제이씨상역",
     "shipper": "삼현INT",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa780",
+    "id": "9c29d33f-9623-47e4-9826-33c802930f26",
     "applicant": "에코프로이엠",
     "shipper": "구산물류",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa781",
+    "id": "5e325ff4-ecf0-4e85-9adc-a61df3f9ca94",
     "applicant": "세방익스프레스",
     "shipper": "루브리졸 코리아",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa782",
+    "id": "a4a3fecf-70db-4e90-b7cf-73b541505ba2",
     "applicant": "지금관세사무소",
     "shipper": "네오베이",
     "submittedDate": "2026-04-10"
   },
   {
-    "id": "poa783",
+    "id": "3c2194c8-1282-4000-b4a7-7d594da04ced",
     "applicant": "주식회사 이노보떼",
     "shipper": "㈜제이엑스로지스틱스",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa784",
+    "id": "257e3361-9a44-4562-9fd6-20db284d6266",
     "applicant": "슈퍼래빗 주식회사",
     "shipper": "허싱카고코리아",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa785",
+    "id": "bca4e5a4-96ba-4618-a0e3-6866a227d1e0",
     "applicant": "시노관세사무소",
     "shipper": "동원홈푸드",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa786",
+    "id": "bf0f9261-3a04-4b73-ab0c-bb37c2f19c27",
     "applicant": "케이비아이메탈(주)",
     "shipper": "(주)지성",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa787",
+    "id": "ca96281d-14f1-4efd-8bd7-6c5888c0b9a3",
     "applicant": "서원피덱스(주)",
     "shipper": "논스톱1관세사무소",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa788",
+    "id": "ea34ceda-c62c-4e85-90d1-42325c0abc54",
     "applicant": "가랑무역 주식회사",
     "shipper": "허싱카고코리아",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa789",
+    "id": "6fae1cd2-9898-4ad3-aac5-8d494e09ddab",
     "applicant": "로디게 아시아 리미티드",
     "shipper": "신조로지텍",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa790",
+    "id": "4a92337f-d6bf-453f-a905-0a60155cff3f",
     "applicant": "전수트레이드 주식회사",
     "shipper": "허싱카고코리아",
     "submittedDate": "2026-04-13"
   },
   {
-    "id": "poa791",
+    "id": "7380e773-aa2b-4e45-8db8-12bd7e766326",
     "applicant": "HANWHA TOTALENERGIES PETROCHEMICAL CO LET",
     "shipper": "용마로지스(YONGMA LOGIS)",
     "submittedDate": ""
   },
   {
-    "id": "poa792",
+    "id": "107c07ba-82f6-438e-9e80-9f703555d6ed",
     "applicant": "㈜ 켐코정밀",
     "shipper": "㈜ 와이엘",
     "submittedDate": "2026-04-14"
   },
   {
-    "id": "poa793",
+    "id": "e7c87bc7-772f-43d2-8a02-cae792eb8f6c",
     "applicant": "수호정밀소재",
     "shipper": "세현코리아",
     "submittedDate": "2026-04-14"
   },
   {
-    "id": "poa794",
+    "id": "1d4c2403-912e-496a-b861-968650edd902",
     "applicant": "국도화학",
     "shipper": "극동물류주식회사",
     "submittedDate": "2026-04-14"
   },
   {
-    "id": "poa795",
+    "id": "f32ec06d-29c7-48b4-bf18-7e76a329939c",
     "applicant": "동성로지스틱",
     "shipper": "KPK CO",
     "submittedDate": "2026-04-15"
   },
   {
-    "id": "poa796",
+    "id": "e2fe607f-03b8-4ab9-aaa9-8b531b833da1",
     "applicant": "신세기기업",
     "shipper": "타워랜드",
     "submittedDate": "2026-04-15"
   },
   {
-    "id": "poa797",
+    "id": "ceba11b1-bf5d-4e50-b86e-4d32c7835d54",
     "applicant": "(주)사러가",
     "shipper": "삼현 INT",
     "submittedDate": "2026-04-15"
   },
   {
-    "id": "poa798",
+    "id": "03042f0c-5288-43a3-b484-e3883c27c4a8",
     "applicant": "삼정펄프주식회사",
     "shipper": "주식회사 보고대성로지스",
     "submittedDate": "2026-04-15"
   },
   {
-    "id": "poa799",
+    "id": "5edc890a-fdaf-4549-b548-b4abfa1b7e25",
     "applicant": "에쓰푸드(주)",
     "shipper": "대흥기업",
     "submittedDate": "2026-04-15"
   },
   {
-    "id": "poa800",
+    "id": "7e99ec86-5f1a-48e0-afca-f6fb89a2a16b",
     "applicant": "(주)파코트레이딩",
     "shipper": "대로관세사무소",
     "submittedDate": "2026-04-20"
   },
   {
-    "id": "poa801",
+    "id": "32da9d57-a15e-4238-b9fc-a6c1c6038365",
     "applicant": "(주)유하물류",
     "shipper": "유민트레이딩",
     "submittedDate": "2026-04-20"
   },
   {
-    "id": "poa802",
+    "id": "29eb4433-4fa3-4260-8f08-da522690c7f8",
     "applicant": "(주)나드",
     "shipper": "관세법인 한림",
     "submittedDate": "2026-04-22"
   },
   {
-    "id": "poa803",
+    "id": "01b7382f-c945-4d1a-8d14-ecb9fc6f868c",
     "applicant": "인우관세사무소",
     "shipper": "에이레스",
     "submittedDate": "2026-04-22"
   },
   {
-    "id": "poa804",
+    "id": "5ffff6ab-18eb-4b74-b238-7e06a99c9bb1",
     "applicant": "주식회사 티에스코리아",
     "shipper": "온누리해운항공",
     "submittedDate": "2026-04-22"
   },
   {
-    "id": "poa805",
+    "id": "ce3b4c30-2ddd-4796-b5d8-ae0bf5a9670d",
     "applicant": "삼성에스디에스",
     "shipper": "솔브레인",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa806",
+    "id": "405e4d45-a908-4ced-ac6f-ac24e71d81e1",
     "applicant": "주식회사 유진화스너",
     "shipper": "지티에스국제물류주식회사",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa807",
+    "id": "088029c2-1d3f-4f1f-b686-6f4062f931d5",
     "applicant": "젠코로직스",
     "shipper": "에이치제이머티리얼즈",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa808",
+    "id": "0f5e3c92-a916-4ebf-962b-f79bdf6a435c",
     "applicant": "연합국제물류(주)",
     "shipper": "주식회사 아세아텍",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa809",
+    "id": "1abe11a3-e350-4e8f-b0ef-f546cb623ed6",
     "applicant": "(주)진바이오컴",
     "shipper": "주원합동관세사무소",
     "submittedDate": "2026-04-03"
   },
   {
-    "id": "poa810",
+    "id": "24fcd5ad-c2fd-44a1-b2f0-905551c51f79",
     "applicant": "오양합동관세사무소",
     "shipper": "삼진산업",
     "submittedDate": "2026-04-03"
   },
   {
-    "id": "poa811",
+    "id": "aaa1b6bd-3722-40d2-923b-62303e904c06",
     "applicant": "위드로지스틱스",
     "shipper": "제일폴리캠",
     "submittedDate": "2026-04-03"
   },
   {
-    "id": "poa812",
+    "id": "e5bf7513-df9a-49d8-861d-92fa7d7cad55",
     "applicant": "주식회사 인앤아웃",
     "shipper": "인천관세법인",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa813",
+    "id": "d47ad397-0154-407c-8cd9-b498a11e0eb7",
     "applicant": "화인플러스",
     "shipper": "인천조은관세사",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa814",
+    "id": "1d20ab6f-b153-42a0-943c-cb0407a968d1",
     "applicant": "(주)올포트카고서비스코리아",
     "shipper": "(주)스칸웰항운",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa815",
+    "id": "87af3ee4-36d4-4125-bfb7-cc7964b5867e",
     "applicant": "주식회사 플랫비즈",
     "shipper": "주식회사 알파티앤엘",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa816",
+    "id": "55ef6e3a-1538-4be1-85bb-78e261966c08",
     "applicant": "주식회사 럼플리어",
     "shipper": "관세법인 뮤추얼스탠다드 인천항지사",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa817",
+    "id": "c91ea4a6-6ca6-4144-bd01-838cad5d3700",
     "applicant": "2027.04.22 힉스오토메이션",
     "shipper": "(주)태웅로직스",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa818",
+    "id": "74d7dc08-947a-4cc2-bf44-50da88387f95",
     "applicant": "관세법인라온서울지사",
     "shipper": "대성기계필름",
     "submittedDate": "2026-04-23"
   },
   {
-    "id": "poa819",
+    "id": "7b249dcc-05be-4b6e-a648-ce7600a73a0c",
     "applicant": "일호로지스틱스",
     "shipper": "시벨코코리아",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa820",
+    "id": "41c727b1-2145-4822-aa62-27b3ed1d3cbf",
     "applicant": "롯데상사(주)",
     "shipper": "관세법인광장",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa821",
+    "id": "982eb814-83bf-41f9-a67d-2c8bb0082df7",
     "applicant": "(주)에너지옵티머스",
     "shipper": "(주)제이투씨앤에어",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa822",
+    "id": "c70aac10-e03c-46b1-9539-39b4d801111a",
     "applicant": "(주)원스탑에어앤씨",
     "shipper": "(주)홈앤하우스",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa823",
+    "id": "d447bda0-11fe-42a3-b242-c3ee3b905171",
     "applicant": "인토세라믹 주식회사",
     "shipper": "디티씨",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa824",
+    "id": "c963fc5b-968b-463a-86df-1041926d94c0",
     "applicant": "(주)한국무역인터내셔날",
     "shipper": "다올관세사무소",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa825",
+    "id": "d581459f-ff3e-4dac-a4b6-ea75d56b809d",
     "applicant": "(주)프린테크엘피엠",
     "shipper": "인천관세법인",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa826",
+    "id": "e33af322-756e-4837-b675-e33173a8b801",
     "applicant": "제일신명관세사무소",
     "shipper": "주)종로아크릴",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa827",
+    "id": "a57f0075-315d-4c9c-b81c-c76d0d3ea71d",
     "applicant": "아키스로직스주식회사",
     "shipper": "주식회사 엠에스코리아",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa828",
+    "id": "77987b7a-4328-4c1c-a71d-d63f2239d17b",
     "applicant": "드림티엘에스",
     "shipper": "서두하이테크",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa829",
+    "id": "388e832d-7c0b-492c-b65b-53c9703a6bc4",
     "applicant": "관세법인 샤인",
     "shipper": "주식회사 사인블루",
     "submittedDate": "2026-04-24"
   },
   {
-    "id": "poa830",
+    "id": "b65a8da8-59a6-4778-ab51-95d4de98a8ba",
     "applicant": "롯데컬처웍스",
     "shipper": "조선해운(주)",
     "submittedDate": "2026-04-27"
   },
   {
-    "id": "poa831",
+    "id": "b5acf8f1-aee3-4e6d-a2b1-2da76f1f7e97",
     "applicant": "Dh 관세사",
     "shipper": "케이에이치하우징",
     "submittedDate": ""
   },
   {
-    "id": "poa832",
+    "id": "608c9ac3-2a9a-4ee6-bb73-05f91ec41e8f",
     "applicant": "에이비그룹코리아",
     "shipper": "디엠코로",
     "submittedDate": ""
   },
   {
-    "id": "poa833",
+    "id": "ecafeca1-daf4-4478-aade-4b2c2cdfcca7",
     "applicant": "판시노해운항공",
     "shipper": "서울 퀸 스마트홈",
     "submittedDate": ""
   },
   {
-    "id": "poa834",
+    "id": "9b90769a-02f9-41e3-9d11-527ba8f7031c",
     "applicant": "정평관세사무소",
     "shipper": "동위기업",
     "submittedDate": ""
   },
   {
-    "id": "poa835",
+    "id": "47fe8cde-cd68-4869-a344-4593fd9ada30",
     "applicant": "목원무역",
     "shipper": "메트로관세사무소",
     "submittedDate": "2026-04-28"
   },
   {
-    "id": "poa836",
+    "id": "68bef738-402f-4aea-b4ac-16ddb6a5dd9d",
     "applicant": "지로지스",
     "shipper": "타라유통",
     "submittedDate": "2026-04-28"
   },
   {
-    "id": "poa837",
+    "id": "16fbf178-ac9c-4bdc-8a4a-d759b7b9f96b",
     "applicant": "플러스알파관세사무소",
     "shipper": "삼신화성산업",
     "submittedDate": "2026-04-28"
   },
   {
-    "id": "poa838",
+    "id": "da056dc8-f559-47f4-a59f-b13a5ca667bc",
     "applicant": "관세법인 스카이브릿지",
     "shipper": "제이씨티케이",
     "submittedDate": "2026-04-29"
   },
   {
-    "id": "poa839",
+    "id": "966941a8-faf0-4cbc-8295-3967d69c78e0",
     "applicant": "글로맥에어엔씨",
     "shipper": "에코캡",
     "submittedDate": "2026-04-29"
   },
   {
-    "id": "poa840",
+    "id": "07f03d90-356c-4513-94ae-ab54bdfe16d5",
     "applicant": "오케이물류",
     "shipper": "더원물류 주식회사",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa841",
+    "id": "8b67770f-1f6b-45a1-9725-23441aa3288b",
     "applicant": "오너스씨앤에어",
     "shipper": "수정실업",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa842",
+    "id": "60f3a694-d495-424f-ab17-930ea13b83fa",
     "applicant": "와이엘물류",
     "shipper": "인터파트",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa843",
+    "id": "9c193ca9-4355-447a-bffc-c34f982fdb24",
     "applicant": "주성씨앤에어주식회사",
     "shipper": "대은산업",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa844",
+    "id": "a90393e9-8cb9-43ff-affc-08c8c94ed8a9",
     "applicant": "더원물류주식회사",
     "shipper": "오케이물류",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa845",
+    "id": "93c64c1f-a3cf-458c-897c-408ad460ab07",
     "applicant": "한솔로지스틱스",
     "shipper": "ECOPROEM",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa846",
+    "id": "f4719e4b-a0ec-4042-9461-6a610ec42160",
     "applicant": "(주)지씨엠",
     "shipper": "어반로직스",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa847",
+    "id": "a3e86e41-442b-46bc-a7f8-9115602f8066",
     "applicant": "(주)엠제이하이테크",
     "shipper": "서한종합물류(주)",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa848",
+    "id": "2ee0dcae-3b87-4bb3-bba4-d130caee1d53",
     "applicant": "(주)새암일렉트로닉스",
     "shipper": "천지관세법인",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa849",
+    "id": "51bd5a13-6ee8-4ebf-b2e4-fcc1ad423d8a",
     "applicant": "(주)대화엠피",
     "shipper": "지평관세사법인",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa850",
+    "id": "7a03edd4-4fbe-4e75-8983-cd578467e14d",
     "applicant": "다인홀딩스",
     "shipper": "영동물류",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa851",
+    "id": "ee6788cc-e6ad-4e2f-bab2-e10bc7263a5c",
     "applicant": "서진통운",
     "shipper": "악조노벨분체도료(주)",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa852",
+    "id": "c8a7c45d-dc37-4c7d-8faa-0a464667e6a8",
     "applicant": "한미스위스광학",
     "shipper": "로얄티엔엘",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa853",
+    "id": "70136487-97fd-4586-a475-8fae0f38a654",
     "applicant": "주식회사 엘림",
     "shipper": "보명해운항공(주)",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa854",
+    "id": "8504b475-99b4-49cb-b973-b03173be110e",
     "applicant": "지티피",
     "shipper": "국경합동관세사무소",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa855",
+    "id": "ed684dcc-e3b7-42e1-9781-655886899377",
     "applicant": "안진통상",
     "shipper": "에이치에스엘엔씨",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa856",
+    "id": "58f95a39-fc38-410b-b0a3-3f4b1a2409f7",
     "applicant": "길상무역",
     "shipper": "한로지스틱스",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa857",
+    "id": "45e84538-ee57-4284-86cc-3eecccb447da",
     "applicant": "(주)파데코",
     "shipper": "경인관세사무소",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa858",
+    "id": "dc889fca-bcc0-4c39-8a2d-92b07a3cb4e7",
     "applicant": "메타베이 주식회사",
     "shipper": "(주)루한로지스틱스",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa859",
+    "id": "aeeaafa7-7666-4b65-a0f9-4f5eb046250a",
     "applicant": "하나티유",
     "shipper": "주식회사 티와이컨설팅",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa860",
+    "id": "c16656da-f2df-476e-a71e-9ff0d9bb29ca",
     "applicant": "ACE관세법인",
     "shipper": "구정마루(주",
     "submittedDate": "2026-05-06"
   },
   {
-    "id": "poa861",
+    "id": "329893f8-59bf-4eec-8bbf-13af5ebd81ce",
     "applicant": "한솔관세사무",
     "shipper": "(주)에이스산업",
     "submittedDate": "2026-05-06"
   },
   {
-    "id": "poa862",
+    "id": "233eed4c-f5aa-4de1-968c-f40f831afca9",
     "applicant": "관세법인 탑스",
     "shipper": "아성세라믹(유)",
     "submittedDate": ""
   },
   {
-    "id": "poa863",
+    "id": "cb798438-c612-45fa-91de-2178f7f25c36",
     "applicant": "(주)벨로지스",
     "shipper": "LS MTRON",
     "submittedDate": ""
   },
   {
-    "id": "poa864",
+    "id": "6245ab55-1d62-40db-b2f5-da24eeacf3bf",
     "applicant": "이오스관세법인",
     "shipper": "굿윌위너스",
     "submittedDate": ""
   },
   {
-    "id": "poa865",
+    "id": "47e90f6c-a7f1-4c09-88fc-52b29ecfe80d",
     "applicant": "에스카고글로벌",
     "shipper": "(주)코라마상사",
     "submittedDate": ""
   },
   {
-    "id": "poa866",
+    "id": "0cc546a2-f93c-471f-98e3-90a4507d2375",
     "applicant": "골트네트웍스",
     "shipper": "바다로요트",
     "submittedDate": "2026-05-07"
   },
   {
-    "id": "poa867",
+    "id": "2d5dfe99-0394-4c33-8b2c-0b6ee66e5bf9",
     "applicant": "스마트해운항공",
     "shipper": "MAREL",
     "submittedDate": "2026-05-07"
   },
   {
-    "id": "poa868",
+    "id": "168021d8-be3b-4b31-8bc9-334dde5fa056",
     "applicant": "이정관세법인부산",
     "shipper": "에이치에스세라믹",
     "submittedDate": "2026-05-07"
   },
   {
-    "id": "poa869",
+    "id": "5388c080-ebb8-4d26-a9df-449157545b2a",
     "applicant": "이정관세법인부산",
     "shipper": "화신세라믹",
     "submittedDate": "2026-05-07"
   },
   {
-    "id": "poa870",
+    "id": "ba6f4502-689e-40c2-9c65-0cea8a2fa8b0",
     "applicant": "신대천합동관세사무소",
     "shipper": "오늘도컴퍼니",
     "submittedDate": "2026-05-07"
   },
   {
-    "id": "poa871",
+    "id": "b8dd6272-3daa-4731-9812-7cfbae35965d",
     "applicant": "바롬항공(주)",
     "shipper": "에스엘테크",
     "submittedDate": "2026-05-07"
   },
   {
-    "id": "poa872",
+    "id": "b26b9d35-93c4-4a41-8f9d-2ec95802729a",
     "applicant": "에이치케이글로벌",
     "shipper": "대동조명",
     "submittedDate": "2026-05-08"
   },
   {
-    "id": "poa873",
+    "id": "21cd47e2-7d36-4960-bb8c-3cf0c02168ee",
     "applicant": "삼현INT",
     "shipper": "로드프리미엄",
     "submittedDate": "2026-05-08"
   },
   {
-    "id": "poa874",
+    "id": "c8dc1685-bd87-4e9f-923b-77e3eff9d41f",
     "applicant": "영원관세법",
     "shipper": "(주)가이아",
     "submittedDate": "2026-05-11"
   },
   {
-    "id": "poa875",
+    "id": "e1cc793a-37d7-42fc-bf4c-85b0088a07c8",
     "applicant": "동아관세법인",
     "shipper": "주식회사타일론코리아",
     "submittedDate": "2026-05-11"
   },
   {
-    "id": "poa876",
+    "id": "e4c3efe4-109e-4c24-8b12-6b96d2f63191",
     "applicant": "율담부산관세사무소",
     "shipper": "이포트",
     "submittedDate": "2026-05-11"
   },
   {
-    "id": "poa877",
+    "id": "bf2e93b3-a90d-4bde-991f-d37d543c000c",
     "applicant": "비에스관세법인",
     "shipper": "에디테크",
     "submittedDate": "2026-05-11"
   },
   {
-    "id": "poa878",
+    "id": "6fb6a1c8-fe55-4202-81be-08d4154ee4ae",
     "applicant": "도성해운항공",
     "shipper": "제이엠코퍼레이션",
     "submittedDate": "2026-05-12"
   },
   {
-    "id": "poa879",
+    "id": "84f70a3c-015f-417b-b4fe-0e29be9db5fa",
     "applicant": "하경관세사무소",
     "shipper": "(주)세탁세제",
     "submittedDate": "2026-05-12"
   },
   {
-    "id": "poa880",
+    "id": "0302988a-f26e-4429-8abf-c9e4ab0aba66",
     "applicant": "해성에스티(주)",
     "shipper": "황보관세법인",
     "submittedDate": "2026-05-06"
   },
   {
-    "id": "poa881",
+    "id": "9810fdc7-28ad-4163-8f99-205f5951c803",
     "applicant": "롯데글로벌로지스",
     "shipper": "롯데건설",
     "submittedDate": "2026-05-12"
   },
   {
-    "id": "poa882",
+    "id": "686a49c2-a3dd-4aeb-b8fc-0a683318846d",
     "applicant": "심천시슬희과학기술유한회사",
     "shipper": "허싱카고 코리아",
     "submittedDate": "2026-05-12"
   },
   {
-    "id": "poa883",
+    "id": "4a19ca60-5e41-4859-897a-467fb7ea8a2a",
     "applicant": "베스트파트너로지스틱",
     "shipper": "한국포장",
     "submittedDate": "2026-05-13"
   },
   {
-    "id": "poa884",
+    "id": "506c7177-433b-4521-9498-a46456460946",
     "applicant": "베스트파트너로지스틱",
     "shipper": "건영테이프",
     "submittedDate": "2026-05-13"
   },
   {
-    "id": "poa885",
+    "id": "6c3be2b1-4777-4eca-a6c0-103232124153",
     "applicant": "엠씨아이글로벌로지스틱스",
     "shipper": "주식회사엘림",
     "submittedDate": "2026-05-13"
   },
   {
-    "id": "poa886",
+    "id": "9204c9e2-bb4c-4828-8f30-54c975d7b38a",
     "applicant": "삼현INT",
     "shipper": "주식회사 팍스푸즈",
     "submittedDate": "2026-05-13"
   },
   {
-    "id": "poa887",
+    "id": "f066acf6-9a03-4026-be2c-7deebc7b030e",
     "applicant": "(주)도성물류",
     "shipper": "FILCORE",
     "submittedDate": "2026-05-13"
   },
   {
-    "id": "poa888",
+    "id": "efc2c2d3-1ab9-49f9-9bef-40350d28fc90",
     "applicant": "성진합동관세사무소",
     "shipper": "우진유체기계",
     "submittedDate": "2026-05-14"
   },
   {
-    "id": "poa889",
+    "id": "198c2372-701b-4380-be81-0b8e7dd1b63c",
     "applicant": "디티씨",
     "shipper": "태강비앤씨",
     "submittedDate": "2026-05-15"
   },
   {
-    "id": "poa890",
+    "id": "256965b4-04d6-410b-a148-3788cae55053",
     "applicant": "엘비물류",
     "shipper": "영신타올",
     "submittedDate": "2026-05-15"
   },
   {
-    "id": "poa891",
+    "id": "1a332ba1-02f3-4093-adb6-b72ffe2fb8ec",
     "applicant": "대원모방",
     "shipper": "대원로지스틱스",
     "submittedDate": "2026-05-15"
   },
   {
-    "id": "poa892",
+    "id": "24aff89f-d17b-45e4-87d5-0842bb71b10d",
     "applicant": "인천관세법인 인천공항지사",
     "shipper": "EK피앤씨",
     "submittedDate": "2026-05-15"
   },
   {
-    "id": "poa893",
+    "id": "02f7ebf0-0672-4d90-b432-902edbf3fe6b",
     "applicant": "카고보스",
     "shipper": "케미스트리",
     "submittedDate": "2026-05-15"
   },
   {
-    "id": "poa894",
+    "id": "c47d8f15-0371-41a6-9578-c83da1303521",
     "applicant": "(주)삼양화인",
     "shipper": "(주)휴먼물류",
     "submittedDate": "2026-05-15"
   },
   {
-    "id": "poa895",
+    "id": "012db471-331e-4ade-9f8e-7b6b4788ec6b",
     "applicant": "유성물류",
     "shipper": "지오맷",
     "submittedDate": "2026-05-19"
   },
   {
-    "id": "poa896",
+    "id": "f9cb8a7d-f15f-4215-91a2-daad31383124",
     "applicant": "메가쉬핑글로벌",
     "shipper": "동광제재",
     "submittedDate": "2026-05-19"
   },
   {
-    "id": "poa897",
+    "id": "2e210148-5065-4107-92ee-d7a97c70e317",
     "applicant": "세다해운",
     "shipper": "비엠에스글로벌",
     "submittedDate": "2026-05-19"
   },
   {
-    "id": "poa898",
+    "id": "d5941c6e-31d3-492e-8ff3-f3e09f311a35",
     "applicant": "세아엘앤에스",
     "shipper": "비앤지트레이딩",
     "submittedDate": "2026-05-19"
   },
   {
-    "id": "poa899",
+    "id": "a6068336-a189-4a8c-b872-48044156194c",
     "applicant": "광교",
     "shipper": "엠티",
     "submittedDate": "2026-05-20"
   },
   {
-    "id": "poa900",
+    "id": "707eb78d-cb2b-4869-8a34-0eb74663eeba",
     "applicant": "토니오션에어",
     "shipper": "피부다움",
     "submittedDate": "2026-05-20"
   },
   {
-    "id": "poa901",
+    "id": "a6a07c14-ea8b-4063-b0ef-a462664b537f",
     "applicant": "관세법인 지오",
     "shipper": "청라통상",
     "submittedDate": "2026-05-20"
   },
   {
-    "id": "poa902",
+    "id": "8653521d-fbd1-4191-a03b-66b0832e83f3",
     "applicant": "쿨스",
     "shipper": "해창",
     "submittedDate": "2026-05-21"
   },
   {
-    "id": "poa903",
+    "id": "1ac87152-aec0-4137-9ff0-a913c5357283",
     "applicant": "쓰리웨이로지스틱스",
     "shipper": "아성크린후로텍",
     "submittedDate": "2026-05-21"
   },
   {
-    "id": "poa904",
+    "id": "64b39584-92c6-458a-affb-49714e43e951",
     "applicant": "관세법인 네오",
     "shipper": "엠아이씨",
     "submittedDate": "2026-05-22"
   },
   {
-    "id": "poa905",
+    "id": "1a97c0c7-94be-4fe0-9e35-e0002e37e9b7",
     "applicant": "엔엔알글로발로지스틱스코리아",
     "shipper": "주식회사 초이앤컴퍼니",
     "submittedDate": "2026-05-26"
   },
   {
-    "id": "poa906",
+    "id": "4deff654-bd7f-4d3c-a1c5-f60533290de1",
     "applicant": "동신씨앤에어",
     "shipper": "주식회사미도",
     "submittedDate": "2026-05-27"
   },
   {
-    "id": "poa907",
+    "id": "5234e303-beaf-4e19-b6c5-8374a2a41045",
     "applicant": "한양관세사무소",
     "shipper": "레이저스",
     "submittedDate": "2026-05-27"
   },
   {
-    "id": "poa908",
+    "id": "f2e240b1-2d52-492e-8569-9ab29f87430b",
     "applicant": "주식회사 목화",
     "shipper": "(주)에스지케이해운",
     "submittedDate": "2026-05-26"
   },
   {
-    "id": "poa909",
+    "id": "e5ab23b0-7a3d-4951-9fa1-8c9206ce61af",
     "applicant": "솔로몬글로벌라인",
     "shipper": "후레쉬메이트",
     "submittedDate": "2026-05-28"
   },
   {
-    "id": "poa910",
+    "id": "f9c3860d-048b-4cd7-bfbe-31afb76660a4",
     "applicant": "세영관세사무소",
     "shipper": "비케이네스트",
     "submittedDate": "2026-05-28"
   },
   {
-    "id": "poa911",
+    "id": "826096c5-80ab-4f7b-a461-92c89422185e",
     "applicant": "한아름그린푸드",
     "shipper": "대흥기업",
     "submittedDate": "2026-05-28"
   },
   {
-    "id": "poa912",
+    "id": "a0368241-251a-48a5-8280-6636d31fa7a2",
     "applicant": "푸른솔관세사무소",
     "shipper": "한경콤포넌트무역",
     "submittedDate": "2026-05-28"
   },
   {
-    "id": "poa913",
+    "id": "57743338-623c-40f3-9fbc-8ebfb51bcdf1",
     "applicant": "한국마하",
     "shipper": "재성관세사무소",
     "submittedDate": "2026-05-29"
   },
   {
-    "id": "poa914",
+    "id": "96eab256-723a-4945-bba1-753e4b9b2c16",
     "applicant": "엠티엠해운항공",
     "shipper": "유닛키즈",
     "submittedDate": "2026-05-29"
   },
   {
-    "id": "poa915",
+    "id": "67160bcc-62b4-4612-9a7c-887fc01ffd1b",
     "applicant": "주식회사 짱",
     "shipper": "율담관세사무소",
     "submittedDate": "2026-05-29"
   },
   {
-    "id": "poa916",
+    "id": "9bc97590-4442-4e8b-bc69-7a68c00aabc7",
     "applicant": "할리우드(주)",
     "shipper": "인천대림관세사",
     "submittedDate": "2026-05-29"
   },
   {
-    "id": "poa917",
+    "id": "8d0ee623-b1b0-487f-8a71-6044fe0bda5c",
     "applicant": "주식회사티씨더블유라인",
     "shipper": "에스앤필터",
     "submittedDate": "2026-05-29"
   },
   {
-    "id": "poa918",
+    "id": "c6c0edc6-43f4-4bba-baf5-deab14fc28a7",
     "applicant": "대구텍 유한책임회사",
     "shipper": "성림글로벌(주)",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa919",
+    "id": "ed601754-475d-42b8-81b3-03579ef34082",
     "applicant": "오웰테크(주)",
     "shipper": "(주)현우특수기업",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa920",
+    "id": "d7c36211-5a05-402b-99c5-1bda3e234e44",
     "applicant": "(주)도프",
     "shipper": "대건물류",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa921",
+    "id": "060d8af6-5ab9-48be-9768-1fdd25cfb6e1",
     "applicant": "디에스이",
     "shipper": "웰빙로지스틱스",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa922",
+    "id": "579bb0db-6dfe-473c-b48c-02808ab823f3",
     "applicant": "대광산업(주)",
     "shipper": "(주)원픽로지엠",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa923",
+    "id": "17ed3b06-a2c4-4394-83f0-f614c2e48b99",
     "applicant": "(주)삼성원미트",
     "shipper": "대흥기업",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa924",
+    "id": "41d05946-fe75-4dbe-8fda-46607c622688",
     "applicant": "주식회사 한독테바",
     "shipper": "관세법인 한주",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa925",
+    "id": "fc6d3f87-722e-4e01-8cfb-23ed5c1b61b2",
     "applicant": "주식회사 맛젤트레이딩",
     "shipper": "(주)동신종합물류",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa926",
+    "id": "5d356aaf-6584-48a8-9235-1899161f4eac",
     "applicant": "그린우드무늬목",
     "shipper": "메가쉬핑글로벌",
     "submittedDate": "2026-06-01"
   },
   {
-    "id": "poa927",
+    "id": "e0d38a36-1bde-4aca-9864-399d76d15d13",
     "applicant": "주식회사 대원 제지",
     "shipper": "(주)피플로지스틱스코리아",
     "submittedDate": "2026-04-07"
   },
   {
-    "id": "poa928",
+    "id": "82b41bfc-2936-4b18-a542-b3f8d91ee099",
     "applicant": "㈜티에스티트레이딩",
     "shipper": "주식회사 제이엠로지스틱스",
     "submittedDate": "2026-05-12"
   },
   {
-    "id": "poa929",
+    "id": "e865acc5-9f9d-4e45-b07b-bf260fcfcd62",
     "applicant": "㈜호경",
     "shipper": "㈜원픽로지엠 2026.6.1 ∼ 2027.6.1",
     "submittedDate": ""
   },
   {
-    "id": "poa930",
+    "id": "f8c4e62d-8180-4c93-a5da-113e0cc07c86",
     "applicant": "(주)동일상회",
     "shipper": "인천덕성관세사무소 2026.6.4 ~",
     "submittedDate": ""
   },
   {
-    "id": "poa931",
+    "id": "648f989d-244b-456b-aa47-8fc46ace16dd",
     "applicant": "에프앤씨글로벌주식회사",
     "shipper": "씨디엠해운항공 2026.6.4 ~",
     "submittedDate": ""
   },
   {
-    "id": "poa932",
+    "id": "620b53f4-fc63-4654-86f2-093576e4e5d0",
     "applicant": "동우국제부산지점",
     "shipper": "유니레버코리아 (UNILEVER KOREA)",
     "submittedDate": "2026-06-04"
   },
   {
-    "id": "poa933",
+    "id": "a386d488-d2ae-4135-baaf-7f062152bd20",
     "applicant": "(주)포티스",
     "shipper": "알피로지스틱주식회사",
     "submittedDate": "2026-06-04"
   },
   {
-    "id": "poa934",
+    "id": "c6546ec2-f020-483e-919d-c54218746d80",
     "applicant": "고신",
     "shipper": "메가쉬핑글로벌",
     "submittedDate": "2025-08-19"
   },
   {
-    "id": "poa935",
+    "id": "5caf3f48-7887-4cd3-868a-5ee299909367",
     "applicant": "주식회사 휴먼뮤지엄",
     "shipper": "자유무역관세사무소 2026. 06. 08. ~ 2027. 06. 08",
     "submittedDate": ""
   },
   {
-    "id": "poa936",
+    "id": "3dadacc4-5977-403e-b8a4-b315e2fb69fd",
     "applicant": "롯데패키징솔루션즈(주)진천공장",
     "shipper": "(주)대동종합물류 2026. 06. 08. ~",
     "submittedDate": ""
   },
   {
-    "id": "poa937",
+    "id": "b3d2c0e5-7b30-46e8-891c-ac8bdaffe523",
     "applicant": "언빌트스페이스",
     "shipper": "엠에스물류 2026. 06. 08. ~",
     "submittedDate": ""
   },
   {
-    "id": "poa938",
+    "id": "f559904b-ed50-4421-9aab-46419f8f1cf9",
     "applicant": "(주)춘우",
     "shipper": "아세아익스프레스(주) 2026. 06. 08. ~",
     "submittedDate": ""
   },
   {
-    "id": "poa939",
+    "id": "9bcf4dbc-b58a-4801-a752-3c43eda64fd5",
     "applicant": "주식회사 와이비케이위니즈",
     "shipper": "비원관세사무소 2026. 06. 08. ~",
     "submittedDate": ""
   },
   {
-    "id": "poa940",
+    "id": "9a8c727a-cf9e-4c2e-8247-03fc63a4b822",
     "applicant": "솔시드",
     "shipper": "소율관세사",
     "submittedDate": "2026-05-04"
   },
   {
-    "id": "poa941",
+    "id": "a592cb6a-7723-42f5-922b-75bcb975b30c",
     "applicant": "한빛무역",
     "shipper": "청원",
     "submittedDate": "2026-06-09"
   },
   {
-    "id": "poa942",
+    "id": "72e485d7-881a-49ba-87d8-c2cd24be8998",
     "applicant": "플러스팩",
     "shipper": "에이치에스엘엔씨",
     "submittedDate": "2026-06-09"
   },
   {
-    "id": "poa943",
+    "id": "80d61147-6e92-49cb-843d-a2e55fd99eca",
     "applicant": "블루보틀커피코리아 유한회사",
     "shipper": "씨제이대한통운(주)",
     "submittedDate": "2026-06-09"
   },
   {
-    "id": "poa944",
+    "id": "3256d90d-1151-481c-b50d-114ae536f829",
     "applicant": "제이에이치코퍼레이션",
     "shipper": "이노트레이드 (이노컨설팅)",
     "submittedDate": "2026-06-10"
   },
   {
-    "id": "poa945",
+    "id": "2a7a46da-5dbb-46aa-a4bb-0254863d438a",
     "applicant": "(주)서원",
     "shipper": "유엔아이라인(주)",
     "submittedDate": "2026-06-10"
   },
   {
-    "id": "poa946",
+    "id": "73309c27-29e4-4b3d-82b0-df2a0f5038c5",
     "applicant": "(주)케이엠글로비스",
     "shipper": "동명에이엔관세사무소 2026.6.10 ~2027.6.10",
     "submittedDate": ""
   },
   {
-    "id": "poa947",
+    "id": "64f99055-453e-4aa2-a609-7e2434a3e9c2",
     "applicant": "무림에스피(주)",
     "shipper": "(주)한익스프레스",
     "submittedDate": "2026-05-11"
   },
   {
-    "id": "poa948",
+    "id": "a73d4295-b0fc-477f-8b09-63e3917f9bd1",
     "applicant": "네오캠코리아",
     "shipper": "관세법인 진솔",
     "submittedDate": "2026-05-10"
   },
   {
-    "id": "poa949",
+    "id": "dffeda9c-cf8d-4dd6-ad85-4f839d3b06d4",
     "applicant": "와이에스티로지스틱스",
     "shipper": "신위무역 유한회사",
     "submittedDate": "2026-05-10"
   },
   {
-    "id": "poa950",
+    "id": "cd89bf4c-c592-4039-99ae-d721892a0b07",
     "applicant": "(주)인화사앤코",
     "shipper": "비에스제이관세사",
     "submittedDate": "2026-06-11"
   },
   {
-    "id": "poa951",
+    "id": "1f56b8f6-c205-4f0d-a9dc-32f6140bacbd",
     "applicant": "(주)동방아그로",
     "shipper": "(주)백상글로지스",
     "submittedDate": "2026-06-11"
   },
   {
-    "id": "poa952",
+    "id": "7ce20da8-79a9-423e-b72e-290c81cbbf81",
     "applicant": "범진시스템",
     "shipper": "동아관세법인",
     "submittedDate": "2026-06-11"
   },
   {
-    "id": "poa953",
+    "id": "926d0c26-5890-4588-9aa8-1c16edb8fe20",
     "applicant": "(주)포트텍",
     "shipper": "이티에스글로벌",
     "submittedDate": "2026-06-09"
   },
   {
-    "id": "poa954",
+    "id": "5ffb8559-8608-440c-b20f-1b0ed6860b67",
     "applicant": "선진텍스",
     "shipper": "관세법인 네오",
     "submittedDate": "2026-06-10"
   },
   {
-    "id": "poa955",
+    "id": "877c5a52-d1f2-4147-964b-e6ea5428ad35",
     "applicant": "(주)이엠티",
     "shipper": "(주)일양익스프레스",
     "submittedDate": "2026-06-10"
   },
   {
-    "id": "poa956",
+    "id": "747105f5-5cf3-4ed9-836e-4c1ace0594d1",
     "applicant": "새톱커머스",
     "shipper": "주식회사 해원",
     "submittedDate": "2026-06-11"
   },
   {
-    "id": "poa957",
+    "id": "2d704fd7-cf7c-48c1-b9a3-2d9fe4f02af4",
     "applicant": "(주)투비네트웍스글로벌",
     "shipper": "씨엠관세사무소",
     "submittedDate": "2026-06-11"
   },
   {
-    "id": "poa958",
+    "id": "e505beca-dfd2-4200-abe4-d209cedaa0f0",
     "applicant": "주식회사 에코코리아",
     "shipper": "관세법인한강글로벌",
     "submittedDate": "2026-06-12"
   },
   {
-    "id": "poa959",
+    "id": "35410fcd-2d54-4e48-a095-de65eacfb94c",
     "applicant": "한결엘에스",
     "shipper": "에이치티에스",
     "submittedDate": "2026-06-15"
   },
   {
-    "id": "poa960",
+    "id": "818e2c7f-a54f-4b1e-b066-7a5febf8cc0d",
     "applicant": "서중인터내셔날",
     "shipper": "케이엠씨",
     "submittedDate": "2026-06-15"
   },
   {
-    "id": "poa961",
+    "id": "f6e3fef2-fe58-4036-a880-bf9d32f2bc8b",
     "applicant": "세한피엔씨㈜",
     "shipper": "인천관세법인 인천공항지사",
     "submittedDate": "2026-06-15"
   },
   {
-    "id": "poa962",
+    "id": "8f40f47d-40e5-4c22-8523-b22bcd74826a",
     "applicant": "에스앤비글로벌",
     "shipper": "이제이인터내셔날",
     "submittedDate": "2026-06-12"
   },
   {
-    "id": "poa963",
+    "id": "5a7270b4-0f4f-4992-9132-bd5e0fab275d",
     "applicant": "(주)태광특수지",
     "shipper": "(주)동신씨앤에어",
     "submittedDate": "2026-06-11"
   },
   {
-    "id": "poa964",
+    "id": "28c320a4-69f7-44a0-a412-0e01d5b560f4",
     "applicant": "씨케이코퍼레이션즈",
     "shipper": "하나로티앤에스",
     "submittedDate": "2026-06-16"
   },
   {
-    "id": "poa965",
+    "id": "5683f2be-9c42-402d-a00e-62a5f6808e0a",
     "applicant": "우드뱅크",
     "shipper": "관세법인 명성",
     "submittedDate": "2026-06-17"
   },
   {
-    "id": "poa966",
+    "id": "cb91deaa-f5f0-4a91-abe1-ffd9839e707c",
     "applicant": "에이치마켓",
     "shipper": "관세법인청진 2026-06-17~",
     "submittedDate": ""
   },
   {
-    "id": "poa967",
+    "id": "b65ff0eb-2dd2-43e4-8cc9-1627963308b5",
     "applicant": "(주)삼주유통",
     "shipper": "(주)성림종합물류",
     "submittedDate": "2026-06-19"
   },
   {
-    "id": "poa968",
+    "id": "f5685e43-5d40-4974-b313-8ef1518fcf0e",
     "applicant": "(주)씨티씨바이오",
     "shipper": "주원합동관세사무소",
     "submittedDate": "2026-06-22"
   },
   {
-    "id": "poa969",
+    "id": "2e69ed95-d011-447c-aa23-669ed712cce9",
     "applicant": "삼현INT",
     "shipper": "주식회사 푸디즘",
     "submittedDate": "2026-06-24"
   },
   {
-    "id": "poa970",
+    "id": "13697e30-221c-4d94-b459-faf2866a951d",
     "applicant": "삼경관세사무소",
     "shipper": "(주)동양우드",
     "submittedDate": "2026-06-24"
   },
   {
-    "id": "poa971",
+    "id": "dc1f7eae-eca8-459a-8999-e9c9d7afa0ad",
     "applicant": "주식회사 에스큐커머스",
     "shipper": "대흥기업",
     "submittedDate": "2026-06-25"
   },
   {
-    "id": "poa972",
+    "id": "af12db85-78b5-4c30-85ce-9894333d5a22",
     "applicant": "(주)미트뱅크",
     "shipper": "(주)유하물류",
     "submittedDate": "2026-04-30"
   },
   {
-    "id": "poa973",
+    "id": "2e01e8b2-12a4-49f1-a3fd-0675896647c8",
     "applicant": "주식회사 리스마켓팅",
     "shipper": "(주)아태물류",
     "submittedDate": "2026-06-29"
   },
   {
-    "id": "poa974",
+    "id": "4a782f62-7c53-476a-8e5c-a093c5b42ea6",
     "applicant": "선민관세사무소",
     "shipper": "지에스인터내셔날",
     "submittedDate": "2026-07-01"
   },
   {
-    "id": "poa975",
+    "id": "760c445b-3fa4-4b77-8715-febae4384b79",
     "applicant": "동아관세사법인",
     "shipper": "해성에스에프",
     "submittedDate": "2026-07-01"
   },
   {
-    "id": "poa976",
+    "id": "b48cbdf2-e13a-4836-b676-a6e98fc0623f",
     "applicant": "(주)유창에프씨",
     "shipper": "동하관세법인",
     "submittedDate": "2026-07-02"
   },
   {
-    "id": "poa977",
+    "id": "d3d78d12-07a8-4f97-a19c-8d0502c827e0",
     "applicant": "(주)동진미트트레이딩",
     "shipper": "삼현INT",
     "submittedDate": "2026-07-02"
   },
   {
-    "id": "poa978",
+    "id": "4c92ed48-983f-4ec7-b63f-eda0b78d6e5d",
     "applicant": "(주)유어초이스",
     "shipper": "대흥기업",
     "submittedDate": "2026-07-02"
   },
   {
-    "id": "poa979",
+    "id": "57a7aa0e-1bb6-4c38-a05a-b68bb76a66aa",
     "applicant": "주식회사 세중로지스틱스",
     "shipper": "(주)유아이헬리콥터",
     "submittedDate": "2026-07-02"
   },
   {
-    "id": "poa980",
+    "id": "ee979461-6ad9-4c34-a7ce-dd3707316bbc",
     "applicant": "후레쉬밥",
     "shipper": "위즈로지스틱스",
     "submittedDate": "2026-07-02"
   },
   {
-    "id": "poa981",
+    "id": "26cc570d-8a2b-492a-9198-48d169de6285",
     "applicant": "코스마스로지스틱스",
     "shipper": "비테스코테크놀로지스코리아",
     "submittedDate": "2026-07-03"
   },
   {
-    "id": "poa982",
+    "id": "bf55247f-2353-4070-9591-8b590eee0ce4",
     "applicant": "선진바이오(주)하안동지점",
     "shipper": "주식회사프라임글로벌네트워크",
     "submittedDate": "2026-07-03"
   },
   {
-    "id": "poa983",
+    "id": "195955a6-1d5f-49e5-8ad7-fa676a051a83",
     "applicant": "더블유알그레이스코리아 주식회사",
     "shipper": "비디피로지스틱스코리아 유한회사",
     "submittedDate": ""
   },
   {
-    "id": "poa984",
+    "id": "606015fd-13e5-4ad3-bc32-d397ab76c6e5",
     "applicant": "대진관세사무소",
     "shipper": "(주)하나코퍼레이션",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa985",
+    "id": "2fd8dd5f-4366-4aee-b842-c09314bece7c",
     "applicant": "(주)챔프종합물류",
     "shipper": "(주)오리오",
     "submittedDate": "2026-04-29"
   },
   {
-    "id": "poa986",
+    "id": "637f8a9e-85c7-462e-9280-4891ee165ddb",
     "applicant": "신앤파트너스",
     "shipper": "케이엠씨",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa987",
+    "id": "2023110a-75ec-41fd-82a7-6a74a82bfacf",
     "applicant": "동양에이케이 코리아",
     "shipper": "청솔로직스",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa988",
+    "id": "2c67eebe-09cc-47ea-84f4-b08ede33200d",
     "applicant": "(주)나인미라클",
     "shipper": "대흥기업",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa989",
+    "id": "baf27843-fb9c-4d80-979c-dea0b21ebb08",
     "applicant": "알피로지스틱",
     "shipper": "폴리탑",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa990",
+    "id": "b4526d1e-b22a-40d7-88e7-c288b99b5b0c",
     "applicant": "선라이즈케미칼(주)",
     "shipper": "유앤아이관세사무소",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa991",
+    "id": "5aa26e89-1a05-4bbd-a7fe-04356cdac13b",
     "applicant": "주식회사 와이에스원테크",
     "shipper": "가연관세사",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa992",
+    "id": "2a2ce39a-ffa2-4fa7-a729-45745acad25a",
     "applicant": "(주)제이비",
     "shipper": "(주)가리온물류",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa993",
+    "id": "c62a827e-abc1-4af1-a064-b897ca19ef95",
     "applicant": "(주)서일피앤씨",
     "shipper": "청안관세사",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa994",
+    "id": "34ca2f68-0b4d-409e-9fca-1fcc315edf26",
     "applicant": "대관령물산",
     "shipper": "인천조은관세사무소",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa995",
+    "id": "319ea0b5-3d49-4401-ae5a-287f75ee002b",
     "applicant": ". SUNKYUNG C&T",
     "shipper": "레누스로지스틱스코리아",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa996",
+    "id": "612aacb4-9693-45aa-ad1d-755de87f0d2d",
     "applicant": "린텍코리아(주)",
     "shipper": "에스디관세법인",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa997",
+    "id": "c8186d46-db7c-4f2d-98a2-6fac8686d62c",
     "applicant": "MOTIVELINK(모티브링크)",
     "shipper": "H LOGISTICS 에이치로지스틱스(주)",
     "submittedDate": "2026-07-06"
   },
   {
-    "id": "poa998",
+    "id": "8c0ec1a4-ca92-4e33-be94-a6dd7f01558e",
     "applicant": "주식회사 에코프로비엠",
     "shipper": "한솔로지스틱스",
     "submittedDate": "2026-07-07"
   },
   {
-    "id": "poa999",
+    "id": "476a0a1e-e811-4bf7-be52-4b1f52e83570",
     "applicant": "주식회사 에이케이투인터네셔널",
     "shipper": "관세법인 청진",
     "submittedDate": "2026-07-07"
   },
   {
-    "id": "poa1000",
+    "id": "42fc51bf-14ee-40ae-8f00-05d62806570b",
     "applicant": "지산관세사무소",
     "shipper": "동서씨앤지",
     "submittedDate": ""
   },
   {
-    "id": "poa1001",
+    "id": "7104ee02-4af8-4569-9098-33988b6bfb80",
     "applicant": "성림종합물류",
     "shipper": "제이원브릿지",
     "submittedDate": ""
   },
   {
-    "id": "poa1002",
+    "id": "97f22e83-9deb-4969-a167-aeffbe4320a0",
     "applicant": "다인합동관세사",
     "shipper": "삼화개발",
     "submittedDate": ""
   },
   {
-    "id": "poa1003",
+    "id": "c3c0e052-1aca-4e29-9328-a606ff0080a0",
     "applicant": "하이시스이노지스",
     "shipper": "하이시스이노지스",
     "submittedDate": ""
   },
   {
-    "id": "poa1004",
+    "id": "58ae18bf-2a95-43fe-b786-a526eafe532a",
     "applicant": "현진제업",
     "shipper": "위드관세사",
     "submittedDate": ""
   },
   {
-    "id": "poa1005",
+    "id": "5e447c43-55ee-4bed-b199-6e47690a8100",
     "applicant": "선우관세사무소",
     "shipper": "본컴퍼니",
     "submittedDate": ""
   },
   {
-    "id": "poa1006",
+    "id": "07887dc3-2620-42d6-b7d5-5999def1485c",
     "applicant": "티케이글로직스",
     "shipper": "한솔",
     "submittedDate": ""
   },
   {
-    "id": "poa1007",
+    "id": "4ba29a93-2869-4982-941d-043e3d022fd3",
     "applicant": "에리자테프 (주)",
     "shipper": "(주)케이엘씨",
     "submittedDate": ""
   },
   {
-    "id": "poa1008",
+    "id": "83e157dd-005a-43fa-8da1-c0f36102f95b",
     "applicant": "맛젤트레이딩",
     "shipper": "케이씨티씨",
     "submittedDate": ""
   },
   {
-    "id": "poa1009",
+    "id": "f6123faf-e44a-4d37-959b-73d60176de94",
     "applicant": "BRIDGESTONETIRE",
     "shipper": "한익스프레스",
     "submittedDate": ""
   },
   {
-    "id": "poa1010",
+    "id": "07319c2c-6e9c-4d8a-8aa8-f46b058e07d0",
     "applicant": "그린윈일",
     "shipper": "(주)동신씨앤에어",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1011",
+    "id": "2bc23296-65ad-45ae-a746-f2dae3ebd51a",
     "applicant": "스타국제종합물류",
     "shipper": "대양산업",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1012",
+    "id": "f08e352c-0ca8-400b-85fc-6f7b33be2d82",
     "applicant": "티케이글로직스",
     "shipper": "스타리온성철",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1013",
+    "id": "067e94a1-1ca0-475a-aa87-b1eeccb99fe5",
     "applicant": "주식회사 퍼시픽지엘에스",
     "shipper": "SI코리아(에스아이코리아)",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1014",
+    "id": "fe395efc-4c03-40e8-9d2f-6fe2b05a3f07",
     "applicant": "딜라이트이앤씨",
     "shipper": "IKEA",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1015",
+    "id": "fa6afb80-bd51-4e88-8aad-46b128d4dec9",
     "applicant": "청솔로직스",
     "shipper": "효성화학",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1016",
+    "id": "bd1e21cc-2b15-43fb-8f00-de57176be344",
     "applicant": "오투관세사",
     "shipper": "한국화섬",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1017",
+    "id": "97c46112-c802-4dce-be80-a0524651ca24",
     "applicant": "(주)씨앤비",
     "shipper": "스카이쉬핑(주)",
     "submittedDate": "2026-07-13"
   },
   {
-    "id": "poa1018",
+    "id": "622118e1-9fe9-4380-a48b-8cecb8ee4816",
     "applicant": "탑스코리아",
     "shipper": "파랑새 해운항공",
     "submittedDate": "2026-07-14"
   },
   {
-    "id": "poa1019",
+    "id": "6b84de8e-f0f7-4488-9b46-0cc3af491760",
     "applicant": "제이에프힐레브란트코리아",
     "shipper": "KMS",
     "submittedDate": "2026-07-14"
   },
   {
-    "id": "poa1020",
+    "id": "e903224d-2377-43ab-80e8-e7ddf1ee88a5",
     "applicant": "(주)영산기업",
     "shipper": "하경관세사무소",
     "submittedDate": "2026-07-14"
   },
   {
-    "id": "poa1021",
+    "id": "da3195a6-68d7-46e0-ba68-731d1384948b",
     "applicant": "세방메탈트레이딩",
     "shipper": "제이에스물류",
     "submittedDate": "2026-07-14"
   },
   {
-    "id": "poa1022",
+    "id": "d00f51cd-8152-4127-a368-458498bc6f9c",
     "applicant": "서울정밀화학공업(주)",
     "shipper": "이산글로벌 로지스틱(주)",
     "submittedDate": "2026-07-14"
   },
   {
-    "id": "poa1023",
+    "id": "420db09e-6563-4111-8ca8-7c30c09e663d",
     "applicant": "팍트라인터내셔널",
     "shipper": "하나셀트론",
     "submittedDate": "2026-07-14"
   },
   {
-    "id": "poa1024",
+    "id": "c8878fa7-e836-4134-b4c6-bd97451e2739",
     "applicant": "디아지오코리아 주식회사",
     "shipper": "주식회사 대화로지스틱",
     "submittedDate": "2026-07-07"
   },
   {
-    "id": "poa1025",
+    "id": "8563ebc9-aef9-4ed9-89ac-5cfbd3b03618",
     "applicant": "영로지스",
     "shipper": "나무와나무",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1026",
+    "id": "b1b68b3b-06be-4931-b6d9-3882bf0ad15a",
     "applicant": "케이투무역관세사무소",
     "shipper": "성우플러스",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1027",
+    "id": "396397b9-fd97-42e9-89ec-f316b6b99bb8",
     "applicant": "썬트랜스인터내셔널",
     "shipper": "아큐릭스",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1028",
+    "id": "eee766e5-2d5e-407c-8a01-bef1c66d2744",
     "applicant": "삼현INT",
     "shipper": "동북푸드",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1029",
+    "id": "20bfb3ab-ce20-4591-9fe8-e0b142c3afbf",
     "applicant": "한강관세법인",
     "shipper": "지에프",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1030",
+    "id": "1489fbf4-ceec-4f00-bf70-1d635c5a211b",
     "applicant": "가나축산유통",
     "shipper": "삼현INT",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1031",
+    "id": "771a11d5-627a-40c6-b06d-e855fd792db8",
     "applicant": "서암코퍼레이션",
     "shipper": "루한로지스틱스",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1032",
+    "id": "e0f4f0bc-4826-488e-b4f0-45ef6d757e01",
     "applicant": "스태리그룹",
     "shipper": "성강로지스틱스",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1033",
+    "id": "3009f99b-bc78-47b0-a19c-1a2e2ca74b56",
     "applicant": "영광물류",
     "shipper": "에이원안전",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1034",
+    "id": "9f075217-b22d-4640-a821-e314cd34660d",
     "applicant": "아진트랜스",
     "shipper": "러셀코리아",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1035",
+    "id": "60efcda2-968c-4599-8032-643b99307cbf",
     "applicant": "(주) 우드원",
     "shipper": "뉴진해운항공(주)",
     "submittedDate": "2026-07-15"
   },
   {
-    "id": "poa1036",
+    "id": "057424a6-89ac-4019-96e0-d8ae61256457",
     "applicant": "켐시스코퍼레이션",
     "shipper": "이앤씨아이앤씨㈜",
     "submittedDate": "2026-07-16"
   },
   {
-    "id": "poa1037",
+    "id": "bfc2fe0e-6b76-45f5-afe1-6fd000d32b3d",
     "applicant": "챔프종합물류",
     "shipper": "에보닉코리아 (EVONIK KOREA)",
     "submittedDate": "2026-07-16"
   },
   {
-    "id": "poa1038",
+    "id": "30f113f4-e226-4aee-914c-1f983f4df4b4",
     "applicant": "성림글로벌 주식회사",
     "shipper": "아이엠씨엔드밀 유한책임회사",
     "submittedDate": "2026-07-16"
   },
   {
-    "id": "poa1039",
+    "id": "36038e8b-57a5-41b0-98da-08d9fa2ebf44",
     "applicant": "(유)한국그랜드유니버셜트레이딩",
     "shipper": "뉴에에스관세법인(ACE관세법인)",
     "submittedDate": ""
   },
   {
-    "id": "poa1040",
+    "id": "857e77d9-7095-4225-836e-0874bc4e1f31",
     "applicant": "켐스코드",
     "shipper": "에이스관세법인",
     "submittedDate": "2026-07-16"
   },
   {
-    "id": "poa1041",
+    "id": "5b534259-9a26-449b-b10f-5e81049bfd6b",
     "applicant": "예스로지텍",
     "shipper": "미원스페셜티케미칼",
     "submittedDate": ""
   },
   {
-    "id": "poa1042",
+    "id": "1ac6c44a-4d0a-4445-831b-1a4242337d07",
     "applicant": "아태물류",
     "shipper": "에버그린후레쉬프로듀스",
     "submittedDate": ""
   },
   {
-    "id": "poa1043",
+    "id": "d3c00e54-3064-40ea-aa0e-4bcbca3ba159",
     "applicant": "뉴스포츠산업",
     "shipper": "삼일국제물류",
     "submittedDate": ""
   },
   {
-    "id": "poa1044",
+    "id": "96dc768b-4f12-4f16-b657-d83e64dd90b8",
     "applicant": "주식회사 로아네트웍스",
     "shipper": "세이브관세사무소",
     "submittedDate": "2026-07-20"
   },
   {
-    "id": "poa1045",
+    "id": "cf6176bf-0666-4b75-8365-92aff526a89d",
     "applicant": "화신세라믹",
     "shipper": "관세법인 에이원 부산총괄본부",
     "submittedDate": "2026-07-20"
   },
   {
-    "id": "poa1046",
+    "id": "013b6fb4-82e5-4b59-9b21-322196df7bd9",
     "applicant": "동아유리무역",
     "shipper": "신효성관세사",
     "submittedDate": "2026-07-20"
   },
   {
-    "id": "poa1047",
+    "id": "b4a6bef4-82a3-4a54-90cc-9b6225f87379",
     "applicant": "모닝스타로지스틱주식회사",
     "shipper": "대한제지",
     "submittedDate": "2026-07-20"
   },
   {
-    "id": "poa1048",
+    "id": "37a4dafb-0cec-4c52-8fbe-48a02f782eb3",
     "applicant": "씨카코리아(주)",
     "shipper": "광진종합물류",
     "submittedDate": "2026-07-20"
   },
   {
-    "id": "poa1049",
+    "id": "159a15c4-ba4a-40db-84df-3c1d012ad32e",
     "applicant": "뉴세화합동관세사무소",
     "shipper": "DONGSUH OIL ＆ FATS CO.,LTD. (동서유지)",
     "submittedDate": ""
   },
   {
-    "id": "poa1050",
+    "id": "8a94cc1c-83d2-4487-a4ac-38da194f08d0",
     "applicant": "주식회사 제이지이노베이션",
     "shipper": "지티씨 로지스틱",
     "submittedDate": "2026-07-20"
   },
   {
-    "id": "poa1051",
+    "id": "11eceb3f-b1af-4a99-b91d-218a12151f84",
     "applicant": "기린트레이딩",
     "shipper": "유성물류",
     "submittedDate": "2026-07-21"
   },
   {
-    "id": "poa1052",
+    "id": "020d5358-cd79-4ec9-a6bf-87f38c8e3a51",
     "applicant": "단팔코리아",
     "shipper": "중앙국제운송",
     "submittedDate": "2026-07-22"
   },
   {
-    "id": "poa1053",
+    "id": "2f4c4a01-eb42-4928-80a1-4eb200808710",
     "applicant": "유하물류",
     "shipper": "굿스트레이딩",
     "submittedDate": "2026-07-22"
   },
   {
-    "id": "poa1054",
+    "id": "797c1bcb-0ed2-4356-8138-e015eefabd21",
     "applicant": "에이치앤알로지스틱스",
     "shipper": "사조동아원",
     "submittedDate": "2026-07-22"
   },
   {
-    "id": "poa1055",
+    "id": "a6fd059c-b736-4899-83c2-cee894f206b5",
     "applicant": "대경로직스",
     "shipper": "제이유케미칼",
     "submittedDate": "2026-07-22"
   },
   {
-    "id": "poa1056",
+    "id": "f7008f2a-5e9b-46b0-aeca-957163f6c263",
     "applicant": "노벨리스코리아",
     "shipper": "진성종합상운",
     "submittedDate": "2026-07-23"
   },
   {
-    "id": "poa1057",
+    "id": "fc2bd0f3-b9e0-49b5-b212-b465017765cc",
     "applicant": "삼화정밀",
     "shipper": "엠트랜스주식회사",
     "submittedDate": "2026-07-23"
   },
   {
-    "id": "poa1058",
+    "id": "51c0bf00-699b-4cf6-a656-01ef15d1dd87",
     "applicant": "(주)제이엠테크",
     "shipper": "대도합동관세사무소",
     "submittedDate": "2026-07-24"
   },
   {
-    "id": "poa1059",
+    "id": "6892f524-7e67-4c7d-b7d4-903f9b5243ea",
     "applicant": "어통수산(주)",
     "shipper": "선민관세사",
     "submittedDate": "2026-07-24"
   },
   {
-    "id": "poa1060",
+    "id": "4615fd7c-5b00-4f2c-a281-7462da1260e9",
     "applicant": "테라트레이딩",
     "shipper": "하이패스관세사무소",
     "submittedDate": "2026-07-27"
   },
   {
-    "id": "poa1061",
+    "id": "d6412844-924e-4ca3-ac62-d6a73aeb20ae",
     "applicant": "조양국제종합물류",
     "shipper": "DONGYANG FT",
     "submittedDate": "2026-07-29"
   },
   {
-    "id": "poa1062",
+    "id": "21beedeb-cd13-41b7-9d98-0b383b18c835",
     "applicant": "로프트로지스틱스",
     "shipper": "LANXESS KOREA",
     "submittedDate": "2026-07-31"
   },
   {
-    "id": "poa1063",
+    "id": "80b4a8b4-d4b5-47c3-9033-47c0cf7412ab",
     "applicant": "한진",
     "shipper": "하이랜드푸드",
     "submittedDate": "2026-08-03"
   },
   {
-    "id": "poa1064",
+    "id": "adbcd215-af5c-4aa2-81b8-46593a01c69c",
     "applicant": "세방익스프레스",
     "shipper": "지오맷",
     "submittedDate": "2026-08-03"
   },
   {
-    "id": "poa1065",
+    "id": "4d0d985c-1665-4c17-97ca-f6dad31b320f",
     "applicant": "이앤엑스",
     "shipper": "저스트큐",
     "submittedDate": "2026-08-03"
   },
   {
-    "id": "poa1066",
+    "id": "75ec2424-a9d6-404e-aa0a-d75244ad9a64",
     "applicant": "대흥기업",
     "shipper": "승리미트",
     "submittedDate": "2026-08-04"
   },
   {
-    "id": "poa1067",
+    "id": "704a83a5-7159-471f-9903-50191bebaad0",
     "applicant": "현우특수기업",
     "shipper": "알테크노메탈 당진지점",
     "submittedDate": "2026-08-04"
   },
   {
-    "id": "poa1068",
+    "id": "c629539c-17de-4305-b1f8-aa67f41ce7dd",
     "applicant": "삼미국제로직스 SAMMI INT'L Logistics Co., Ltd",
     "shipper": "아이비티 IBT CO.,LTD",
     "submittedDate": "2026-03-23"
   },
   {
-    "id": "poa1069",
+    "id": "e95a9632-70a5-409c-bef3-493f9bd9353a",
     "applicant": "(주)화경",
     "shipper": "그린관세사무소",
     "submittedDate": "2026-06-08"
