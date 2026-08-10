@@ -244,161 +244,169 @@ async function deleteOblFromServer(id) {
 }
 
 /* =========================================================================
-   ⚙️ 확정 휴가 실시간 공유 설정
-   위임장/오비엘/모선일정/의견남기기와 같은 방식이에요. 새 구글 시트 + 새
-   Apps Script 웹앱을 배포한 뒤, 그 주소를 아래에 붙여넣으면 활성화돼요.
+   ⚙️ 확정휴가 · 공휴일 · 팀일정 · 공지배너 통합 실시간 공유 설정
+   4개를 각각 Apps Script로 안 만들고, 이 URL 하나로 다 처리해요 (entity
+   파라미터로 서버에서 구분). 확정휴가·공휴일·팀일정·공지배너 저장(추가·
+   수정·삭제)은 관리자 키가 맞아야만 되고, 보기는 누구나 가능해요.
    ========================================================================= */
-const VACATION_SHEET_API_URL = "";
+const CORE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzLftWNL8gZOvPlpn9ReB7tvkZw4c3OEarX-y7uW2Bct0xtMYLf3tBuBOdJ65bigWXq/exec";
 
-async function fetchVacationListFromServer() {
-  if (!VACATION_SHEET_API_URL) return null;
+/* ---- 관리자 키 처리: 한 번 물어보고 이 브라우저에 저장, 틀리면 다시 물어봄 ---- */
+const ADMIN_KEY_STORAGE = "csGuideAdminKey";
+
+function getCachedAdminKey() {
+  return localStorage.getItem(ADMIN_KEY_STORAGE) || "";
+}
+
+function promptAdminKey() {
+  const key = prompt("관리자 키를 입력해주세요 (확정휴가·공휴일·팀일정·공지배너 편집 권한)");
+  if (key) localStorage.setItem(ADMIN_KEY_STORAGE, key);
+  return key || "";
+}
+
+function clearCachedAdminKey() {
+  localStorage.removeItem(ADMIN_KEY_STORAGE);
+}
+
+/* 캐시된 키가 있으면 그대로 쓰고, 없으면 물어봐서 저장 */
+function ensureAdminKey() {
+  const cached = getCachedAdminKey();
+  if (cached) return cached;
+  return promptAdminKey();
+}
+
+/* ---- entity 기반 공통 GET/POST 헬퍼 ---- */
+async function coreFetchEntity(entity) {
+  if (!CORE_SHEET_API_URL) return null;
   try {
-    const res = await fetch(VACATION_SHEET_API_URL, { method: "GET" });
+    const res = await fetch(CORE_SHEET_API_URL + "?entity=" + entity, { method: "GET" });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
-    return data.list.map((row) => ({
-      id: row.id, name: row.name || "", startDate: row.startDate || "",
-      endDate: row.endDate || "", note: row.note || "", unit: row.unit || "full"
-    }));
+    return data;
   } catch (err) {
-    console.error("휴가 목록 서버 불러오기 실패:", err);
+    console.error(entity + " 서버 불러오기 실패:", err);
     return null;
   }
 }
 
+/* 쓰기(추가/수정/삭제/저장)는 관리자 키가 필요해서, 틀리면 캐시를 지우고
+   한 번 더 물어봐서 재시도한다 (오타로 저장 못 하는 상황을 줄이기 위함) */
+async function corePostEntity(entity, payload) {
+  if (!CORE_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
+  const adminKey = ensureAdminKey();
+  if (!adminKey) return { ok: false, error: "관리자 키를 입력해야 저장할 수 있어요." };
+  try {
+    const res = await fetch(CORE_SHEET_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(Object.assign({ entity: entity, adminKey: adminKey }, payload)),
+    });
+    const data = await res.json();
+    if (data.authError) {
+      clearCachedAdminKey();
+      const retryKey = promptAdminKey();
+      if (!retryKey) return { ok: false, error: "관리자 키가 필요해요." };
+      const retryRes = await fetch(CORE_SHEET_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(Object.assign({ entity: entity, adminKey: retryKey }, payload)),
+      });
+      return await retryRes.json();
+    }
+    return data;
+  } catch (err) {
+    console.error(entity + " 서버 저장 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/* ===================== 확정휴가 ===================== */
+async function fetchVacationListFromServer() {
+  const data = await coreFetchEntity("vacations");
+  if (!data) return null;
+  return data.list.map((row) => ({
+    id: row.id, name: row.name || "", startDate: row.startDate || "",
+    endDate: row.endDate || "", note: row.note || "", unit: row.unit || "full"
+  }));
+}
 async function submitVacationToServer(entry) {
-  if (!VACATION_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  try {
-    const res = await fetch(VACATION_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
-    return { ok: true, id: data.id };
-  } catch (err) {
-    console.error("휴가 서버 등록 실패:", err);
-    return { ok: false, error: String(err) };
-  }
+  const result = await corePostEntity("vacations", Object.assign({ action: "add" }, entry));
+  return result;
 }
-
 async function updateVacationOnServer(entry) {
-  if (!VACATION_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  try {
-    const res = await fetch(VACATION_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "update" }, entry)),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "수정에 실패했어요.");
-    return { ok: true };
-  } catch (err) {
-    console.error("휴가 서버 수정 실패:", err);
-    return { ok: false, error: String(err) };
-  }
+  return corePostEntity("vacations", Object.assign({ action: "update" }, entry));
 }
-
 async function deleteVacationFromServer(id) {
-  if (!VACATION_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  try {
-    const res = await fetch(VACATION_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "delete", id: id }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
-    return { ok: true };
-  } catch (err) {
-    console.error("휴가 서버 삭제 실패:", err);
-    return { ok: false, error: String(err) };
-  }
+  return corePostEntity("vacations", { action: "delete", id: id });
 }
-
 /* 확정휴가 탭·팀일정 캘린더 탭 둘 다 VACATIONS를 쓰기 때문에, 둘 중 어디로
    들어오든 이 함수로 먼저 최신화한 뒤 화면을 그린다 */
 async function syncVacationsFromServer() {
-  if (!VACATION_SHEET_API_URL) return;
+  if (!CORE_SHEET_API_URL) return;
   const list = await fetchVacationListFromServer();
   if (list) VACATIONS = list;
 }
 
-/* =========================================================================
-   ⚙️ 공휴일 실시간 공유 설정
-   ========================================================================= */
-const HOLIDAY_SHEET_API_URL = "";
-
+/* ===================== 공휴일 ===================== */
 async function fetchHolidayListFromServer() {
-  if (!HOLIDAY_SHEET_API_URL) return null;
-  try {
-    const res = await fetch(HOLIDAY_SHEET_API_URL, { method: "GET" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
-    return data.list.map((row) => ({ id: row.id, date: row.date || "", name: row.name || "" }));
-  } catch (err) {
-    console.error("공휴일 목록 서버 불러오기 실패:", err);
-    return null;
-  }
+  const data = await coreFetchEntity("holidays");
+  if (!data) return null;
+  return data.list.map((row) => ({ id: row.id, date: row.date || "", name: row.name || "" }));
 }
-
 async function submitHolidayToServer(entry) {
-  if (!HOLIDAY_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  try {
-    const res = await fetch(HOLIDAY_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
-    return { ok: true, id: data.id };
-  } catch (err) {
-    console.error("공휴일 서버 등록 실패:", err);
-    return { ok: false, error: String(err) };
-  }
+  return corePostEntity("holidays", Object.assign({ action: "add" }, entry));
 }
-
 async function updateHolidayOnServer(entry) {
-  if (!HOLIDAY_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  try {
-    const res = await fetch(HOLIDAY_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "update" }, entry)),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "수정에 실패했어요.");
-    return { ok: true };
-  } catch (err) {
-    console.error("공휴일 서버 수정 실패:", err);
-    return { ok: false, error: String(err) };
-  }
+  return corePostEntity("holidays", Object.assign({ action: "update" }, entry));
 }
-
 async function deleteHolidayFromServer(id) {
-  if (!HOLIDAY_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  try {
-    const res = await fetch(HOLIDAY_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "delete", id: id }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
-    return { ok: true };
-  } catch (err) {
-    console.error("공휴일 서버 삭제 실패:", err);
-    return { ok: false, error: String(err) };
-  }
+  return corePostEntity("holidays", { action: "delete", id: id });
 }
-
 async function syncHolidaysFromServer() {
-  if (!HOLIDAY_SHEET_API_URL) return;
+  if (!CORE_SHEET_API_URL) return;
   const list = await fetchHolidayListFromServer();
   if (list) HOLIDAYS = list;
 }
+
+/* ===================== 팀 일정(회사 일정) ===================== */
+async function fetchTeamEventListFromServer() {
+  const data = await coreFetchEntity("teamEvents");
+  if (!data) return null;
+  return data.list.map((row) => ({
+    id: row.id, date: row.date || "", text: row.text || "",
+    highlight: row.highlight === true || row.highlight === "TRUE" || row.highlight === "true"
+  }));
+}
+async function submitTeamEventToServer(entry) {
+  return corePostEntity("teamEvents", Object.assign({ action: "add" }, entry));
+}
+async function updateTeamEventOnServer(entry) {
+  return corePostEntity("teamEvents", Object.assign({ action: "update" }, entry));
+}
+async function deleteTeamEventFromServer(id) {
+  return corePostEntity("teamEvents", { action: "delete", id: id });
+}
+async function syncTeamEventsFromServer() {
+  if (!CORE_SHEET_API_URL) return;
+  const list = await fetchTeamEventListFromServer();
+  if (list) TEAM_EVENTS = list;
+}
+
+/* ===================== 공지 배너 ===================== */
+async function fetchNoticeBannerFromServer() {
+  const data = await coreFetchEntity("banner");
+  if (!data) return null;
+  return { enabled: data.enabled === true, text: data.text || "", updatedAt: data.updatedAt || "" };
+}
+async function saveNoticeBannerToServer(banner) {
+  return corePostEntity("banner", Object.assign({ action: "save" }, banner));
+}
+async function syncNoticeBannerFromServer() {
+  if (!CORE_SHEET_API_URL) return;
+  const banner = await fetchNoticeBannerFromServer();
+  if (banner) NOTICE_BANNER = banner;
+}
+
 
 async function loadOblTab() {
   const wrap = document.getElementById("oblTableWrap");
@@ -14969,7 +14977,7 @@ async function loadVacationTab() {
 }
 
 async function loadTeamCalendarTab() {
-  await Promise.all([loadTentativeVacations(), syncVacationsFromServer(), syncHolidaysFromServer()]);
+  await Promise.all([loadTentativeVacations(), syncVacationsFromServer(), syncHolidaysFromServer(), syncTeamEventsFromServer()]);
   renderTeamCalendar();
 }
 
@@ -16895,7 +16903,7 @@ function closePersonVacationEditor() {
 /* person-vacation-row 안에서 값 하나 바뀔 때마다 호출 - 서버 연동 켜져있으면 그쪽으로,
    아니면 예전처럼 로컬 저장 */
 async function persistVacationEdit(v) {
-  if (VACATION_SHEET_API_URL) {
+  if (CORE_SHEET_API_URL) {
     const result = await updateVacationOnServer({ id: v.id, name: v.name, startDate: v.startDate, endDate: v.endDate, note: v.note || "", unit: v.unit || "full" });
     if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return false; }
     await syncVacationsFromServer();
@@ -16998,7 +17006,7 @@ function renderPersonVacationBody(name) {
     delBtn.style.cssText = "flex-shrink:0;padding:6px 10px;font-size:12px;color:#dc2626;";
     delBtn.textContent = "삭제";
     delBtn.onclick = async () => {
-      if (VACATION_SHEET_API_URL) {
+      if (CORE_SHEET_API_URL) {
         const result = await deleteVacationFromServer(v.id);
         if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
         await syncVacationsFromServer();
@@ -17040,7 +17048,7 @@ function renderPersonVacationBody(name) {
   addBtn.onclick = async () => {
     if (!addDate.value) { alert("날짜를 선택해주세요."); return; }
     const entry = { name, startDate: addDate.value, endDate: addDate.value, unit: addUnit.value, note: "" };
-    if (VACATION_SHEET_API_URL) {
+    if (CORE_SHEET_API_URL) {
       const result = await submitVacationToServer(entry);
       if (!result.ok) { alert("등록에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
       await syncVacationsFromServer();
@@ -17158,7 +17166,7 @@ function renderVacationEditorBody(existingId, prefillName) {
     const unit = unitSelect.value;
     const entry = { name, startDate: startInput.value, endDate, note: noteInput.value.trim(), unit };
 
-    if (VACATION_SHEET_API_URL) {
+    if (CORE_SHEET_API_URL) {
       saveBtn.disabled = true;
       const result = existing
         ? await updateVacationOnServer(Object.assign({ id: existing.id }, entry))
@@ -17484,16 +17492,34 @@ function renderDayEditorBody(dateStr) {
       highlightBtn.style.cssText = "flex-shrink:0;padding:8px 10px;font-size:12px;" + (ev.highlight ? "background:#f87171;color:#fff;border-color:#f87171;" : "");
       highlightBtn.textContent = "🔴";
       highlightBtn.title = "강조 표시 켜기/끄기";
-      highlightBtn.onclick = () => { ev.highlight = !ev.highlight; saveData(); refreshCurrentTab(); renderDayEditorBody(dateStr); };
+      highlightBtn.onclick = async () => {
+        const newHighlight = !ev.highlight;
+        if (CORE_SHEET_API_URL) {
+          const result = await updateTeamEventOnServer({ id: ev.id, date: ev.date, text: ev.text, highlight: newHighlight });
+          if (!result.ok) { alert("변경에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+          await syncTeamEventsFromServer();
+        } else {
+          ev.highlight = newHighlight;
+          saveData();
+        }
+        refreshCurrentTab();
+        renderDayEditorBody(dateStr);
+      };
       row.appendChild(highlightBtn);
 
       const delBtn = document.createElement("button");
       delBtn.className = "btn secondary-btn";
       delBtn.style.cssText = "flex-shrink:0;padding:8px 10px;font-size:12px;color:#dc2626;";
       delBtn.textContent = "삭제";
-      delBtn.onclick = () => {
-        TEAM_EVENTS = TEAM_EVENTS.filter((t) => t.id !== ev.id);
-        saveData();
+      delBtn.onclick = async () => {
+        if (CORE_SHEET_API_URL) {
+          const result = await deleteTeamEventFromServer(ev.id);
+          if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+          await syncTeamEventsFromServer();
+        } else {
+          TEAM_EVENTS = TEAM_EVENTS.filter((t) => t.id !== ev.id);
+          saveData();
+        }
         refreshCurrentTab();
         renderDayEditorBody(dateStr);
       };
@@ -17521,11 +17547,19 @@ function renderDayEditorBody(dateStr) {
   addBtn.className = "btn generate-btn";
   addBtn.style.cssText = "flex-shrink:0;padding:8px 14px;font-size:13px;";
   addBtn.textContent = "+ 추가";
-  addBtn.onclick = () => {
+  addBtn.onclick = async () => {
     const text = addInput.value.trim();
     if (!text) return;
-    TEAM_EVENTS.push({ id: genId("te"), date: dateStr, text, highlight: false });
-    saveData();
+    if (CORE_SHEET_API_URL) {
+      addBtn.disabled = true;
+      const result = await submitTeamEventToServer({ date: dateStr, text, highlight: false });
+      addBtn.disabled = false;
+      if (!result.ok) { alert("등록에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      await syncTeamEventsFromServer();
+    } else {
+      TEAM_EVENTS.push({ id: genId("te"), date: dateStr, text, highlight: false });
+      saveData();
+    }
     refreshCurrentTab();
     renderDayEditorBody(dateStr);
   };
@@ -19010,7 +19044,18 @@ function renderNoticeAdminBody(body) {
   saveBtn.className = "btn generate-btn full";
   saveBtn.style.marginTop = "12px";
   saveBtn.textContent = "💾 저장하기";
-  saveBtn.onclick = () => {
+  saveBtn.onclick = async () => {
+    const banner = { enabled: chk.checked, text: ta.value, updatedAt: todayStr() };
+    if (CORE_SHEET_API_URL) {
+      saveBtn.disabled = true;
+      const result = await saveNoticeBannerToServer(banner);
+      saveBtn.disabled = false;
+      if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      NOTICE_BANNER = banner;
+      renderNoticeBanner();
+      renderNoticeAdminBody(body);
+      return;
+    }
     NOTICE_BANNER.enabled = chk.checked;
     NOTICE_BANNER.text = ta.value;
     NOTICE_BANNER.updatedAt = todayStr();
@@ -19700,7 +19745,7 @@ async function deleteItem(id) {
   } else if (adminSection === "vacations") {
     const item = VACATIONS.find((t) => t.id === id);
     if (!confirm(`"${item.name}"님의 휴가 일정을 삭제할까요?`)) return;
-    if (VACATION_SHEET_API_URL) {
+    if (CORE_SHEET_API_URL) {
       const result = await deleteVacationFromServer(id);
       if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
       await syncVacationsFromServer();
@@ -19728,7 +19773,7 @@ async function deleteItem(id) {
   } else if (adminSection === "holidays") {
     const item = HOLIDAYS.find((t) => t.id === id);
     if (!confirm(`"${item.name}" (${item.date}) 공휴일을 삭제할까요?`)) return;
-    if (HOLIDAY_SHEET_API_URL) {
+    if (CORE_SHEET_API_URL) {
       const result = await deleteHolidayFromServer(id);
       if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
       await syncHolidaysFromServer();
@@ -19740,6 +19785,14 @@ async function deleteItem(id) {
   } else {
     const item = TEAM_EVENTS.find((t) => t.id === id);
     if (!confirm(`"${item.text}" 일정을 삭제할까요?`)) return;
+    if (CORE_SHEET_API_URL) {
+      const result = await deleteTeamEventFromServer(id);
+      if (!result.ok) { alert("삭제에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+      await syncTeamEventsFromServer();
+      renderAdminList();
+      refreshCurrentTab();
+      return;
+    }
     TEAM_EVENTS = TEAM_EVENTS.filter((t) => t.id !== id);
   }
   saveData();
@@ -20983,7 +21036,7 @@ async function commitDraft(list, setter) {
   const isNew = !draft.id;
 
   // 확정휴가·공휴일은 서버 연동이 켜져 있으면 구글시트에 저장하고, 최신 목록으로 다시 불러온다
-  if (adminSection === "vacations" && VACATION_SHEET_API_URL) {
+  if (adminSection === "vacations" && CORE_SHEET_API_URL) {
     const entry = { name: draft.name, startDate: draft.startDate, endDate: draft.endDate, note: draft.note, unit: draft.unit || "full" };
     const result = isNew ? await submitVacationToServer(entry) : await updateVacationOnServer(Object.assign({ id: draft.id }, entry));
     if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
@@ -20993,12 +21046,22 @@ async function commitDraft(list, setter) {
     refreshCurrentTab();
     return;
   }
-  if (adminSection === "holidays" && HOLIDAY_SHEET_API_URL) {
+  if (adminSection === "holidays" && CORE_SHEET_API_URL) {
     const entry = { date: draft.date, name: draft.name };
     const result = isNew ? await submitHolidayToServer(entry) : await updateHolidayOnServer(Object.assign({ id: draft.id }, entry));
     if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
     draft = null;
     await syncHolidaysFromServer();
+    renderAdminList();
+    refreshCurrentTab();
+    return;
+  }
+  if (adminSection === "teamEvents" && CORE_SHEET_API_URL) {
+    const entry = { date: draft.date, text: draft.text, highlight: !!draft.highlight };
+    const result = isNew ? await submitTeamEventToServer(entry) : await updateTeamEventOnServer(Object.assign({ id: draft.id }, entry));
+    if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+    draft = null;
+    await syncTeamEventsFromServer();
     renderAdminList();
     refreshCurrentTab();
     return;
@@ -23366,6 +23429,9 @@ switchMainTab("procedures");
 initTypeSelect();
 initNtfTypeSelect();
 renderNoticeBanner();
+if (CORE_SHEET_API_URL) {
+  syncNoticeBannerFromServer().then(() => renderNoticeBanner());
+}
 renderFeedbackBadge();
 if (FEEDBACK_SHEET_API_URL) {
   fetchFeedbackListFromServer().then((list) => {
