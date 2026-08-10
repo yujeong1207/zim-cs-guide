@@ -15174,14 +15174,13 @@ function renderSearchResults(query) {
     groups[groupIndex[r.label]].items.push(r);
   });
 
-  const SEARCH_GROUP_COLLAPSE_THRESHOLD = 6;
-
+  // 개수와 상관없이 모든 카테고리를 일단 접어두고 헤더만 쭉 보여줘서,
+  // "어떤 종류에 몇 건씩 있는지"를 한눈에 훑어본 다음 원하는 걸 펼쳐보게 함
   groups.forEach((group, gi) => {
-    const shouldCollapse = group.items.length > SEARCH_GROUP_COLLAPSE_THRESHOLD;
     const groupId = "searchGroup_" + gi;
 
     const headerRow = document.createElement("div");
-    headerRow.className = "search-result-group-header-row" + (shouldCollapse ? " collapsible" : "");
+    headerRow.className = "search-result-group-header-row collapsible";
     const headerText = document.createElement("div");
     headerText.className = "search-result-group-header";
     headerText.textContent = group.label + " · " + group.items.length + "건";
@@ -15189,19 +15188,17 @@ function renderSearchResults(query) {
 
     const itemsWrap = document.createElement("div");
     itemsWrap.id = groupId;
-    itemsWrap.style.display = shouldCollapse ? "none" : "block";
+    itemsWrap.style.display = "none";
 
-    if (shouldCollapse) {
-      const toggleHint = document.createElement("div");
-      toggleHint.className = "search-result-group-toggle-hint";
-      toggleHint.textContent = "펼쳐보기 ▾";
-      headerRow.appendChild(toggleHint);
-      headerRow.onclick = () => {
-        const isOpen = itemsWrap.style.display !== "none";
-        itemsWrap.style.display = isOpen ? "none" : "block";
-        toggleHint.textContent = isOpen ? "펼쳐보기 ▾" : "접기 ▴";
-      };
-    }
+    const toggleHint = document.createElement("div");
+    toggleHint.className = "search-result-group-toggle-hint";
+    toggleHint.textContent = "펼쳐보기 ▾";
+    headerRow.appendChild(toggleHint);
+    headerRow.onclick = () => {
+      const isOpen = itemsWrap.style.display !== "none";
+      itemsWrap.style.display = isOpen ? "none" : "block";
+      toggleHint.textContent = isOpen ? "펼쳐보기 ▾" : "접기 ▴";
+    };
 
     list.appendChild(headerRow);
 
@@ -15633,12 +15630,12 @@ function renderProcNode(node, container) {
         const item = document.createElement("div");
         item.className = "step-item";
         item.textContent = s;
-        item.onclick = (e) => { e.stopPropagation(); item.classList.toggle("done"); };
         stepsWrap.appendChild(item);
       }
     });
     container.appendChild(stepsWrap);
     renderAttachDisplay(container, node.attachments);
+    renderExampleEmailDisplay(container, node.exampleEmails);
   }
 }
 
@@ -20112,6 +20109,7 @@ function renderSubItemRows(wrap, items) {
       block.appendChild(addTableBtn);
 
       renderAttachEditSection(block, sub);
+      renderExampleEmailEditSection(block, sub);
     }
 
     wrap.appendChild(block);
@@ -21756,7 +21754,85 @@ function renderAttachEditSection(container, obj) {
   container.appendChild(hint);
 }
 
-/* 업무 절차 / FAQ / 자료 모음에서 저장된 첨부파일을 보여주는 공통 표시 UI (다운로드 버튼 포함) */
+/* 업무 절차 항목에 "실제 처리된 예시 메일" 링크를 등록/관리 - 메일 자체는 용량이
+   커서 첨부 대신, 공유폴더(원드라이브 등)에 있는 링크만 저장해서 보여줌 */
+function renderExampleEmailEditSection(container, obj) {
+  const label = document.createElement("div");
+  label.className = "label";
+  label.style.marginTop = "10px";
+  label.textContent = "📧 예시 메일 링크 (실제 처리된 메일을 공유폴더에 올려두고, 그 링크만 등록)";
+  container.appendChild(label);
+
+  if (!obj.exampleEmails) obj.exampleEmails = [];
+  const listWrap = document.createElement("div");
+  listWrap.className = "attach-list";
+  container.appendChild(listWrap);
+
+  function renderList() {
+    listWrap.innerHTML = "";
+    obj.exampleEmails.forEach((ex, idx) => {
+      const row = document.createElement("div");
+      row.className = "attach-download-row";
+      const labelInput = document.createElement("input");
+      labelInput.placeholder = "설명 (예: 화주 클레임 응대 예시)";
+      labelInput.value = ex.label || "";
+      labelInput.style.flex = "1";
+      labelInput.onchange = () => { ex.label = labelInput.value; };
+      const urlInput = document.createElement("input");
+      urlInput.placeholder = "https://... (공유 링크)";
+      urlInput.value = ex.url || "";
+      urlInput.style.flex = "1.5";
+      urlInput.onchange = () => { ex.url = urlInput.value; };
+      const delBtn = document.createElement("button");
+      delBtn.className = "btn danger-btn";
+      delBtn.style.cssText = "padding:4px 10px;font-size:12px;flex-shrink:0;";
+      delBtn.textContent = "삭제";
+      delBtn.onclick = () => { obj.exampleEmails.splice(idx, 1); renderList(); };
+      row.appendChild(labelInput);
+      row.appendChild(urlInput);
+      row.appendChild(delBtn);
+      listWrap.appendChild(row);
+    });
+  }
+  renderList();
+
+  const addBtn = document.createElement("button");
+  addBtn.className = "add-row-btn";
+  addBtn.textContent = "＋ 예시 메일 링크 추가";
+  addBtn.onclick = () => { obj.exampleEmails.push({ label: "", url: "" }); renderList(); };
+  container.appendChild(addBtn);
+
+  const hint = document.createElement("div");
+  hint.className = "hint";
+  hint.textContent = "링크는 원드라이브·셰어포인트 등 공유 폴더 주소를 붙여넣으면 돼요. 팀원이 볼 수 있는 권한으로 공유돼 있는지 확인해주세요.";
+  container.appendChild(hint);
+}
+
+/* 업무 절차 화면에서 등록된 예시 메일 링크를 보여주는 표시용 UI */
+function renderExampleEmailDisplay(container, exampleEmails) {
+  if (!exampleEmails || exampleEmails.length === 0) return;
+  const box = document.createElement("div");
+  box.className = "attach-box";
+  exampleEmails.forEach((ex) => {
+    if (!ex.url) return;
+    const row = document.createElement("div");
+    row.className = "attach-download-row";
+    const name = document.createElement("div");
+    name.style.flex = "1";
+    name.textContent = "📧 " + (ex.label || "예시 메일 보기");
+    row.appendChild(name);
+    const a = document.createElement("a");
+    a.href = ex.url;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.textContent = "🔗 열기";
+    row.appendChild(a);
+    box.appendChild(row);
+  });
+  container.appendChild(box);
+}
+
+
 function renderAttachDisplay(container, attachments) {
   if (!attachments || attachments.length === 0) return;
   const box = document.createElement("div");

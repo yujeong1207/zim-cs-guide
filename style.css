@@ -550,10 +550,9 @@ input, select, textarea {
 .step-group-title:first-child { margin-top: 0; }
 .step-item {
   font-size: 14px; color: #374151; line-height: 1.65; margin-bottom: 9px;
-  padding-left: 18px; position: relative; cursor: pointer;
+  padding-left: 18px; position: relative;
 }
 .step-item:before { content: "•"; position: absolute; left: 4px; color: #9ca3af; }
-.step-item.done { text-decoration: line-through; color: #9ca3af; }
 
 .subitem-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 .subitem-pill {
