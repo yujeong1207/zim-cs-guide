@@ -2707,6 +2707,578 @@ const DEFAULT_RESOURCES = [
     "title": "ZIM 화물 조회 (Track a Shipment)",
     "description": "B/L 번호로 실시간 스케줄/위치 조회, Notify Me 알림 설정 가능",
     "link": "https://www.zim.com/tools/track-a-shipment"
+  },
+  {
+    "id": "res_bl_africa",
+    "category": "export",
+    "group": "중남미·아프리카 BL 발행 참고사항",
+    "title": "🌍 아프리카 퍼더루팅 가능 항구",
+    "subItems": [
+      {
+        "id": "res_bl_africa_leaf",
+        "name": "아프리카 퍼더루팅 가능 항구",
+        "steps": [
+          "East Africa 아래 포인트들은 BL 상 \"Further Routing\"에 언제든 기입 가능하며, 선사가 운송을 책임져야 하는 \"DEL field\"에는 절대 기입 불가합니다.",
+          {
+            "type": "table",
+            "caption": "",
+            "headers": [
+              "Port",
+              "Port Name",
+              "Unlocode",
+              "Country",
+              "LCC",
+              "Location Type"
+            ],
+            "rows": [
+              [
+                "BIBUJ",
+                "BUJUMBURA",
+                "BIBJM",
+                "BURUNDI",
+                "#",
+                "C"
+              ],
+              [
+                "CDKIN",
+                "KINSHASA",
+                "CDFIH",
+                "CONGO, DEMOCRATIC RE",
+                "#",
+                "C"
+              ],
+              [
+                "CDLUM",
+                "LUBUMBASHI",
+                "CDFBM",
+                "CONGO, DEMOCRATIC RE",
+                "#",
+                "C"
+              ],
+              [
+                "CDMAT",
+                "MATADI",
+                "CDMAT",
+                "CONGO, DEMOCRATIC RE",
+                "#",
+                "C"
+              ],
+              [
+                "MWBLA",
+                "BLANTYRE",
+                "MWBLZ",
+                "MALAWI",
+                "BLA",
+                "C"
+              ],
+              [
+                "MWLIW",
+                "LILONGWE",
+                "MWLLW",
+                "MALAWI",
+                "LIW",
+                "C"
+              ],
+              [
+                "RWKGL",
+                "KIGALI",
+                "RWKGL",
+                "RWANDA",
+                "#",
+                "C"
+              ],
+              [
+                "TZDAR",
+                "DAR ES SALAAM",
+                "TZDAR",
+                "TANZANIA",
+                "DAR",
+                "M"
+              ],
+              [
+                "UGJIN",
+                "JINJA",
+                "UGJIN",
+                "UGANDA",
+                "#",
+                "C"
+              ],
+              [
+                "UGKMP",
+                "KAMPALA",
+                "UGKLA",
+                "UGANDA",
+                "MBA",
+                "C"
+              ],
+              [
+                "XKAM",
+                "KAMPALA VIA MOMBASA",
+                "#",
+                "UGANDA",
+                "#",
+                "X"
+              ],
+              [
+                "ZMKTW",
+                "KITWE",
+                "ZMKIW",
+                "ZAMBIA",
+                "#",
+                "C"
+              ],
+              [
+                "ZMLUS",
+                "LUSAKA",
+                "ZMLUN",
+                "ZAMBIA",
+                "LUS",
+                "C"
+              ],
+              [
+                "ZMNDC",
+                "NDOLA",
+                "ZMNLA",
+                "ZAMBIA",
+                "#",
+                "C"
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "res_bl_caribbean",
+    "category": "export",
+    "group": "중남미·아프리카 BL 발행 참고사항",
+    "title": "🌎 카리브해·중남미 운임 표기 규정",
+    "subItems": [
+      {
+        "id": "res_bl_car_1",
+        "name": "국가별 규정 (ZAT)",
+        "steps": [
+          "CARIBBEAN/CENTRAM",
+          "* SUBJ Approval no longer applicable to US exports",
+          {
+            "type": "table",
+            "caption": "",
+            "headers": [
+              "COUNTRY",
+              "FREIGHT MUST BE SHOWN IN BL",
+              "FREIGHTED ORIGINAL OR FREIGHT CONFIRMATION LETTER CAN BE ISSUED",
+              "SWB ALLOWED",
+              "FREIGHT COLLECT ALLOWED"
+            ],
+            "rows": [
+              [
+                "ANTIGUA",
+                "YES",
+                "NO",
+                "YES",
+                "NO"
+              ],
+              [
+                "ARUBA",
+                "ONLY FOR COLLECT BL",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "BAHAMAS",
+                "NO",
+                "NO",
+                "YES",
+                "YES TO FREEPORT, NO TO NASSAU"
+              ],
+              [
+                "BARBADOS",
+                "YES",
+                "YES",
+                "YES",
+                "NO"
+              ],
+              [
+                "BELIZE",
+                "NO",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "BERMUDA",
+                "NO",
+                "NO",
+                "YES",
+                "YES WITH POP USORF"
+              ],
+              [
+                "COLOMBIA",
+                "NO",
+                "YES",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "COSTA RICA",
+                "NO",
+                "YES",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "CURACAO",
+                "ONLY FOR COLLECT BL",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "DOMINICAN REPUBLIC",
+                "YES",
+                "YES",
+                "YES / NO SUR",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "DOMINICA",
+                "YES",
+                "NO",
+                "NO",
+                "NO"
+              ],
+              [
+                "EL SALVADOR",
+                "YES",
+                "NO",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "GRAND CAYMAN",
+                "YES",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "GRENADA",
+                "YES",
+                "YES",
+                "YES",
+                "NO"
+              ],
+              [
+                "GUATEMALA",
+                "YES",
+                "NO",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "GUYANA",
+                "YES",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "HAITI",
+                "NO",
+                "YES",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "HONDURAS",
+                "NO",
+                "YES",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "JAMAICA",
+                "YES",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "MEXICO",
+                "NO",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL, new POP MXMEX"
+              ],
+              [
+                "NICARAGUA",
+                "YES",
+                "YES",
+                "NO",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "PANAMA",
+                "YES",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "PUERTO RICO",
+                "NO",
+                "YES",
+                "YES, SUR YES",
+                "YES"
+              ],
+              [
+                "SURINAME",
+                "YES",
+                "ONLY FREIGHTED ORIGINAL",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "ST KITTS AND NEVIS",
+                "YES",
+                "NO",
+                "NO",
+                "NO"
+              ],
+              [
+                "ST LUCIA",
+                "YES",
+                "YES",
+                "YES",
+                "NO"
+              ],
+              [
+                "ST.MAARTEN",
+                "YES",
+                "NO",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "ST.VINCENT",
+                "YES",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL"
+              ],
+              [
+                "TRINIDAD",
+                "YES",
+                "YES",
+                "YES",
+                "SUBJ APPROVAL AND PAYMENT IN USD ONLY"
+              ],
+              [
+                "TURKS AND CAICOS ISLANDS",
+                "YES",
+                "NO",
+                "NO",
+                "NO"
+              ],
+              [
+                "VIRGIN ISLANDS BRITISH",
+                "YES",
+                "NO",
+                "NO",
+                "NO"
+              ],
+              [
+                "VIRGIN ISLANDS USA",
+                "YES",
+                "NO",
+                "NO",
+                "NO"
+              ],
+              [
+                "VENEZUELA",
+                "NO",
+                "YES",
+                "NO",
+                "NO"
+              ],
+              [
+                "ECUADOR",
+                "YES",
+                "ONLY FREIGHTED ORIGINAL",
+                "NO",
+                "YES"
+              ],
+              [
+                "PERU",
+                "CAN BE SHOWN BUT IT SHOULD BE ALWAYS MANIFESTED",
+                "NO",
+                "YES",
+                "YES"
+              ],
+              [
+                "CHILE",
+                "YES",
+                "ONLY FREIGHTED ORIGINAL",
+                "YES",
+                "YES"
+              ]
+            ]
+          }
+        ]
+      },
+      {
+        "id": "res_bl_car_2",
+        "name": "특수 케이스 (콜롬비아·페루·에콰도르·칠레)",
+        "steps": [
+          {
+            "type": "table",
+            "caption": "",
+            "headers": [
+              "PORT / COUNTRY",
+              "FREIGHT MUST BE SHOWN",
+              "FREIGHTED ORIGINAL / FREIGHT CONFIRMATION LETTER",
+              "SEAWAY BILL ALLOWED",
+              "FREIGHT COLLECT ALLOWED"
+            ],
+            "rows": [
+              [
+                "COLOMBIA",
+                "NO",
+                "If the cnee requires BL can be printed non-freighted OBL, but this is just for printing because freight information is a mandatory field transmitted to Local Customs, so customers have access to this information.",
+                "TLX RLS / SWB are not acceptable. Can be released at destination only OBL",
+                "It's acceptable."
+              ],
+              [
+                "PECLO Callao / PERU",
+                "YES",
+                "If the cnee requires BL can be printed non-freighted OBL, but this is just for printing because freight information is a mandatory field transmitted to Local Customs, so customers have access to this information.",
+                "YES (SUR YES)",
+                "It's acceptable."
+              ],
+              [
+                "ECGYL Guayaquil / ECUADOR",
+                "YES",
+                "If the cnee requires BL can be printed non-freighted OBL, but this is just for printing because freight information is a mandatory field transmitted to Local Customs, so customers have access to this information.",
+                "TLX RLS / SWB are not acceptable. Can be released at destination only OBL",
+                "It's acceptable."
+              ],
+              [
+                "CLIIC San Antonio / CHILE",
+                "YES",
+                "If the cnee requires BL can be printed non-freighted OBL, but this is just for printing because freight information is a mandatory field transmitted to Local Customs, so customers have access to this information.",
+                "SWB is accepted, however the TLX RLS is rejected by Chilean Customs.",
+                "It's acceptable."
+              ]
+            ]
+          },
+          "MX - 운임 미기재 가능 / SWB 가능"
+        ]
+      },
+      {
+        "id": "res_bl_car_3",
+        "name": "남미 4개국 서비스 현황 (ASE)",
+        "steps": [
+          {
+            "type": "table",
+            "caption": "",
+            "headers": [
+              "DESTINATION",
+              "EXPRESS",
+              "TELEX",
+              "OBLS AT DEST.",
+              "COLLECT",
+              "FREIGHTED/UNFREIGHTED OBLS",
+              "COUNTRY",
+              "CODE"
+            ],
+            "rows": [
+              [
+                "ASUNCION",
+                "NO",
+                "NO",
+                "YES",
+                "PRE-APPROVAL",
+                "UNFREIGHTED",
+                "PARAGUAY",
+                "PYASU"
+              ],
+              [
+                "BUENOS AIRES",
+                "NO",
+                "NO",
+                "YES",
+                "NO",
+                "BOTH ARE ACCEPTED",
+                "ARGENTINA",
+                "ARBUE"
+              ],
+              [
+                "MONTEVIDEO",
+                "YES",
+                "NO",
+                "YES",
+                "YES",
+                "BOTH ARE ACCEPTED",
+                "URUGUAY",
+                "UYMVD"
+              ],
+              [
+                "BRAZ. PORTS",
+                "NO",
+                "NO",
+                "YES",
+                "PRE-APPROVAL",
+                "FREIGHTED",
+                "BRAZIL",
+                "BRSNT"
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": "res_bl_ase_corrections",
+    "category": "export",
+    "group": "중남미·아프리카 BL 발행 참고사항",
+    "title": "🌎 ASE Corrections 규정 (남미 정정 규정)",
+    "subItems": [
+      {
+        "id": "res_bl_ase_corr_leaf",
+        "name": "ASE Corrections 규정",
+        "steps": [
+          {
+            "type": "table",
+            "caption": "",
+            "headers": [
+              "DESTINATION",
+              "CORRECTION POLICY"
+            ],
+            "rows": [
+              [
+                "ASUNCION",
+                "ACCEPTED 72 WORKING HOURS PRIOR TO VESSEL ARRIVAL AT TRANSHIPMENT PORT (MONTEVIDEO). AFTER THAT A CORRECTION CONSULAR LETTER ISSUED BY PARAGUAYAN CONSULATE IN MONTEVIDEO IS REQUESTED BY LOCAL CUSTOMS. IF THIS IS DONE THERE IS A CHARGE OF US$550.00 (VAT included) X B/L"
+              ],
+              [
+                "BUENOS AIRES",
+                "ACCEPTED 24 HOURS PRIOR TO VESSEL ARRIVAL WITHOUT FINES OR PENALTIES, AFTER THAT THERE WILL BE FINES BY LOCAL CUSTOMS - IF THE BILL HAS TO BE REISSUED IN BUENOS AIRES THERE IS A CHARGE"
+              ],
+              [
+                "MONTEVIDEO",
+                "ACCEPTED 24 WORKING HOURS BEFORE VESSEL ARRIVES AT PORT. AFTER ARRIVAL, CLIENT HAS 5 DAYS WITH NO CHARGE AT CUSTOMS BUT CHARGE AT TERMINAL TO BE CHARGE BY CONSIGNEE IN UY"
+              ],
+              [
+                "BRAZ. PORTS",
+                "ACCEPTED UP TO 3 DAYS BEFORE FIRST PORT OF CALL/LETTER SIGNED AND STAMPED BY ORIGIN PORT/ DATE OF CORRECTOR MUST BE PRIOR TO VESSEL ARRIVAL/ SPECIAL SITUATIONS MAY REQUEST AUTHENTICATED LETTER (REQUEST BY AUTHORITIES CASE BY CASE)/ USUALLY TO AMEND CONSIGNEE OLD ORIGINALS NEED TO BE ENDORSED TO NEW CONSIGNEE."
+              ]
+            ]
+          }
+        ]
+      }
+    ]
   }
 ];
 
@@ -16000,8 +16572,16 @@ function renderResList() {
     card.className = "content-card";
     card.style.cursor = "default";
     card.dataset.resId = r.id;
-    card.appendChild(buildResourceRow(r));
-    renderAttachDisplay(card, r.attachments);
+    if (r.subItems && r.subItems.length) {
+      card.appendChild(buildResourceRow(r));
+      const subBody = document.createElement("div");
+      subBody.style.marginTop = "10px";
+      renderProcNode({ subItems: r.subItems }, subBody);
+      card.appendChild(subBody);
+    } else {
+      card.appendChild(buildResourceRow(r));
+      renderAttachDisplay(card, r.attachments);
+    }
     list.appendChild(card);
   });
 
@@ -16021,7 +16601,14 @@ function renderResList() {
       itemWrap.className = "resource-group-item";
       itemWrap.dataset.resId = r.id;
       itemWrap.appendChild(buildResourceRow(r));
-      renderAttachDisplay(itemWrap, r.attachments);
+      if (r.subItems && r.subItems.length) {
+        const subBody = document.createElement("div");
+        subBody.style.marginTop = "10px";
+        renderProcNode({ subItems: r.subItems }, subBody);
+        itemWrap.appendChild(subBody);
+      } else {
+        renderAttachDisplay(itemWrap, r.attachments);
+      }
       cbody.appendChild(itemWrap);
     });
 
