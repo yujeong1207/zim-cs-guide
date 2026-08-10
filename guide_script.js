@@ -15672,8 +15672,13 @@ function renderSearchResults(query) {
     if (full.toLowerCase().includes(q)) results.push({ kind: "faqTopic", label: "🗂 FAQ 그룹", title: t.title, snippet: snippetHtml(full, query), category: t.category, id: t.id });
   });
   RESOURCES.forEach((r) => {
-    const full = r.title + " " + (r.description || "");
-    if (full.toLowerCase().includes(q)) results.push({ kind: "resource", label: "🔗 자료 모음", title: r.title, snippet: r.description ? escapeHtml(r.description) : "", category: r.category, id: r.id });
+    const subText = r.subItems && r.subItems.length ? flattenProcNodeText({ subItems: r.subItems }) : "";
+    const full = r.title + " " + (r.description || "") + " " + subText;
+    if (full.toLowerCase().includes(q)) {
+      let snippet = r.description ? escapeHtml(r.description) : "";
+      if (!snippet && subText && subText.toLowerCase().includes(q)) snippet = snippetHtml(subText, query);
+      results.push({ kind: "resource", label: "🔗 자료 모음", title: r.title, snippet, category: r.category, id: r.id });
+    }
   });
   VESSELS.forEach((v) => {
     const full = [v.name, v.code, v.voyage].filter(Boolean).join(" ");
