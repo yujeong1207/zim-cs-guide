@@ -15109,7 +15109,7 @@ function renderSearchResults(query) {
       results.push({
         kind: "vessel", label: "🚢 모선 일정",
         title: v.name + (v.code ? " (" + v.code + ")" : "") + (v.voyage ? " · " + v.voyage : ""),
-        snippet: [v.arrivalDate ? "입항 " + v.arrivalDate : "", v.departureDate ? "출항 " + v.departureDate : ""].filter(Boolean).join(" · "),
+        snippet: [v.arrivalDate ? "입항 " + formatVesselDateTime(v.arrivalDate) : "", v.departureDate ? "출항 " + formatVesselDateTime(v.departureDate) : ""].filter(Boolean).join(" · "),
         category: null, id: v.id
       });
     }
@@ -16095,11 +16095,11 @@ function buildVesselMonthSection(month) {
 
       const arrTd = document.createElement("td");
       arrTd.className = "vessel-td-arr";
-      arrTd.textContent = v.arrivalDate || "-";
+      arrTd.textContent = formatVesselDateTime(v.arrivalDate);
 
       const depTd = document.createElement("td");
       depTd.className = "vessel-td-dep";
-      depTd.textContent = v.departureDate || "-";
+      depTd.textContent = formatVesselDateTime(v.departureDate);
 
       const actTd = document.createElement("td");
       actTd.className = "vessel-actions";
@@ -16255,16 +16255,16 @@ function renderVesselEditorBody(month, existingId) {
   arrWrap.style.cssText = "flex:1;min-width:130px;";
   arrWrap.appendChild(makeLabel("⚓ 모선 입항일 (D/O 기준)"));
   const arrInput = document.createElement("input");
-  arrInput.type = "date";
-  arrInput.value = existing ? (existing.arrivalDate || "") : "";
+  arrInput.type = "datetime-local";
+  arrInput.value = existing ? toDatetimeLocalValue(existing.arrivalDate) : "";
   arrWrap.appendChild(arrInput);
 
   const depWrap = document.createElement("div");
   depWrap.style.cssText = "flex:1;min-width:130px;";
   depWrap.appendChild(makeLabel("🚩 모선 출항일 (B/L 기준)"));
   const depInput = document.createElement("input");
-  depInput.type = "date";
-  depInput.value = existing ? (existing.departureDate || "") : "";
+  depInput.type = "datetime-local";
+  depInput.value = existing ? toDatetimeLocalValue(existing.departureDate) : "";
   depWrap.appendChild(depInput);
 
   dateRow.appendChild(arrWrap);
@@ -16278,8 +16278,8 @@ function renderVesselEditorBody(month, existingId) {
         nameInput.value = match.vessel + " (" + port + ")";
       }
       voyInput.value = match.voyage || voyInput.value;
-      if (match.eta) arrInput.value = match.eta.slice(0, 10);
-      if (match.etd) depInput.value = match.etd.slice(0, 10);
+      if (match.eta) arrInput.value = normalizeDateForInput(match.eta);
+      if (match.etd) depInput.value = normalizeDateForInput(match.etd);
     });
   };
 
@@ -16520,10 +16520,31 @@ function parsePastedVesselRow(text) {
   return { vessel, voyage, eta, etd, isIncheon };
 }
 
+/* datetime-local input에 넣을 값 보정 - 기존 데이터가 시간 없이 "YYYY-MM-DD"만 있으면
+   "T00:00"을 붙여서 입력칸이 깨지지 않게 함 */
+function toDatetimeLocalValue(s) {
+  if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) return s.slice(0, 16);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s + "T00:00";
+  return s;
+}
+
+/* "2026-08-01T14:30" 형태를 "2026-08-01 14:30"처럼 보기 좋게 표시.
+   시간이 00:00(입력 안 한 경우)이면 시간은 생략하고 날짜만 보여줌 */
+function formatVesselDateTime(s) {
+  if (!s) return "-";
+  const m = s.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})/);
+  if (!m) return s;
+  if (m[2] === "00:00") return m[1];
+  return m[1] + " " + m[2];
+}
+
 function normalizeDateForInput(s) {
-  const m = s.match(/(\d{4})[/-](\d{2})[/-](\d{2})/);
+  const m = s.match(/(\d{4})[/-](\d{2})[/-](\d{2})(?:[T\s]+(\d{2}):(\d{2}))?/);
   if (!m) return "";
-  return m[1] + "-" + m[2] + "-" + m[3];
+  const datePart = m[1] + "-" + m[2] + "-" + m[3];
+  const timePart = (m[4] && m[5]) ? (m[4] + ":" + m[5]) : "00:00";
+  return datePart + "T" + timePart;
 }
 
 async function deleteVessel(id) {
