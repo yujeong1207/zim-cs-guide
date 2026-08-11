@@ -186,26 +186,29 @@
   <div id="an-contacts-tab"></div>
   <style>
     .contacts-wrap { padding: 0; }
-    .contacts-search-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .contacts-search-row input[type="text"] { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-    .contacts-search-row button { padding: 10px 16px; background: #4472C4; color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
-    .contacts-loading, .contacts-empty { padding: 24px; text-align: center; color: #888; }
-    .contacts-table { display: flex; flex-direction: column; gap: 6px; }
-    .contacts-row { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa; }
+    .contacts-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .contacts-search-row input[type="text"] { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .contacts-search-row button { padding: 8px 14px; background: #4472C4; color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; }
+    .contacts-count { font-size: 12px; color: #888; margin-bottom: 6px; }
+    .contacts-loading, .contacts-empty { padding: 20px; text-align: center; color: #888; }
+    .contacts-table { display: flex; flex-direction: column; gap: 3px; }
+    .contacts-row { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr auto; gap: 8px; align-items: center; padding: 6px 10px; border: 1px solid #eee; border-radius: 5px; background: #fafafa; font-size: 13px; }
     .contacts-row-warning { background: #FFF2CC; border-color: #E8C560; grid-template-columns: 1.6fr 1fr 1.6fr 1fr auto; }
     .contacts-col-eng { font-weight: 600; }
     .contacts-col-kor { color: #555; }
     .contacts-col-email { color: #1a5fb4; word-break: break-all; }
-    .contacts-col-note { color: #C00000; font-weight: 600; font-size: 13px; }
-    .contacts-edit-btn { padding: 6px 10px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 12px; }
-    .contacts-form { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; margin-bottom: 14px; }
-    .contacts-form-title { font-weight: 700; margin-bottom: 4px; }
-    .contacts-form input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
-    .contacts-form-actions { display: flex; gap: 8px; margin-top: 4px; }
-    .contacts-form-actions button { padding: 8px 14px; border-radius: 6px; cursor: pointer; border: none; }
+    .contacts-col-note { color: #C00000; font-weight: 600; font-size: 12px; }
+    .contacts-edit-btn { padding: 4px 8px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 11px; }
+    .contacts-load-more-btn { width: 100%; margin-top: 10px; padding: 10px; background: #eef1f7; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 13px; color: #4472C4; font-weight: 600; }
+    .contacts-load-more-btn:disabled { opacity: 0.6; cursor: default; }
+    .contacts-form { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; margin-bottom: 10px; }
+    .contacts-form-title { font-weight: 700; margin-bottom: 2px; font-size: 13px; }
+    .contacts-form input { padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+    .contacts-form-actions { display: flex; gap: 8px; margin-top: 2px; }
+    .contacts-form-actions button { padding: 7px 12px; border-radius: 6px; cursor: pointer; border: none; font-size: 13px; }
     #cf-save { background: #4472C4; color: #fff; }
     #cf-cancel { background: #eee; }
-    #cf-status { font-size: 13px; color: #C00000; }
+    #cf-status { font-size: 12px; color: #C00000; }
   </style>
 </div>
 

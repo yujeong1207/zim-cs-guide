@@ -17,7 +17,10 @@
 
 const CONTACT_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbz7qB6NXJ421ynHQ3J8I30Sha2CvzYfWZPO54FuZoe44-nFFL5mN-x7k4jvqz6Z1T87vA/exec";
 
+const CONTACTS_PAGE_SIZE = 200; // 한 번에 불러올 개수 ("더 보기" 누를 때마다 이만큼씩)
+
 let contactsSearchTimer = null;
+let contactsState = { query: "", offset: 0, total: 0, items: [] };
 
 function initContactsTab() {
   const root = document.getElementById("an-contacts-tab");
@@ -27,10 +30,11 @@ function initContactsTab() {
     <div class="contacts-wrap">
       <div class="contacts-search-row">
         <input id="contacts-search-input" type="text"
-          placeholder="영문상호 또는 한글상호로 검색..." autocomplete="off" />
+          placeholder="영문상호 또는 한글상호로 검색... (비워두면 전체 목록, ABC순)" autocomplete="off" />
         <button id="contacts-add-btn" type="button">+ 새 거래처 등록</button>
       </div>
       <div id="contacts-add-form" class="contacts-form" style="display:none;"></div>
+      <div id="contacts-count" class="contacts-count"></div>
       <div id="contacts-list"></div>
     </div>
   `;
@@ -38,26 +42,35 @@ function initContactsTab() {
   document.getElementById("contacts-search-input").addEventListener("input", (e) => {
     clearTimeout(contactsSearchTimer);
     const q = e.target.value;
-    contactsSearchTimer = setTimeout(() => fetchContacts(q), 300); // 300ms 디바운스
+    contactsSearchTimer = setTimeout(() => fetchContacts(q, true), 300); // 300ms 디바운스
   });
 
   document.getElementById("contacts-add-btn").addEventListener("click", () => {
     renderContactForm(null);
   });
 
-  fetchContacts(""); // 처음 열었을 때 최근 등록 목록 보여줌
+  fetchContacts("", true); // 처음 열었을 때 전체 목록 ABC순 첫 페이지
 }
 
-function fetchContacts(query) {
+function fetchContacts(query, reset) {
+  if (reset) {
+    contactsState = { query: query || "", offset: 0, total: 0, items: [] };
+  }
+
   const listEl = document.getElementById("contacts-list");
-  listEl.innerHTML = `<div class="contacts-loading">불러오는 중...</div>`;
+  if (reset) {
+    listEl.innerHTML = `<div class="contacts-loading">불러오는 중...</div>`;
+  }
 
   if (!CONTACT_SHEET_API_URL) {
     listEl.innerHTML = `<div class="contacts-empty">CONTACT_SHEET_API_URL이 아직 설정되지 않았어요.</div>`;
     return;
   }
 
-  const url = CONTACT_SHEET_API_URL + "?q=" + encodeURIComponent(query || "");
+  const url = CONTACT_SHEET_API_URL
+    + "?q=" + encodeURIComponent(contactsState.query)
+    + "&offset=" + contactsState.offset
+    + "&limit=" + CONTACTS_PAGE_SIZE;
 
   fetch(url)
     .then((res) => res.json())
@@ -66,22 +79,30 @@ function fetchContacts(query) {
         listEl.innerHTML = `<div class="contacts-empty">오류: ${escapeHtml(data.error || "알 수 없는 오류")}</div>`;
         return;
       }
-      renderContactList(data.list, query);
+      contactsState.items = contactsState.items.concat(data.list);
+      contactsState.total = data.total;
+      contactsState.offset = contactsState.items.length;
+      renderContactList();
     })
     .catch((err) => {
       listEl.innerHTML = `<div class="contacts-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
     });
 }
 
-function renderContactList(list, query) {
+function renderContactList() {
   const listEl = document.getElementById("contacts-list");
+  const countEl = document.getElementById("contacts-count");
+  const list = contactsState.items;
 
   if (!list || list.length === 0) {
+    countEl.textContent = "";
     listEl.innerHTML = `<div class="contacts-empty">
-      ${query ? "검색 결과가 없어요. 새로 등록해보세요." : "등록된 연락처가 없어요."}
+      ${contactsState.query ? "검색 결과가 없어요. 새로 등록해보세요." : "등록된 연락처가 없어요."}
     </div>`;
     return;
   }
+
+  countEl.textContent = `${list.length.toLocaleString()} / ${contactsState.total.toLocaleString()}건`;
 
   const rowsHtml = list.map((item) => {
     const hasNote = item.note && item.note.trim();
@@ -96,7 +117,12 @@ function renderContactList(list, query) {
     `;
   }).join("");
 
-  listEl.innerHTML = `<div class="contacts-table">${rowsHtml}</div>`;
+  const hasMore = list.length < contactsState.total;
+  const moreHtml = hasMore
+    ? `<button id="contacts-load-more" type="button" class="contacts-load-more-btn">더 보기 (${(contactsState.total - list.length).toLocaleString()}건 남음)</button>`
+    : "";
+
+  listEl.innerHTML = `<div class="contacts-table">${rowsHtml}</div>${moreHtml}`;
 
   listEl.querySelectorAll(".contacts-edit-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -104,6 +130,15 @@ function renderContactList(list, query) {
       if (item) renderContactForm(item);
     });
   });
+
+  const loadMoreBtn = document.getElementById("contacts-load-more");
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener("click", () => {
+      loadMoreBtn.textContent = "불러오는 중...";
+      loadMoreBtn.disabled = true;
+      fetchContacts(contactsState.query, false);
+    });
+  }
 }
 
 function renderContactForm(item) {
@@ -161,7 +196,7 @@ function renderContactForm(item) {
         }
         formEl.style.display = "none";
         formEl.innerHTML = "";
-        fetchContacts(document.getElementById("contacts-search-input").value);
+        fetchContacts(contactsState.query, true);
       })
       .catch((err) => {
         document.getElementById("cf-status").textContent = "저장 실패: " + err;
