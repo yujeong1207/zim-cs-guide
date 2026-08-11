@@ -131,9 +131,9 @@ function renderContactList() {
     const hasNote = item.note && item.note.trim();
     return `
       <div class="anemail-row ${hasNote ? "anemail-row-warning" : ""}" data-id="${escapeHtml(item.id)}">
-        <div class="anemail-col-eng">${escapeHtml(item.eng)}</div>
-        <div class="anemail-col-kor">${escapeHtml(item.kor || "-")}</div>
-        <div class="anemail-col-email">${escapeHtml(item.email)}</div>
+        <div class="anemail-col-eng" title="${escapeHtml(item.eng)}">${escapeHtml(item.eng)}</div>
+        <div class="anemail-col-kor" title="${escapeHtml(item.kor || "")}">${escapeHtml(item.kor || "-")}</div>
+        <div class="anemail-col-email" title="${escapeHtml(item.email)}">${escapeHtml(item.email)}</div>
         ${hasNote ? `<div class="anemail-col-note">⚠️ ${escapeHtml(item.note)}</div>` : ""}
         <button class="anemail-edit-btn" type="button" data-id="${escapeHtml(item.id)}">수정</button>
       </div>
