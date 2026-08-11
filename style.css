@@ -1276,3 +1276,54 @@ input, select, textarea {
   border-radius: 8px;
   font-size: 14px;
 }
+
+/* ===== 💰 입금현황 비엘번호 조회 ===== */
+.payment-check-box {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+}
+.payment-bl-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.payment-result-list {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.payment-row {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.payment-row.ready {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+.payment-row.not-ready {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+.payment-row.already-issued {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+.payment-row.not-found {
+  background: #fffbeb;
+  color: #b45309;
+  border-color: #fde68a;
+}

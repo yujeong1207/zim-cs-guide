@@ -24424,6 +24424,125 @@ function populateOblNameSelect() {
   });
 }
 
+/* =========================================================================
+   💰 입금현황 - 비엘번호 발행가능 여부 조회
+   ========================================================================= */
+
+// ⚠️ 이 URL은 재무 데이터에 접근하는 열쇠와 같아요. 외부에 공유하거나
+//    공개 채널에 붙여넣지 마세요.
+const PAYMENT_FLOW_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/229ec6df86cd40bcbd87f4b82ab3f334/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=CLDN_iRbJXWAVyjjpTfukXm5GQgzkqnuEXyk4aCg970";
+const PAYMENT_FLOW_SECRET = "zimcsguide05012026";
+
+let paymentDataCache = null;       // { "비엘번호": {amount, paid, issued} }
+let paymentDataUpdatedAt = null;
+
+async function refreshPaymentData() {
+  const statusEl = document.getElementById("paymentRefreshStatus");
+  if (statusEl) statusEl.textContent = "⏳ 재무팀 파일에서 최신 데이터 가져오는 중...";
+
+  try {
+    const res = await fetch(PAYMENT_FLOW_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: PAYMENT_FLOW_SECRET }),
+    });
+    if (!res.ok) throw new Error("서버 응답 오류 (" + res.status + ")");
+
+    const raw = await res.json();
+    // raw는 Office Script의 range.getValues() 결과 (2차원 배열)
+    // 실제 컬럼 순서: [입금일, 업체, BL NO, KRW, USD, BL발행, 입금처리유무]
+    //                    0      1     2      3    4     5         6
+    const rows = Array.isArray(raw) ? raw.slice(1) : []; // 첫 행(헤더) 제외
+
+    paymentDataCache = {};
+    rows.forEach((r) => {
+      const blNo = String(r[2] || "").trim().toUpperCase();
+      if (!blNo) return;
+      paymentDataCache[blNo] = {
+        paidDate: r[0],
+        company: r[1],
+        krw: r[3],
+        usd: r[4],
+        issued: String(r[5] || "").trim(),
+        paid: String(r[6] || "").trim(),
+      };
+    });
+
+    paymentDataUpdatedAt = new Date();
+    try {
+      localStorage.setItem("payment_data_cache", JSON.stringify(paymentDataCache));
+      localStorage.setItem("payment_data_updated_at", paymentDataUpdatedAt.toISOString());
+    } catch (e) { /* localStorage 사용 불가 시 무시 */ }
+
+    if (statusEl) {
+      statusEl.textContent = `✅ 갱신 완료 (${paymentDataUpdatedAt.toLocaleString("ko-KR")}) · 총 ${Object.keys(paymentDataCache).length}건`;
+    }
+  } catch (err) {
+    if (statusEl) statusEl.textContent = "❌ 갱신 실패: " + err.message;
+    console.error("입금현황 갱신 오류:", err);
+  }
+}
+
+function loadCachedPaymentData() {
+  try {
+    const cached = localStorage.getItem("payment_data_cache");
+    const updatedAt = localStorage.getItem("payment_data_updated_at");
+    if (cached) {
+      paymentDataCache = JSON.parse(cached);
+      paymentDataUpdatedAt = updatedAt ? new Date(updatedAt) : null;
+      const statusEl = document.getElementById("paymentRefreshStatus");
+      if (statusEl && paymentDataUpdatedAt) {
+        statusEl.textContent = `마지막 갱신: ${paymentDataUpdatedAt.toLocaleString("ko-KR")} · 총 ${Object.keys(paymentDataCache).length}건 (필요하면 다시 갱신하세요)`;
+      }
+    }
+  } catch (e) { /* 무시 */ }
+}
+
+function checkPaymentStatus() {
+  const inputEl = document.getElementById("paymentBlInput");
+  const resultEl = document.getElementById("paymentResultList");
+  if (!inputEl || !resultEl) return;
+
+  if (!paymentDataCache) {
+    resultEl.innerHTML = `<div class="hint">⚠️ 먼저 "데이터 갱신" 버튼을 눌러 최신 데이터를 가져와주세요.</div>`;
+    return;
+  }
+
+  const blNumbers = inputEl.value
+    .split(/[\n,]+/)
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (blNumbers.length === 0) {
+    resultEl.innerHTML = `<div class="hint">비엘번호를 입력해주세요.</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = blNumbers
+    .map((bl) => {
+      const data = paymentDataCache[bl];
+      if (!data) {
+        return `<div class="payment-row not-found">⚠️ ${bl} — 목록에 없음 (번호 확인 필요)</div>`;
+      }
+      const paid = data.paid.toUpperCase() === "O";
+      const issued = data.issued.toUpperCase() === "O";
+
+      let statusText, statusClass;
+      if (issued) {
+        statusText = "이미 발행 완료";
+        statusClass = "already-issued";
+      } else if (paid) {
+        statusText = "✅ 입금확인 완료 · 발행 가능";
+        statusClass = "ready";
+      } else {
+        statusText = "❌ 입금 미확인 · 발행 불가";
+        statusClass = "not-ready";
+      }
+      return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
+    })
+    .join("");
+}
+
 switchMainTab("procedures");
 initTypeSelect();
 initNtfTypeSelect();
@@ -24440,4 +24559,5 @@ if (FEEDBACK_SHEET_API_URL) {
 checkAndShowDailyQuote();
 renderRecentItemsRow();
 populateOblNameSelect();
+loadCachedPaymentData();
 
