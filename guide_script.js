@@ -24449,22 +24449,18 @@ async function refreshPaymentData() {
     if (!res.ok) throw new Error("서버 응답 오류 (" + res.status + ")");
 
     const raw = await res.json();
-    // raw는 Office Script의 range.getValues() 결과 (2차원 배열)
-    // 실제 컬럼 순서: [입금일, 업체, BL NO, KRW, USD, BL발행, 입금처리유무]
-    //                    0      1     2      3    4     5         6
+    // raw는 Office Script가 이미 3개 컬럼만 골라서 반환한 결과예요.
+    // 순서: [BL NO, BL발행, 입금처리유무]
+    //          0       1          2
     const rows = Array.isArray(raw) ? raw.slice(1) : []; // 첫 행(헤더) 제외
 
     paymentDataCache = {};
     rows.forEach((r) => {
-      const blNo = String(r[2] || "").trim().toUpperCase();
+      const blNo = String(r[0] || "").trim().toUpperCase();
       if (!blNo) return;
       paymentDataCache[blNo] = {
-        paidDate: r[0],
-        company: r[1],
-        krw: r[3],
-        usd: r[4],
-        issued: String(r[5] || "").trim(),
-        paid: String(r[6] || "").trim(),
+        issued: String(r[1] || "").trim(),
+        paid: String(r[2] || "").trim(),
       };
     });
 
