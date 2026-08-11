@@ -3,197 +3,207 @@
  * AN 연락처 탭 - 프론트엔드
  * ===============================================
  * guide_script.js 랑 분리된 별도 파일이에요.
- * index.html 에 아래 한 줄만 추가하면 됩니다 (guide_script.js 불러오는 줄 근처):
  *
- *   <script src="contacts_script.js"></script>
- *
- * 그리고 연락처 탭이 들어갈 자리에 아래 HTML을 넣어주세요
- * (contacts_tab.html 파일에 똑같은 내용 있어요):
- *
- *   <div id="an-contacts-tab">...</div>
- *
- * 아래 URL만 채우면 바로 작동합니다.
+ * ===== 동작 방식 (중요) =====
+ * 탭이 열릴 때 전체 데이터를 딱 한 번 다 받아와서 브라우저 메모리에 저장해두고,
+ * 검색은 서버에 안 물어보고 그 메모리 안에서 바로 걸러내요.
+ * → 그래서 검색이 타이핑 즉시 반응하고, 경합 조건(늦게 온 응답이 최신 걸 덮어쓰는 버그) 걱정도 없어요.
+ * → 대신 다른 팀원이 방금 추가한 항목은, 내가 "🔄 새로고침"을 누르거나 탭을 다시 열기 전까지는
+ *   내 화면에 바로 안 보일 수 있어요. (등록/수정은 항상 서버에 바로 반영되니, 데이터 자체는 안전해요)
  */
 
 const CONTACT_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbz7qB6NXJ421ynHQ3J8I30Sha2CvzYfWZPO54FuZoe44-nFFL5mN-x7k4jvqz6Z1T87vA/exec";
 
-const CONTACTS_PAGE_SIZE = 200; // 한 번에 불러올 개수 ("더 보기" 누를 때마다 이만큼씩)
+const CONTACTS_RENDER_PAGE_SIZE = 200; // 검색 결과가 많을 때 한 번에 화면에 그릴 개수 ("더 보기"로 늘어남)
 
-let contactsSearchTimer = null;
-let contactsState = { query: "", offset: 0, total: 0, items: [] };
-let contactsRequestSeq = 0; // 늦게 도착한 응답이 최신 상태를 덮어쓰지 못하게 막는 토큰
+let contactsAllItems = null; // 전체 데이터 캐시 (한 번 로드되면 계속 재사용)
+let contactsFilteredItems = []; // 현재 검색어로 걸러진 결과
+let contactsRenderCount = CONTACTS_RENDER_PAGE_SIZE; // 지금까지 화면에 그린 개수
+let contactsCurrentQuery = "";
 
 function initContactsTab() {
-  const root = document.getElementById("an-contacts-tab");
+  const root = document.getElementById("an-anemail-tab");
   if (!root) return;
 
   root.innerHTML = `
-    <div class="contacts-wrap">
-      <div class="contacts-search-row">
-        <input id="contacts-search-input" type="text"
-          placeholder="영문상호·한글상호·비고(포워더명 등)로 검색... (비워두면 전체 목록)" autocomplete="off" />
-        <button id="contacts-add-btn" type="button">+ 새 거래처 등록</button>
+    <div class="anemail-wrap">
+      <div class="anemail-search-row">
+        <input id="anemail-search-input" type="text"
+          placeholder="영문상호·한글상호·비고(포워더명 등)로 검색... (비워두면 전체 목록)" autocomplete="off" disabled />
+        <button id="anemail-refresh-btn" type="button" title="다른 팀원이 방금 추가한 내용까지 새로 불러와요">🔄</button>
+        <button id="anemail-add-btn" type="button">+ 새 거래처 등록</button>
       </div>
-      <div id="contacts-add-form" class="contacts-form" style="display:none;"></div>
-      <div id="contacts-count" class="contacts-count"></div>
-      <div id="contacts-list"></div>
+      <div id="anemail-add-form" class="anemail-form" style="display:none;"></div>
+      <div id="anemail-count" class="anemail-count"></div>
+      <div id="anemail-list"></div>
     </div>
   `;
 
-  document.getElementById("contacts-search-input").addEventListener("input", (e) => {
-    clearTimeout(contactsSearchTimer);
-    const q = e.target.value;
-    contactsSearchTimer = setTimeout(() => fetchContacts(q, true), 400); // 400ms 디바운스
+  document.getElementById("anemail-search-input").addEventListener("input", (e) => {
+    applyContactsFilter(e.target.value);
   });
 
-  document.getElementById("contacts-add-btn").addEventListener("click", () => {
+  document.getElementById("anemail-add-btn").addEventListener("click", () => {
     renderContactForm(null);
   });
 
-  fetchContacts("", true); // 처음 열었을 때 원본 순서대로 전체 목록 첫 페이지
+  document.getElementById("anemail-refresh-btn").addEventListener("click", () => {
+    loadAllContacts(true);
+  });
+
+  loadAllContacts(false);
 }
 
-function fetchContacts(query, reset) {
-  if (reset) {
-    contactsState = { query: query || "", offset: 0, total: 0, items: [] };
-  }
+/* 전체 데이터를 한 번에 불러와 캐시에 저장 (forceReload면 캐시 무시하고 새로 받아옴) */
+function loadAllContacts(forceReload) {
+  const listEl = document.getElementById("anemail-list");
+  const inputEl = document.getElementById("anemail-search-input");
 
-  contactsRequestSeq += 1;
-  const myRequestId = contactsRequestSeq; // 이 요청만의 고유 번호
-
-  const listEl = document.getElementById("contacts-list");
-  if (reset) {
-    listEl.innerHTML = `<div class="contacts-loading">불러오는 중...</div>`;
-  }
-
-  if (!CONTACT_SHEET_API_URL) {
-    listEl.innerHTML = `<div class="contacts-empty">CONTACT_SHEET_API_URL이 아직 설정되지 않았어요.</div>`;
+  if (contactsAllItems && !forceReload) {
+    applyContactsFilter(inputEl.value);
     return;
   }
 
-  const requestedQuery = contactsState.query;
-  const requestedOffset = contactsState.offset;
-  const url = CONTACT_SHEET_API_URL
-    + "?q=" + encodeURIComponent(requestedQuery)
-    + "&offset=" + requestedOffset
-    + "&limit=" + CONTACTS_PAGE_SIZE;
+  listEl.innerHTML = `<div class="anemail-loading">전체 연락처 불러오는 중... (처음 한 번만 시간이 좀 걸려요)</div>`;
+  inputEl.disabled = true;
+
+  if (!CONTACT_SHEET_API_URL) {
+    listEl.innerHTML = `<div class="anemail-empty">CONTACT_SHEET_API_URL이 아직 설정되지 않았어요.</div>`;
+    return;
+  }
+
+  const url = CONTACT_SHEET_API_URL + "?limit=20000"; // 전체를 한 번에 (현재 6,885건보다 넉넉하게)
 
   fetch(url)
     .then((res) => res.json())
     .then((data) => {
-      // 이 응답이 도착하는 사이에 더 최신 검색이 시작됐으면, 이 응답은 버림 (경합 조건 방지)
-      if (myRequestId !== contactsRequestSeq) return;
-      // 검색어가 그 사이 또 바뀌었으면 (드문 케이스) 이것도 버림
-      if (requestedQuery !== contactsState.query || requestedOffset !== contactsState.offset) return;
-
       if (!data.ok) {
-        listEl.innerHTML = `<div class="contacts-empty">오류: ${escapeHtml(data.error || "알 수 없는 오류")}</div>`;
+        listEl.innerHTML = `<div class="anemail-empty">오류: ${escapeHtml(data.error || "알 수 없는 오류")}</div>`;
         return;
       }
-      contactsState.items = contactsState.items.concat(data.list);
-      contactsState.total = data.total;
-      contactsState.offset = contactsState.items.length;
-      renderContactList();
+      contactsAllItems = data.list;
+      inputEl.disabled = false;
+      applyContactsFilter(inputEl.value);
     })
     .catch((err) => {
-      if (myRequestId !== contactsRequestSeq) return;
-      listEl.innerHTML = `<div class="contacts-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
+      listEl.innerHTML = `<div class="anemail-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
     });
 }
 
-function renderContactList() {
-  const listEl = document.getElementById("contacts-list");
-  const countEl = document.getElementById("contacts-count");
-  const list = contactsState.items;
+/* 캐시된 전체 데이터 안에서 검색어로 걸러서 화면에 그림 (서버 호출 없음 - 즉시 반응) */
+function applyContactsFilter(query) {
+  contactsCurrentQuery = query || "";
+  contactsRenderCount = CONTACTS_RENDER_PAGE_SIZE;
 
-  if (!list || list.length === 0) {
+  const q = contactsCurrentQuery.trim().toUpperCase();
+
+  if (!q) {
+    contactsFilteredItems = contactsAllItems || [];
+  } else {
+    contactsFilteredItems = (contactsAllItems || []).filter((item) => {
+      const eng = (item.eng || "").toUpperCase();
+      const kor = (item.kor || "").toUpperCase();
+      const note = (item.note || "").toUpperCase();
+      return eng.includes(q) || kor.includes(q) || note.includes(q);
+    });
+  }
+
+  renderContactList();
+}
+
+function renderContactList() {
+  const listEl = document.getElementById("anemail-list");
+  const countEl = document.getElementById("anemail-count");
+  const all = contactsFilteredItems;
+
+  if (!all || all.length === 0) {
     countEl.textContent = "";
-    listEl.innerHTML = `<div class="contacts-empty">
-      ${contactsState.query ? "검색 결과가 없어요. 새로 등록해보세요." : "등록된 연락처가 없어요."}
+    listEl.innerHTML = `<div class="anemail-empty">
+      ${contactsCurrentQuery ? "검색 결과가 없어요. 새로 등록해보세요." : "등록된 연락처가 없어요."}
     </div>`;
     return;
   }
 
-  countEl.textContent = `${list.length.toLocaleString()} / ${contactsState.total.toLocaleString()}건`;
+  const visible = all.slice(0, contactsRenderCount);
+  countEl.textContent = `${visible.length.toLocaleString()} / ${all.length.toLocaleString()}건`;
 
-  const rowsHtml = list.map((item) => {
+  const rowsHtml = visible.map((item) => {
     const hasNote = item.note && item.note.trim();
     return `
-      <div class="contacts-row ${hasNote ? "contacts-row-warning" : ""}" data-id="${escapeHtml(item.id)}">
-        <div class="contacts-col-eng">${escapeHtml(item.eng)}</div>
-        <div class="contacts-col-kor">${escapeHtml(item.kor || "-")}</div>
-        <div class="contacts-col-email">${escapeHtml(item.email)}</div>
-        ${hasNote ? `<div class="contacts-col-note">⚠️ ${escapeHtml(item.note)}</div>` : ""}
-        <button class="contacts-edit-btn" type="button" data-id="${escapeHtml(item.id)}">수정</button>
+      <div class="anemail-row ${hasNote ? "anemail-row-warning" : ""}" data-id="${escapeHtml(item.id)}">
+        <div class="anemail-col-eng">${escapeHtml(item.eng)}</div>
+        <div class="anemail-col-kor">${escapeHtml(item.kor || "-")}</div>
+        <div class="anemail-col-email">${escapeHtml(item.email)}</div>
+        ${hasNote ? `<div class="anemail-col-note">⚠️ ${escapeHtml(item.note)}</div>` : ""}
+        <button class="anemail-edit-btn" type="button" data-id="${escapeHtml(item.id)}">수정</button>
       </div>
     `;
   }).join("");
 
-  const hasMore = list.length < contactsState.total;
+  const hasMore = visible.length < all.length;
   const moreHtml = hasMore
-    ? `<button id="contacts-load-more" type="button" class="contacts-load-more-btn">더 보기 (${(contactsState.total - list.length).toLocaleString()}건 남음)</button>`
+    ? `<button id="anemail-load-more" type="button" class="anemail-load-more-btn">더 보기 (${(all.length - visible.length).toLocaleString()}건 남음)</button>`
     : "";
 
-  listEl.innerHTML = `<div class="contacts-table">${rowsHtml}</div>${moreHtml}`;
+  listEl.innerHTML = `<div class="anemail-table">${rowsHtml}</div>${moreHtml}`;
 
-  listEl.querySelectorAll(".contacts-edit-btn").forEach((btn) => {
+  listEl.querySelectorAll(".anemail-edit-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
-      const item = list.find((x) => String(x.id) === String(btn.dataset.id));
+      const item = all.find((x) => String(x.id) === String(btn.dataset.id));
       if (item) renderContactForm(item);
     });
   });
 
-  const loadMoreBtn = document.getElementById("contacts-load-more");
+  const loadMoreBtn = document.getElementById("anemail-load-more");
   if (loadMoreBtn) {
     loadMoreBtn.addEventListener("click", () => {
-      loadMoreBtn.textContent = "불러오는 중...";
-      loadMoreBtn.disabled = true;
-      fetchContacts(contactsState.query, false);
+      contactsRenderCount += CONTACTS_RENDER_PAGE_SIZE;
+      renderContactList(); // 이미 캐시에 있는 데이터라 서버 호출 없이 바로 더 그려짐
     });
   }
 }
 
 function renderContactForm(item) {
   const isEdit = !!item;
-  const formEl = document.getElementById("contacts-add-form");
+  const formEl = document.getElementById("anemail-add-form");
   formEl.style.display = "block";
   formEl.innerHTML = `
-    <div class="contacts-form-title">${isEdit ? "거래처 수정" : "새 거래처 등록"}</div>
-    <input id="cf-eng" type="text" placeholder="영문상호 (필수)" value="${escapeHtml(item ? item.eng : "")}" />
-    <input id="cf-kor" type="text" placeholder="한글상호" value="${escapeHtml(item ? item.kor : "")}" />
-    <input id="cf-email" type="text" placeholder="이메일 (필수)" value="${escapeHtml(item ? item.email : "")}" />
-    <input id="cf-manager" type="text" placeholder="담당자" value="${escapeHtml(item ? item.manager : "")}" />
-    <input id="cf-note" type="text" placeholder="⚠️ 비고 (특이사항 있을 때만)" value="${escapeHtml(item ? item.note : "")}" />
-    <div class="contacts-form-actions">
-      <button id="cf-save" type="button">${isEdit ? "수정 저장" : "등록"}</button>
-      <button id="cf-cancel" type="button">취소</button>
+    <div class="anemail-form-title">${isEdit ? "거래처 수정" : "새 거래처 등록"}</div>
+    <input id="af-eng" type="text" placeholder="영문상호 (필수)" value="${escapeHtml(item ? item.eng : "")}" />
+    <input id="af-kor" type="text" placeholder="한글상호" value="${escapeHtml(item ? item.kor : "")}" />
+    <input id="af-email" type="text" placeholder="이메일 (필수)" value="${escapeHtml(item ? item.email : "")}" />
+    <input id="af-manager" type="text" placeholder="담당자" value="${escapeHtml(item ? item.manager : "")}" />
+    <input id="af-note" type="text" placeholder="⚠️ 비고 (특이사항 있을 때만)" value="${escapeHtml(item ? item.note : "")}" />
+    <div class="anemail-form-actions">
+      <button id="af-save" type="button">${isEdit ? "수정 저장" : "등록"}</button>
+      <button id="af-cancel" type="button">취소</button>
     </div>
-    <div id="cf-status"></div>
+    <div id="af-status"></div>
   `;
 
-  document.getElementById("cf-cancel").addEventListener("click", () => {
+  document.getElementById("af-cancel").addEventListener("click", () => {
     formEl.style.display = "none";
     formEl.innerHTML = "";
   });
 
-  document.getElementById("cf-save").addEventListener("click", () => {
+  document.getElementById("af-save").addEventListener("click", () => {
     const payload = {
       action: isEdit ? "update" : "add",
       id: isEdit ? item.id : undefined,
-      eng: document.getElementById("cf-eng").value.trim(),
-      kor: document.getElementById("cf-kor").value.trim(),
-      email: document.getElementById("cf-email").value.trim(),
-      manager: document.getElementById("cf-manager").value.trim(),
-      note: document.getElementById("cf-note").value.trim(),
+      eng: document.getElementById("af-eng").value.trim(),
+      kor: document.getElementById("af-kor").value.trim(),
+      email: document.getElementById("af-email").value.trim(),
+      manager: document.getElementById("af-manager").value.trim(),
+      note: document.getElementById("af-note").value.trim(),
     };
 
     if (!payload.eng || !payload.email) {
-      document.getElementById("cf-status").textContent = "영문상호와 이메일은 필수예요.";
+      document.getElementById("af-status").textContent = "영문상호와 이메일은 필수예요.";
       return;
     }
 
-    document.getElementById("cf-save").disabled = true;
-    document.getElementById("cf-status").textContent = "저장 중...";
+    document.getElementById("af-save").disabled = true;
+    document.getElementById("af-status").textContent = "저장 중...";
 
     fetch(CONTACT_SHEET_API_URL, {
       method: "POST",
@@ -202,17 +212,18 @@ function renderContactForm(item) {
       .then((res) => res.json())
       .then((data) => {
         if (!data.ok) {
-          document.getElementById("cf-status").textContent = "오류: " + data.error;
-          document.getElementById("cf-save").disabled = false;
+          document.getElementById("af-status").textContent = "오류: " + data.error;
+          document.getElementById("af-save").disabled = false;
           return;
         }
         formEl.style.display = "none";
         formEl.innerHTML = "";
-        fetchContacts(contactsState.query, true);
+        // 방금 등록/수정한 게 바로 보이도록 캐시를 새로 불러옴 (여기선 한 번 더 기다리는 게 맞음)
+        loadAllContacts(true);
       })
       .catch((err) => {
-        document.getElementById("cf-status").textContent = "저장 실패: " + err;
-        document.getElementById("cf-save").disabled = false;
+        document.getElementById("af-status").textContent = "저장 실패: " + err;
+        document.getElementById("af-save").disabled = false;
       });
   });
 }
@@ -228,7 +239,7 @@ function escapeHtml(str) {
 
 // 연락처 탭이 클릭되어 화면에 나타날 때 초기화 (기존 탭 전환 로직에 맞춰 호출 위치 조정 필요)
 document.addEventListener("DOMContentLoaded", () => {
-  if (document.getElementById("an-contacts-tab")) {
+  if (document.getElementById("an-anemail-tab")) {
     initContactsTab();
   }
 });
