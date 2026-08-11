@@ -129,15 +129,21 @@ function renderContactList() {
 
   const rowsHtml = visible.map((item) => {
     const hasNote = item.note && item.note.trim();
-    return `
-      <div class="anemail-row ${hasNote ? "anemail-row-warning" : ""}" data-id="${escapeHtml(item.id)}">
-        <div class="anemail-col-eng" title="${escapeHtml(item.eng)}">${escapeHtml(item.eng)}</div>
-        <div class="anemail-col-kor" title="${escapeHtml(item.kor || "")}">${escapeHtml(item.kor || "-")}</div>
-        <div class="anemail-col-email" title="${escapeHtml(item.email)}">${escapeHtml(item.email)}</div>
-        ${hasNote ? `<div class="anemail-col-note">⚠️ ${escapeHtml(item.note)}</div>` : ""}
-        <button class="anemail-edit-btn" type="button" data-id="${escapeHtml(item.id)}">수정</button>
-      </div>
+    const rowClass = hasNote ? "anemail-row-warning" : "";
+    const mainRow = `
+      <tr class="${rowClass}" data-id="${escapeHtml(item.id)}">
+        <td class="anemail-col-eng" title="${escapeHtml(item.eng)}">${escapeHtml(item.eng)}</td>
+        <td class="anemail-col-kor">${escapeHtml(item.kor) || "-"}</td>
+        <td class="anemail-col-email">${escapeHtml(item.email) || "-"}</td>
+        <td class="anemail-col-btn"><button class="anemail-edit-btn" type="button" data-id="${escapeHtml(item.id)}">수정</button></td>
+      </tr>
     `;
+    const noteRow = hasNote ? `
+      <tr class="${rowClass}" data-id="${escapeHtml(item.id)}">
+        <td class="anemail-col-note" colspan="4">⚠️ ${escapeHtml(item.note)}</td>
+      </tr>
+    ` : "";
+    return mainRow + noteRow;
   }).join("");
 
   const hasMore = visible.length < all.length;
@@ -145,7 +151,7 @@ function renderContactList() {
     ? `<button id="anemail-load-more" type="button" class="anemail-load-more-btn">더 보기 (${(all.length - visible.length).toLocaleString()}건 남음)</button>`
     : "";
 
-  listEl.innerHTML = `<div class="anemail-table">${rowsHtml}</div>${moreHtml}`;
+  listEl.innerHTML = `<table class="anemail-table"><tbody>${rowsHtml}</tbody></table>${moreHtml}`;
 
   listEl.querySelectorAll(".anemail-edit-btn").forEach((btn) => {
     btn.addEventListener("click", () => {

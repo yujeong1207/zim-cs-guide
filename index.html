@@ -192,17 +192,15 @@
     #anemail-refresh-btn { background: #eef1f7; color: #333; padding: 8px 10px; }
     .anemail-count { font-size: 12px; color: #888; margin-bottom: 6px; }
     .anemail-loading, .anemail-empty { padding: 20px; text-align: center; color: #888; }
-    .anemail-table { display: flex; flex-direction: column; gap: 5px; }
-    .anemail-row { display: grid; grid-template-columns: 230px 150px 230px auto; gap: 12px; align-items: center; padding: 8px 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa; font-size: 13px; }
-    .anemail-row-warning { background: #FFF2CC; border-color: #E8C560; grid-template-columns: 230px 150px 230px 1fr auto; }
-    .anemail-col-eng, .anemail-col-kor, .anemail-col-email {
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-    }
-    .anemail-col-eng { font-weight: 600; }
-    .anemail-col-kor { color: #555; }
-    .anemail-col-email { color: #1a5fb4; }
-    .anemail-col-note { color: #C00000; font-weight: 600; font-size: 12px; white-space: normal; }
-    .anemail-edit-btn { padding: 5px 10px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap; }
+    .anemail-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .anemail-table td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: top; word-break: break-word; }
+    .anemail-row-warning td { background: #FFF2CC; }
+    .anemail-col-eng { font-weight: 600; width: 25%; }
+    .anemail-col-kor { color: #555; width: 20%; }
+    .anemail-col-email { color: #1a5fb4; width: 25%; }
+    .anemail-col-note { color: #C00000; font-weight: 600; font-size: 12px; }
+    .anemail-col-btn { width: 1%; white-space: nowrap; text-align: right; }
+    .anemail-edit-btn { display: inline-block; width: auto; padding: 5px 10px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap; }
     .anemail-load-more-btn { width: 100%; margin-top: 10px; padding: 10px; background: #eef1f7; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 13px; color: #4472C4; font-weight: 600; }
     .anemail-load-more-btn:disabled { opacity: 0.6; cursor: default; }
     .anemail-form { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; margin-bottom: 10px; }
