@@ -24528,8 +24528,8 @@ function checkPaymentStatus() {
       const ready = data.issued.toUpperCase() === "O";
 
       const statusText = ready
-        ? "✅ 입금확인 완료 · 발행 가능"
-        : "❌ 입금 미확인 · 발행 불가";
+        ? "✅ BL 발행 가능"
+        : "❌ BL 발행 불가";
       const statusClass = ready ? "ready" : "not-ready";
 
       return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
