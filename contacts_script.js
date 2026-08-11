@@ -21,6 +21,7 @@ const CONTACTS_PAGE_SIZE = 200; // 한 번에 불러올 개수 ("더 보기" 누
 
 let contactsSearchTimer = null;
 let contactsState = { query: "", offset: 0, total: 0, items: [] };
+let contactsRequestSeq = 0; // 늦게 도착한 응답이 최신 상태를 덮어쓰지 못하게 막는 토큰
 
 function initContactsTab() {
   const root = document.getElementById("an-contacts-tab");
@@ -30,7 +31,7 @@ function initContactsTab() {
     <div class="contacts-wrap">
       <div class="contacts-search-row">
         <input id="contacts-search-input" type="text"
-          placeholder="영문상호 또는 한글상호로 검색... (비워두면 전체 목록)" autocomplete="off" />
+          placeholder="영문상호·한글상호·비고(포워더명 등)로 검색... (비워두면 전체 목록)" autocomplete="off" />
         <button id="contacts-add-btn" type="button">+ 새 거래처 등록</button>
       </div>
       <div id="contacts-add-form" class="contacts-form" style="display:none;"></div>
@@ -42,7 +43,7 @@ function initContactsTab() {
   document.getElementById("contacts-search-input").addEventListener("input", (e) => {
     clearTimeout(contactsSearchTimer);
     const q = e.target.value;
-    contactsSearchTimer = setTimeout(() => fetchContacts(q, true), 300); // 300ms 디바운스
+    contactsSearchTimer = setTimeout(() => fetchContacts(q, true), 400); // 400ms 디바운스
   });
 
   document.getElementById("contacts-add-btn").addEventListener("click", () => {
@@ -57,6 +58,9 @@ function fetchContacts(query, reset) {
     contactsState = { query: query || "", offset: 0, total: 0, items: [] };
   }
 
+  contactsRequestSeq += 1;
+  const myRequestId = contactsRequestSeq; // 이 요청만의 고유 번호
+
   const listEl = document.getElementById("contacts-list");
   if (reset) {
     listEl.innerHTML = `<div class="contacts-loading">불러오는 중...</div>`;
@@ -67,14 +71,21 @@ function fetchContacts(query, reset) {
     return;
   }
 
+  const requestedQuery = contactsState.query;
+  const requestedOffset = contactsState.offset;
   const url = CONTACT_SHEET_API_URL
-    + "?q=" + encodeURIComponent(contactsState.query)
-    + "&offset=" + contactsState.offset
+    + "?q=" + encodeURIComponent(requestedQuery)
+    + "&offset=" + requestedOffset
     + "&limit=" + CONTACTS_PAGE_SIZE;
 
   fetch(url)
     .then((res) => res.json())
     .then((data) => {
+      // 이 응답이 도착하는 사이에 더 최신 검색이 시작됐으면, 이 응답은 버림 (경합 조건 방지)
+      if (myRequestId !== contactsRequestSeq) return;
+      // 검색어가 그 사이 또 바뀌었으면 (드문 케이스) 이것도 버림
+      if (requestedQuery !== contactsState.query || requestedOffset !== contactsState.offset) return;
+
       if (!data.ok) {
         listEl.innerHTML = `<div class="contacts-empty">오류: ${escapeHtml(data.error || "알 수 없는 오류")}</div>`;
         return;
@@ -85,6 +96,7 @@ function fetchContacts(query, reset) {
       renderContactList();
     })
     .catch((err) => {
+      if (myRequestId !== contactsRequestSeq) return;
       listEl.innerHTML = `<div class="contacts-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
     });
 }
