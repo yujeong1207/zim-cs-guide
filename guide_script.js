@@ -24524,20 +24524,14 @@ function checkPaymentStatus() {
       if (!data) {
         return `<div class="payment-row not-found">⚠️ ${bl} — 목록에 없음 (번호 확인 필요)</div>`;
       }
-      const paid = data.paid.toUpperCase() === "O";
-      const issued = data.issued.toUpperCase() === "O";
+      // "BL발행" 컬럼(issued)에 O가 표시되어 있으면 = 입금확인 완료, 발행 가능
+      const ready = data.issued.toUpperCase() === "O";
 
-      let statusText, statusClass;
-      if (issued) {
-        statusText = "이미 발행 완료";
-        statusClass = "already-issued";
-      } else if (paid) {
-        statusText = "✅ 입금확인 완료 · 발행 가능";
-        statusClass = "ready";
-      } else {
-        statusText = "❌ 입금 미확인 · 발행 불가";
-        statusClass = "not-ready";
-      }
+      const statusText = ready
+        ? "✅ 입금확인 완료 · 발행 가능"
+        : "❌ 입금 미확인 · 발행 불가";
+      const statusClass = ready ? "ready" : "not-ready";
+
       return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
     })
     .join("");
