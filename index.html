@@ -193,12 +193,12 @@
     .anemail-count { font-size: 12px; color: #888; margin-bottom: 6px; }
     .anemail-loading, .anemail-empty { padding: 20px; text-align: center; color: #888; }
     .anemail-table { display: flex; flex-direction: column; gap: 3px; }
-    .anemail-row { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr auto; gap: 8px; align-items: center; padding: 6px 10px; border: 1px solid #eee; border-radius: 5px; background: #fafafa; font-size: 13px; }
-    .anemail-row-warning { background: #FFF2CC; border-color: #E8C560; grid-template-columns: 1.6fr 1fr 1.6fr 1fr auto; }
-    .anemail-col-eng { font-weight: 600; }
-    .anemail-col-kor { color: #555; }
-    .anemail-col-email { color: #1a5fb4; word-break: break-all; }
-    .anemail-col-note { color: #C00000; font-weight: 600; font-size: 12px; }
+    .anemail-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 6px 10px; border: 1px solid #eee; border-radius: 5px; background: #fafafa; font-size: 13px; max-width: 760px; }
+    .anemail-row-warning { background: #FFF2CC; border-color: #E8C560; }
+    .anemail-col-eng { font-weight: 600; flex: 0 1 auto; min-width: 140px; max-width: 320px; }
+    .anemail-col-kor { color: #555; flex: 0 1 auto; min-width: 80px; max-width: 200px; }
+    .anemail-col-email { color: #1a5fb4; word-break: break-all; flex: 0 1 auto; max-width: 320px; }
+    .anemail-col-note { color: #C00000; font-weight: 600; font-size: 12px; flex: 1 1 100%; }
     .anemail-edit-btn { padding: 4px 8px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 11px; }
     .anemail-load-more-btn { width: 100%; margin-top: 10px; padding: 10px; background: #eef1f7; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 13px; color: #4472C4; font-weight: 600; }
     .anemail-load-more-btn:disabled { opacity: 0.6; cursor: default; }
