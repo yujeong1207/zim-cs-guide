@@ -30,7 +30,7 @@ function initContactsTab() {
     <div class="contacts-wrap">
       <div class="contacts-search-row">
         <input id="contacts-search-input" type="text"
-          placeholder="영문상호 또는 한글상호로 검색... (비워두면 전체 목록, ABC순)" autocomplete="off" />
+          placeholder="영문상호 또는 한글상호로 검색... (비워두면 전체 목록)" autocomplete="off" />
         <button id="contacts-add-btn" type="button">+ 새 거래처 등록</button>
       </div>
       <div id="contacts-add-form" class="contacts-form" style="display:none;"></div>
@@ -49,7 +49,7 @@ function initContactsTab() {
     renderContactForm(null);
   });
 
-  fetchContacts("", true); // 처음 열었을 때 전체 목록 ABC순 첫 페이지
+  fetchContacts("", true); // 처음 열었을 때 원본 순서대로 전체 목록 첫 페이지
 }
 
 function fetchContacts(query, reset) {
