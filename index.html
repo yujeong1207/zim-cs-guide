@@ -93,6 +93,7 @@
   <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
   <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
   <button class="main-tab-btn" data-tab="payment" onclick="switchMainTab('payment')">💰 입금현황</button>
+  <button class="main-tab-btn" data-tab="anContacts" onclick="switchMainTab('anContacts')">📧 AN 이메일</button>
 
   <div class="tab-group" data-group="schedule">
     <button class="tab-group-btn" onclick="toggleTabGroup('schedule')">🗓 일정관리 <span class="tab-group-caret">▾</span></button>
@@ -177,6 +178,35 @@
 <div class="tab-page" id="page-contacts">
   <input id="contactsFilter" class="contacts-filter-input" placeholder="🔍 대륙·국가·카테고리·담당자·이메일로 찾기" oninput="renderContactsTable()">
   <div id="contactsTableWrap"></div>
+</div>
+
+<!-- ===== 📧 AN 이메일 탭 (신규, 실시간 공유 - 구글시트 연동) ===== -->
+<div class="tab-page" id="page-anContacts">
+  <div class="hint" style="margin-bottom:10px;">AN 보낼 업체의 영문상호 또는 한글상호로 검색하면 이메일이 바로 떠요. 새 거래처를 알게 됐으면 팀원 누구나 바로 등록/수정할 수 있고, <b>등록하는 순간 팀원 전체 화면에 반영</b>돼요. ⚠️ 노란색으로 표시된 업체는 A/N 발송 시 유의사항이 있으니 꼭 확인해주세요.</div>
+  <div id="an-contacts-tab"></div>
+  <style>
+    .contacts-wrap { padding: 0; }
+    .contacts-search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .contacts-search-row input[type="text"] { flex: 1; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    .contacts-search-row button { padding: 10px 16px; background: #4472C4; color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; }
+    .contacts-loading, .contacts-empty { padding: 24px; text-align: center; color: #888; }
+    .contacts-table { display: flex; flex-direction: column; gap: 6px; }
+    .contacts-row { display: grid; grid-template-columns: 1.6fr 1fr 1.6fr auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid #eee; border-radius: 6px; background: #fafafa; }
+    .contacts-row-warning { background: #FFF2CC; border-color: #E8C560; grid-template-columns: 1.6fr 1fr 1.6fr 1fr auto; }
+    .contacts-col-eng { font-weight: 600; }
+    .contacts-col-kor { color: #555; }
+    .contacts-col-email { color: #1a5fb4; word-break: break-all; }
+    .contacts-col-note { color: #C00000; font-weight: 600; font-size: 13px; }
+    .contacts-edit-btn { padding: 6px 10px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .contacts-form { display: flex; flex-direction: column; gap: 8px; padding: 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; margin-bottom: 14px; }
+    .contacts-form-title { font-weight: 700; margin-bottom: 4px; }
+    .contacts-form input { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+    .contacts-form-actions { display: flex; gap: 8px; margin-top: 4px; }
+    .contacts-form-actions button { padding: 8px 14px; border-radius: 6px; cursor: pointer; border: none; }
+    #cf-save { background: #4472C4; color: #fff; }
+    #cf-cancel { background: #eee; }
+    #cf-status { font-size: 13px; color: #C00000; }
+  </style>
 </div>
 
 <!-- ===== 🖋️ 위임장 현황 탭 ===== -->
@@ -577,6 +607,7 @@
 </div>
 
 <script src="guide_script.js"></script>
+<script src="contacts_script.js"></script>
 
 </body>
 </html>
