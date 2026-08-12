@@ -1327,3 +1327,10 @@ input, select, textarea {
   color: #b45309;
   border-color: #fde68a;
 }
+
+/* ===== 오비엘 접수 - 노션코드 체크박스 ===== */
+.obl-notion-check {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}

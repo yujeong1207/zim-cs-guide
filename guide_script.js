@@ -581,6 +581,34 @@ function buildOblStatsHtml() {
   return html;
 }
 
+function toggleAllOblChecks() {
+  const boxes = document.querySelectorAll(".obl-notion-check");
+  if (boxes.length === 0) return;
+  const anyUnchecked = Array.from(boxes).some((b) => !b.checked);
+  boxes.forEach((b) => { b.checked = anyUnchecked; });
+}
+
+async function copySelectedNotionCodes() {
+  const statusEl = document.getElementById("oblCopyStatus");
+  const checked = Array.from(document.querySelectorAll(".obl-notion-check:checked"));
+
+  if (checked.length === 0) {
+    if (statusEl) statusEl.textContent = "⚠️ 선택된 항목이 없어요.";
+    return;
+  }
+
+  // 노션에 그대로 붙여넣기 좋게, 줄바꿈으로 구분된 텍스트로 만듦
+  const text = checked.map((b) => b.dataset.code).join("\n");
+
+  try {
+    await navigator.clipboard.writeText(text);
+    if (statusEl) statusEl.textContent = `✅ ${checked.length}건 복사됨 — 노션에 붙여넣기(Ctrl+V) 하세요.`;
+  } catch (err) {
+    if (statusEl) statusEl.textContent = "❌ 복사 실패 (브라우저 권한 문제일 수 있어요): " + err.message;
+    console.error("노션코드 복사 오류:", err);
+  }
+}
+
 function renderOblTable() {
   const wrap = document.getElementById("oblTableWrap");
   if (!wrap) return;
@@ -605,6 +633,11 @@ function renderOblTable() {
 
   let prefixHtml = `<button class="btn secondary-btn" style="margin-bottom:14px;" onclick="toggleOblStats()">${oblStatsOpen ? "📊 담당자별 현황 접기" : "📊 담당자별 접수 현황 보기"}</button>`;
   if (oblStatsOpen) prefixHtml += buildOblStatsHtml();
+  prefixHtml += `<div style="display:flex; gap:8px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+      <button class="btn secondary-btn" style="padding:6px 12px; font-size:13px;" onclick="toggleAllOblChecks()">전체 선택/해제</button>
+      <button class="btn generate-btn" style="padding:6px 12px; font-size:13px;" onclick="copySelectedNotionCodes()">📋 선택한 노션코드 복사</button>
+      <span id="oblCopyStatus" class="hint" style="margin-top:0;"></span>
+    </div>`;
 
   if (q && matched.length === 0) {
     wrap.innerHTML = prefixHtml + '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요.</div>';
@@ -613,13 +646,15 @@ function renderOblTable() {
 
   const table = document.createElement("table");
   table.className = "contacts-table";
-  table.innerHTML = "<tr><th>날짜</th><th>이름</th><th>BL번호</th><th>노션(뒷 7자리)</th><th></th></tr>";
+  table.innerHTML = "<tr><th style='width:34px;'></th><th>날짜</th><th>이름</th><th>BL번호</th><th>노션(뒷 7자리)</th><th></th></tr>";
   matched.forEach((o) => {
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${formatPoaDate(o.date) || "-"}</td>`
+    const notionCode = extractNotionCode(o.blNumber);
+    tr.innerHTML = `<td><input type="checkbox" class="obl-notion-check" data-code="${escapeHtml(notionCode)}" checked></td>`
+      + `<td>${formatPoaDate(o.date) || "-"}</td>`
       + `<td>${escapeHtml(o.name || "")}</td>`
       + `<td>${q ? snippetHtml(o.blNumber || "", q) : escapeHtml(o.blNumber || "")}</td>`
-      + `<td><b>${escapeHtml(extractNotionCode(o.blNumber))}</b></td>`
+      + `<td><b>${escapeHtml(notionCode)}</b></td>`
       + `<td><button class="btn danger-btn" style="padding:4px 10px;font-size:12px;" onclick="deleteOblItemFlow('${o.id}')">삭제</button></td>`;
     table.appendChild(tr);
   });
