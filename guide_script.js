@@ -14997,6 +14997,12 @@ function memoRotationFor(id) {
   return (h % 7) - 3;
 }
 
+/* 입력한 줄 수/글자 수에 맞춰 메모 textarea 높이를 자동으로 늘려줌 (포스트잇 카드 자체가 같이 커짐) */
+function autoGrowMemoTextarea(el) {
+  el.style.height = "auto";
+  el.style.height = el.scrollHeight + "px";
+}
+
 function renderMemoTab() {
   const board = document.getElementById("memoBoard");
   if (!board) return;
@@ -15032,8 +15038,13 @@ function renderMemoTab() {
     textarea.className = "memo-note-text";
     textarea.value = note.text || "";
     textarea.placeholder = "메모를 적어보세요...";
-    textarea.oninput = (e) => onMemoNoteInput(note.id, e.target.value);
+    textarea.oninput = (e) => {
+      autoGrowMemoTextarea(e.target);
+      onMemoNoteInput(note.id, e.target.value);
+    };
     card.appendChild(textarea);
+    // 저장된 기존 내용 길이에 맞춰 처음부터 높이 맞춰줌
+    requestAnimationFrame(() => autoGrowMemoTextarea(textarea));
 
     const footer = document.createElement("div");
     footer.className = "memo-note-footer";
