@@ -258,7 +258,7 @@ async function downloadBlListExcel() {
   const line1 = `${serviceName} - ${result.title} (${vesselName}) ${arrivalDate} - ${callSign} - ${arrivalCount}`;
   const line2 = `MRN : ${mrnFmt}    BL : ${result.blCount}`;
   titleCell.value = line1 + "\n" + line2;
-  titleCell.font = { name: FONT_NAME, size: FONT_SIZE };
+  titleCell.font = { name: FONT_NAME, size: 11 };
   titleCell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
   ws.getRow(1).height = 15;
   ws.getRow(2).height = 15;
