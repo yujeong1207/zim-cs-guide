@@ -241,8 +241,12 @@ async function downloadBlListExcel() {
   const FONT_NAME = "Aptos";
   const FONT_SIZE = 10;
   const HEADER_BLUE = { argb: "FF0000FF" };
+  const DATA_BLACK = { argb: "FF1A1A1A" };
   const GREY_FILL = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
   const YELLOW_FILL = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFF00" } };
+  const STRIPE_FILL = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF5F4EF" } }; // 한 줄씩 옅은 배경(줄무늬)
+  const THIN_GREY = { style: "thin", color: { argb: "FFD0D0D0" } };
+  const CELL_BORDER = { top: THIN_GREY, bottom: THIN_GREY, left: THIN_GREY, right: THIN_GREY };
 
   const headers = ["COMPUTE 6", "B/L Number", "B/T", "Customer Name", "POL", "VIA", "POD", "DEL", "NOTIFY", "COLLECT"];
   ws.columns = [
@@ -271,6 +275,7 @@ async function downloadBlListExcel() {
     cell.value = h;
     cell.font = { name: FONT_NAME, size: FONT_SIZE, bold: true, color: HEADER_BLUE };
     cell.fill = GREY_FILL;
+    cell.border = CELL_BORDER;
   });
   headerRow.height = 20;
 
@@ -279,18 +284,22 @@ async function downloadBlListExcel() {
   finalRows.forEach((row, i) => {
     const r = HEADER_ROW + 1 + i;
     const excelRow = ws.getRow(r);
+    const isMoved = i >= result.kept.length;      // moved(V, 회색) 행
+    const isStripe = !isMoved && i % 2 === 1;      // kept 행끼리만 한 줄씩 옅은 배경
     const values = [row.compute6, row.blNo, row.bt, row.customer, row.pol, row.via, row.pod, row.del, row.notify, row.collect ? "COLLECT" : null];
     values.forEach((v, c) => {
       const cell = excelRow.getCell(c + 1);
       cell.value = v;
-      cell.font = { name: FONT_NAME, size: FONT_SIZE };
+      cell.font = { name: FONT_NAME, size: FONT_SIZE, color: DATA_BLACK };
+      cell.border = CELL_BORDER;
+      if (isStripe) cell.fill = STRIPE_FILL;
     });
-    if (i >= result.kept.length) { // moved(V, 회색) 행
+    if (isMoved) {
       for (let c = 1; c <= headers.length; c++) excelRow.getCell(c).fill = GREY_FILL;
     }
     if (row.collect) {
       const cc = excelRow.getCell(10);
-      cc.font = { name: FONT_NAME, size: FONT_SIZE, bold: true };
+      cc.font = { name: FONT_NAME, size: FONT_SIZE, bold: true, color: DATA_BLACK };
       cc.fill = YELLOW_FILL;
     }
     excelRow.height = 15;
