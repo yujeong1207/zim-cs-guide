@@ -1087,11 +1087,11 @@ input, select, textarea {
 .memo-board { display: flex; flex-wrap: wrap; gap: 26px; margin-top: 22px; padding-bottom: 20px; }
 
 .memo-note {
-  width: 260px; min-height: 220px; padding: 20px 16px 14px;
+  width: 260px; min-width: 260px; min-height: 220px; padding: 20px 16px 14px;
   border-radius: 3px 3px 34px 3px;
   box-shadow: 3px 7px 16px rgba(0,0,0,0.16);
   display: flex; flex-direction: column; position: relative;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 .memo-note:hover { transform: rotate(0deg) scale(1.04) !important; box-shadow: 4px 12px 22px rgba(0,0,0,0.22); z-index: 5; }
 
@@ -1117,12 +1117,46 @@ input, select, textarea {
 .memo-pin-btn:hover { transform: scale(1.15); }
 
 .memo-note-text {
-  flex: none; background: transparent; border: none; resize: none; outline: none;
-  overflow: hidden;
+  flex: none; width: 100%; box-sizing: border-box;
+  background: transparent; border: none; outline: none;
+  overflow: hidden; cursor: text;
   font-family: inherit; font-size: 15px; line-height: 1.7; color: #1f1f1f; font-weight: 500;
   min-height: 120px; margin-bottom: 8px;
 }
-.memo-note-text::placeholder { color: rgba(0,0,0,0.4); }
+.memo-note-text[data-empty="true"]::before {
+  content: "메모를 적어보세요...";
+  color: rgba(0,0,0,0.4);
+  font-weight: 500;
+}
+.memo-note-text mark {
+  background: rgba(255, 235, 59, 0.65);
+  border-radius: 2px;
+  padding: 0 1px;
+}
+.memo-note-text mark.hl-pink { background: rgba(255, 105, 180, 0.45); }
+.memo-note-text mark.hl-blue { background: rgba(100, 181, 246, 0.5); }
+.memo-note-text mark.hl-green { background: rgba(129, 199, 132, 0.55); }
+
+/* 텍스트 드래그 선택 시 뜨는 작은 서식 툴바 */
+.memo-format-toolbar {
+  display: none; position: absolute; z-index: 50;
+  background: #2d2d2d; border-radius: 8px; padding: 5px 6px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+  gap: 4px;
+}
+.memo-format-toolbar button {
+  border: none; background: transparent; color: #fff; cursor: pointer;
+  width: 28px; height: 28px; border-radius: 6px; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.memo-format-toolbar button:hover { background: rgba(255,255,255,0.15); }
+.memo-format-toolbar .fmt-bold { font-weight: 800; }
+.memo-format-toolbar .fmt-hl { border-radius: 50%; width: 20px; height: 20px; margin: 4px 2px; padding: 0; }
+.memo-format-toolbar .fmt-hl-yellow { background: rgb(255, 235, 59); }
+.memo-format-toolbar .fmt-hl-pink { background: rgb(255, 105, 180); }
+.memo-format-toolbar .fmt-hl-blue { background: rgb(100, 181, 246); }
+.memo-format-toolbar .fmt-hl-green { background: rgb(129, 199, 132); }
+.memo-format-toolbar .fmt-clear { font-size: 12px; }
 
 .memo-note-footer { display: flex; justify-content: space-between; gap: 6px; }
 .memo-note-btn {

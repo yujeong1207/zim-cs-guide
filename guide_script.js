@@ -14997,11 +14997,104 @@ function memoRotationFor(id) {
   return (h % 7) - 3;
 }
 
-/* 입력한 줄 수/글자 수에 맞춰 메모 textarea 높이를 자동으로 늘려줌 (포스트잇 카드 자체가 같이 커짐) */
-function autoGrowMemoTextarea(el) {
-  el.style.height = "auto";
-  el.style.height = el.scrollHeight + "px";
+/* 입력한 내용(HTML)에 맞춰 메모 카드의 가로/세로 크기를 함께 늘려줌 */
+function autoGrowMemoBox(el) {
+  const card = el.closest(".memo-note");
+  if (!card) return;
+  // 임시로 너비를 넉넉하게 풀어서 자연스러운 콘텐츠 크기부터 재본 뒤, 상한선 안에서 확정
+  card.style.width = "520px";
+  const contentWidth = Math.min(520, Math.max(260, el.scrollWidth + 40));
+  card.style.width = contentWidth + "px";
+  const contentHeight = Math.max(220, el.scrollHeight + 100);
+  card.style.height = contentHeight + "px";
 }
+
+/* 지금 마우스로 드래그해서 선택된 범위가, 메모박스(contenteditable) 안에 있는지 확인 */
+function getActiveMemoSelectionBox() {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+  let node = sel.getRangeAt(0).commonAncestorContainer;
+  if (node.nodeType === 3) node = node.parentNode;
+  const box = node.closest && node.closest(".memo-note-text");
+  return box || null;
+}
+
+/* 드래그로 텍스트를 선택하면, 그 근처에 작은 서식 툴바(B / 형광펜)를 띄워줌 */
+function handleMemoSelection(e) {
+  const toolbar = document.getElementById("memoFormatToolbar");
+  if (!toolbar) return;
+  const box = getActiveMemoSelectionBox();
+  if (!box) { toolbar.style.display = "none"; return; }
+
+  const sel = window.getSelection();
+  const range = sel.getRangeAt(0);
+  const rect = range.getBoundingClientRect();
+  if (rect.width === 0 && rect.height === 0) { toolbar.style.display = "none"; return; }
+
+  toolbar.style.display = "flex";
+  toolbar.style.top = (window.scrollY + rect.top - 42) + "px";
+  toolbar.style.left = (window.scrollX + rect.left + rect.width / 2 - 70) + "px";
+  toolbar.dataset.targetBoxId = box.dataset.noteId;
+}
+
+/* 볼드 버튼을 눌렀을 때 */
+function applyMemoBold() {
+  applyMemoFormatCommon(() => document.execCommand("bold", false, null));
+}
+
+/* 형광펜 버튼을 눌렀을 때 - 선택 영역을 <mark> 태그로 직접 감싸줌 (브라우저 호환성 문제 없이 안정적으로 작동) */
+function applyMemoHighlight(hlClass) {
+  applyMemoFormatCommon(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    const range = sel.getRangeAt(0);
+    const mark = document.createElement("mark");
+    if (hlClass) mark.className = hlClass;
+    try {
+      range.surroundContents(mark);
+    } catch (e) {
+      // 선택 범위가 여러 태그에 걸쳐 있어 surroundContents가 실패하는 경우의 대체 처리
+      const content = range.extractContents();
+      mark.appendChild(content);
+      range.insertNode(mark);
+    }
+    sel.removeAllRanges();
+  });
+}
+
+/* 서식(볼드/하이라이트) 지우기 */
+function applyMemoClearFormat() {
+  applyMemoFormatCommon(() => document.execCommand("removeFormat", false, null));
+}
+
+function applyMemoFormatCommon(action) {
+  const toolbar = document.getElementById("memoFormatToolbar");
+  const noteId = toolbar ? toolbar.dataset.targetBoxId : null;
+  action();
+  if (toolbar) toolbar.style.display = "none";
+  if (noteId) {
+    const box = document.querySelector(`.memo-note-text[data-note-id="${noteId}"]`);
+    if (box) {
+      box.focus();
+      onMemoNoteInput(noteId, box.innerHTML);
+      autoGrowMemoBox(box);
+    }
+  }
+}
+
+/* 툴바 버튼을 클릭하는 순간에도 방금 드래그해서 선택한 텍스트 범위가 풀리지 않도록,
+   버튼의 mousedown 시점에 기본 동작(포커스 이동)을 막아줌 */
+document.addEventListener("DOMContentLoaded", () => {
+  const toolbar = document.getElementById("memoFormatToolbar");
+  if (toolbar) {
+    toolbar.addEventListener("mousedown", (e) => e.preventDefault());
+  }
+  document.addEventListener("mousedown", (e) => {
+    if (toolbar && toolbar.style.display !== "none" && !toolbar.contains(e.target) && !e.target.closest(".memo-note-text")) {
+      toolbar.style.display = "none";
+    }
+  });
+});
 
 function renderMemoTab() {
   const board = document.getElementById("memoBoard");
@@ -15034,17 +15127,26 @@ function renderMemoTab() {
     pinBtn.onclick = () => toggleMemoPin(note.id);
     card.appendChild(pinBtn);
 
-    const textarea = document.createElement("textarea");
-    textarea.className = "memo-note-text";
-    textarea.value = note.text || "";
-    textarea.placeholder = "메모를 적어보세요...";
-    textarea.oninput = (e) => {
-      autoGrowMemoTextarea(e.target);
-      onMemoNoteInput(note.id, e.target.value);
-    };
-    card.appendChild(textarea);
-    // 저장된 기존 내용 길이에 맞춰 처음부터 높이 맞춰줌
-    requestAnimationFrame(() => autoGrowMemoTextarea(textarea));
+    // textarea 대신 contenteditable div를 써서 볼드/형광펜 같은 서식을 지원함.
+    // note.html이 있으면 그걸 쓰고, 옛날 데이터(순수 텍스트 note.text)만 있으면 그대로 옮겨줌(자동 마이그레이션).
+    const box = document.createElement("div");
+    box.className = "memo-note-text";
+    box.contentEditable = "true";
+    box.dataset.noteId = note.id;
+    box.innerHTML = (note.html != null ? note.html : escapeHtml(note.text || "")) || "";
+    if (!box.innerHTML) box.dataset.empty = "true";
+
+    box.addEventListener("input", () => {
+      box.dataset.empty = box.innerText.trim() ? "false" : "true";
+      onMemoNoteInput(note.id, box.innerHTML);
+      autoGrowMemoBox(box);
+    });
+    box.addEventListener("mouseup", () => setTimeout(handleMemoSelection, 0));
+    box.addEventListener("keyup", (e) => {
+      if (e.shiftKey) setTimeout(handleMemoSelection, 0);
+    });
+    card.appendChild(box);
+    requestAnimationFrame(() => autoGrowMemoBox(box));
 
     const footer = document.createElement("div");
     footer.className = "memo-note-footer";
@@ -15069,22 +15171,30 @@ function renderMemoTab() {
 function addMemoNote() {
   const notes = loadMemoNotes();
   const color = MEMO_COLORS[Math.floor(Math.random() * MEMO_COLORS.length)];
-  const newNote = { id: genId("memo"), text: "", color: color, pinned: false, ts: Date.now() };
+  const newNote = { id: genId("memo"), text: "", html: "", color: color, pinned: false, ts: Date.now() };
   notes.unshift(newNote);
   saveMemoNotes(notes);
   renderMemoTab();
   setTimeout(() => {
-    const el = document.querySelector('.memo-note textarea');
+    const el = document.querySelector('.memo-note .memo-note-text');
     if (el) el.focus();
   }, 50);
 }
 
-function onMemoNoteInput(id, value) {
+/* value는 contenteditable div의 innerHTML. 저장은 html로 하고,
+   복사/검색 등에서 쓰기 편하도록 순수 텍스트(text)도 같이 뽑아서 저장해둠. */
+function onMemoNoteInput(id, htmlValue) {
   clearTimeout(memoSaveTimers[id]);
   memoSaveTimers[id] = setTimeout(() => {
     const notes = loadMemoNotes();
     const note = notes.find((n) => n.id === id);
-    if (note) { note.text = value; saveMemoNotes(notes); }
+    if (note) {
+      note.html = htmlValue;
+      const tmp = document.createElement("div");
+      tmp.innerHTML = htmlValue;
+      note.text = tmp.innerText || tmp.textContent || "";
+      saveMemoNotes(notes);
+    }
   }, 400);
 }
 

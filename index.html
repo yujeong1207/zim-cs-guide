@@ -93,7 +93,6 @@
   <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
   <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
   <button class="main-tab-btn" data-tab="payment" onclick="switchMainTab('payment')">💰 입금현황</button>
-  <button class="main-tab-btn" data-tab="anContacts" onclick="switchMainTab('anContacts')">📧 AN 이메일</button>
 
   <div class="tab-group" data-group="schedule">
     <button class="tab-group-btn" onclick="toggleTabGroup('schedule')">🗓 일정관리 <span class="tab-group-caret">▾</span></button>
@@ -172,46 +171,20 @@
   <div class="hint" style="margin-bottom:10px;">🔒 이 메모는 이 브라우저에만 저장돼요. 다른 팀원에게는 안 보이고, 내보내기/가져오기에도 포함 안 돼요.</div>
   <button class="btn generate-btn" onclick="addMemoNote()">🐳 새 포스트잇 추가</button>
   <div id="memoBoard" class="memo-board"></div>
+  <div id="memoFormatToolbar" class="memo-format-toolbar">
+    <button class="fmt-bold" title="굵게" onclick="applyMemoBold()">B</button>
+    <button class="fmt-hl fmt-hl-yellow" title="노랑 형광펜" onclick="applyMemoHighlight('')"></button>
+    <button class="fmt-hl fmt-hl-pink" title="핑크 형광펜" onclick="applyMemoHighlight('hl-pink')"></button>
+    <button class="fmt-hl fmt-hl-blue" title="파랑 형광펜" onclick="applyMemoHighlight('hl-blue')"></button>
+    <button class="fmt-hl fmt-hl-green" title="초록 형광펜" onclick="applyMemoHighlight('hl-green')"></button>
+    <button class="fmt-clear" title="서식 지우기" onclick="applyMemoClearFormat()">✕</button>
+  </div>
 </div>
 
 <!-- ===== 연락처 탭 ===== -->
 <div class="tab-page" id="page-contacts">
-  <input id="contactsFilter" class="anemail-filter-input" placeholder="🔍 대륙·국가·카테고리·담당자·이메일로 찾기" oninput="renderContactsTable()">
+  <input id="contactsFilter" class="contacts-filter-input" placeholder="🔍 대륙·국가·카테고리·담당자·이메일로 찾기" oninput="renderContactsTable()">
   <div id="contactsTableWrap"></div>
-</div>
-
-<!-- ===== 📧 AN 이메일 탭 (신규, 실시간 공유 - 구글시트 연동) ===== -->
-<div class="tab-page" id="page-anContacts">
-  <div class="hint" style="margin-bottom:10px;">AN 보낼 업체의 영문상호 또는 한글상호로 검색하면 이메일이 바로 떠요. 새 거래처를 알게 됐으면 팀원 누구나 바로 등록/수정할 수 있고, <b>등록하는 순간 팀원 전체 화면에 반영</b>돼요. ⚠️ 노란색으로 표시된 업체는 A/N 발송 시 유의사항이 있으니 꼭 확인해주세요.</div>
-  <div id="an-anemail-tab"></div>
-  <style>
-    .anemail-wrap { padding: 0; }
-    .anemail-search-row { display: flex; gap: 8px; margin-bottom: 8px; }
-    .anemail-search-row input[type="text"] { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
-    .anemail-search-row button { padding: 8px 14px; background: #4472C4; color: #fff; border: none; border-radius: 6px; cursor: pointer; white-space: nowrap; font-size: 13px; }
-    #anemail-refresh-btn { background: #eef1f7; color: #333; padding: 8px 10px; }
-    .anemail-count { font-size: 12px; color: #888; margin-bottom: 6px; }
-    .anemail-loading, .anemail-empty { padding: 20px; text-align: center; color: #888; }
-    .anemail-table { border-collapse: collapse; font-size: 13px; }
-    .anemail-table td { padding: 8px 10px; border-bottom: 1px solid #eee; vertical-align: top; word-break: break-word; }
-    .anemail-row-warning td { background: #FFF2CC; }
-    .anemail-col-eng { font-weight: 600; max-width: 320px; }
-    .anemail-col-kor { color: #555; max-width: 220px; }
-    .anemail-col-email { color: #1a5fb4; max-width: 280px; }
-    .anemail-col-note { color: #C00000; font-weight: 600; font-size: 12px; }
-    .anemail-col-btn { white-space: nowrap; text-align: right; }
-    .anemail-edit-btn { display: inline-block; width: auto; padding: 5px 10px; background: #fff; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; font-size: 11px; white-space: nowrap; }
-    .anemail-load-more-btn { width: 100%; margin-top: 10px; padding: 10px; background: #eef1f7; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: 13px; color: #4472C4; font-weight: 600; }
-    .anemail-load-more-btn:disabled { opacity: 0.6; cursor: default; }
-    .anemail-form { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 1px solid #ddd; border-radius: 8px; background: #fff; margin-bottom: 10px; }
-    .anemail-form-title { font-weight: 700; margin-bottom: 2px; font-size: 13px; }
-    .anemail-form input { padding: 7px 9px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
-    .anemail-form-actions { display: flex; gap: 8px; margin-top: 2px; }
-    .anemail-form-actions button { padding: 7px 12px; border-radius: 6px; cursor: pointer; border: none; font-size: 13px; }
-    #af-save { background: #4472C4; color: #fff; }
-    #af-cancel { background: #eee; }
-    #af-status { font-size: 12px; color: #C00000; }
-  </style>
 </div>
 
 <!-- ===== 🖋️ 위임장 현황 탭 ===== -->
@@ -612,7 +585,6 @@
 </div>
 
 <script src="guide_script.js"></script>
-<script src="contacts_script.js"></script>
 
 </body>
 </html>
