@@ -433,7 +433,7 @@ function buildBlListHtml() {
 
     if (result.collectList.length) {
       html += `<div class="excel-warning-box">
-        <div class="excel-warning-title">🟡 COLLECT 표시된 B/L ${result.collectList.length}건 — 운임 타사 전송 금지!</div>
+        <div class="excel-warning-title">🟡 COLLECT 표시된 B/L ${result.collectList.length}건 — 운임 프리즘 전송 금지!, A/N 발송 주소 유의!</div>
         <div class="excel-result-table-wrap" style="margin-top:10px;">
           <table class="excel-result-table"><thead><tr><th>B/L Number</th></tr></thead>
           <tbody>${result.collectList.map((b) => `<tr><td>${escapeHtml(b)}</td></tr>`).join("")}</tbody></table>
