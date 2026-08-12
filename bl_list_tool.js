@@ -345,7 +345,7 @@ async function downloadBlListExcel() {
 /* ---------- 화면 렌더링 ---------- */
 
 function buildBlListHtml() {
-  let html = `<div class="hint" style="margin-bottom:14px;">수입 마감할 때 만드는 비엘 리스트를 자동으로 만들어줘요. ① 원본 비엘 리스트(Agenteam 추출)와 ② Customer Name 추출 파일 두 개를 올려주세요.</div>`;
+  let html = `<div class="hint" style="margin-bottom:14px;">수입 마감할 때 만드는 비엘 리스트를 자동으로 만들어줘요. ① 원본 비엘 리스트(Agenteam 추출)와 ② Customer Name 추출 파일 두 개를 올려주세요. <b>① 원본은 꼭 B/L Number 순서대로 정렬된 상태로 올려주세요</b> — 정렬이 안 되어 있으면 COMPUTE 6 번호랑 회색 처리(V) 순서가 뒤죽박죽될 수 있어요.</div>`;
 
   html += `<div style="display:flex; gap:14px; flex-wrap:wrap;">`;
 
@@ -355,7 +355,7 @@ function buildBlListHtml() {
       <input type="file" id="blListFileInput1" accept=".xlsx,.xls" onchange="handleBlListFile1(event)">
       <div class="excel-upload-icon">📄</div>
       <div class="excel-upload-label">원본 비엘 리스트 올리기</div>
-      <div class="excel-upload-sub">Agenteam 등에서 추출한 원본 (.xlsx)</div>
+      <div class="excel-upload-sub">Agenteam 등에서 추출한 원본 (.xlsx) — B/L Number 순서로 정렬해서 올려주세요</div>
     </label>
     ${blListState.file1Name ? `<div class="excel-file-chip">📎 ${escapeHtml(blListState.file1Name)} <button onclick="clearBlListFile1()">✕</button></div>` : ""}
   </div>`;
@@ -433,7 +433,7 @@ function buildBlListHtml() {
 
     if (result.collectList.length) {
       html += `<div class="excel-warning-box">
-        <div class="excel-warning-title">🟡 COLLECT 표시된 B/L ${result.collectList.length}건 — 운임 프리즘 전송 금지!, A/N 발송 주소 유의!</div>
+        <div class="excel-warning-title">🟡 COLLECT 표시된 B/L ${result.collectList.length}건 — 운임 프리즘 전송 금지!</div>
         <div class="excel-result-table-wrap" style="margin-top:10px;">
           <table class="excel-result-table"><thead><tr><th>B/L Number</th></tr></thead>
           <tbody>${result.collectList.map((b) => `<tr><td>${escapeHtml(b)}</td></tr>`).join("")}</tbody></table>

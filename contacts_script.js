@@ -29,10 +29,11 @@ function initContactsTab() {
 
   root.innerHTML = `
     <div class="anemail-wrap">
+      <div class="hint" style="margin:0;">💡 등록·수정은 서버에 바로 반영되지만, <b>다른 팀원 화면엔 자동으로 안 떠요.</b> 새 업체를 추가하기 전이나, 방금 등록/수정한 게 있는지 확인하고 싶을 땐 꼭 "🔄 새로고침"을 먼저 눌러주세요.</div>
       <div class="anemail-search-row">
         <input id="anemail-search-input" type="text"
           placeholder="영문상호·한글상호·비고(포워더명 등)로 검색... (비워두면 전체 목록)" autocomplete="off" disabled />
-        <button id="anemail-refresh-btn" type="button" title="다른 팀원이 방금 추가한 내용까지 새로 불러와요">🔄</button>
+        <button id="anemail-refresh-btn" type="button" title="다른 팀원이 방금 추가한 내용까지 새로 불러와요">🔄 새로고침</button>
         <button id="anemail-add-btn" type="button">+ 새 거래처 등록</button>
       </div>
       <div id="anemail-add-form" class="anemail-form" style="display:none;"></div>
@@ -177,6 +178,7 @@ function renderContactForm(item) {
   formEl.style.display = "block";
   formEl.innerHTML = `
     <div class="anemail-form-title">${isEdit ? "거래처 수정" : "새 거래처 등록"}</div>
+    ${isEdit ? "" : `<div class="hint" style="margin:0 0 10px;">⚠️ 이미 등록된 업체인지 모를 수 있어요. 등록 전에 위 "🔄 새로고침"을 한 번 눌러서 최신 목록으로 확인해주세요.</div>`}
     <input id="af-eng" type="text" placeholder="영문상호 (필수)" value="${escapeHtml(item ? item.eng : "")}" />
     <input id="af-kor" type="text" placeholder="한글상호" value="${escapeHtml(item ? item.kor : "")}" />
     <input id="af-email" type="text" placeholder="이메일 (필수)" value="${escapeHtml(item ? item.email : "")}" />
