@@ -592,7 +592,13 @@ function renderOblTable() {
     return;
   }
 
-  const sorted = OBL_LIST.slice().sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+  // 최근 "등록한" 순서대로 위에 오도록 정렬. createdAt(실제 등록시각)이 있으면
+  // 그걸 우선 쓰고, 옛날 데이터처럼 createdAt이 없는 경우엔 date(선적/접수 날짜)로 대체.
+  const sorted = OBL_LIST.slice().sort((a, b) => {
+    const av = a.createdAt || a.date || "";
+    const bv = b.createdAt || b.date || "";
+    return bv.localeCompare(av);
+  });
   const matched = q
     ? sorted.filter((o) => [o.name, o.blNumber].filter(Boolean).join(" ").toLowerCase().includes(q))
     : sorted;
@@ -667,7 +673,7 @@ async function submitOblInlineForm() {
 
   btn.disabled = true;
   btn.textContent = "등록 중...";
-  const result = await submitOblToServer({ date, name, blNumber });
+  const result = await submitOblToServer({ date, name, blNumber, createdAt: new Date().toISOString() });
   btn.disabled = false;
   btn.textContent = "✅ 등록하기";
 
