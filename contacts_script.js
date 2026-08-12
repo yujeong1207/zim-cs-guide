@@ -24,6 +24,8 @@ let contactsCurrentQuery = "";
 function initContactsTab() {
   const root = document.getElementById("an-anemail-tab");
   if (!root) return;
+  if (root.dataset.anemailInited === "1") return; // 이미 초기화됐으면 다시 안 그림 (검색창 값 유지)
+  root.dataset.anemailInited = "1";
 
   root.innerHTML = `
     <div class="anemail-wrap">

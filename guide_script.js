@@ -15754,6 +15754,7 @@ function switchMainTab(tab) {
   if (tab === "templates" && !currentType) initTypeSelect();
   if (tab === "ntf" && !currentNtfType) initNtfTypeSelect();
   if (tab === "excelTool") renderExcelTool();
+  if (tab === "anemail" && typeof initContactsTab === "function") initContactsTab();
 
   const MAIN_TAB_RECENT_LABELS = { calc: "🧮 계산기", memo: "📝 메모", excelTool: "📦 엑셀 정리" };
   if (MAIN_TAB_RECENT_LABELS[tab]) recordRecentItem("mainTab", tab, MAIN_TAB_RECENT_LABELS[tab]);

@@ -1369,3 +1369,59 @@ input, select, textarea {
   height: 16px;
   cursor: pointer;
 }
+
+/* ===== 📧 AN 연락처 탭 ===== */
+.anemail-wrap { display: flex; flex-direction: column; gap: 12px; }
+.anemail-search-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.anemail-search-row input { flex: 1; min-width: 220px; margin-bottom: 0; }
+.anemail-search-row button {
+  padding: 10px 14px; border-radius: 10px; border: 1px solid #e5e7eb;
+  background: white; cursor: pointer; font-size: 13px; font-weight: bold; white-space: nowrap;
+}
+.anemail-search-row #anemail-refresh-btn { padding: 10px 12px; }
+.anemail-search-row #anemail-add-btn { background: #6366f1; color: white; border: none; }
+.anemail-search-row #anemail-add-btn:hover { background: #4f46e5; }
+
+.anemail-count { font-size: 12px; color: #9ca3af; }
+
+.anemail-loading, .anemail-empty {
+  background: white; border-radius: 14px; padding: 30px 20px; text-align: center;
+  color: #9ca3af; font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+
+.anemail-table { width: 100%; border-collapse: collapse; background: white; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.05); }
+.anemail-table td { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; font-size: 13px; vertical-align: middle; }
+.anemail-table tr:last-child td { border-bottom: none; }
+.anemail-table tr:hover td { background: #f9fafb; }
+.anemail-col-eng { font-weight: bold; color: #111827; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.anemail-col-kor { color: #6b7280; }
+.anemail-col-email { color: #4338ca; }
+.anemail-col-btn { text-align: right; width: 70px; }
+.anemail-col-note { color: #b45309; font-size: 12.5px; background: #fffbeb; }
+.anemail-row-warning td { background: #fffdf5; }
+
+.anemail-edit-btn {
+  padding: 6px 12px; border-radius: 8px; border: 1px solid #e5e7eb; background: white;
+  cursor: pointer; font-size: 12px; font-weight: bold; color: #4b5563;
+}
+.anemail-edit-btn:hover { background: #f3f4f6; }
+
+.anemail-load-more-btn {
+  width: 100%; padding: 12px; border-radius: 12px; border: 1px dashed #c7d2fe;
+  background: white; color: #4f46e5; font-weight: bold; cursor: pointer; font-size: 13px;
+}
+.anemail-load-more-btn:hover { background: #eef2ff; }
+
+.anemail-form {
+  background: white; border-radius: 14px; padding: 18px; box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+.anemail-form-title { font-size: 15px; font-weight: bold; margin-bottom: 10px; }
+.anemail-form-actions { display: flex; gap: 8px; margin-top: 4px; }
+.anemail-form-actions button {
+  flex: 1; padding: 10px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer;
+}
+#af-save { background: #6366f1; color: white; }
+#af-save:hover { background: #4f46e5; }
+#af-cancel { background: #f3f4f6; color: #374151; }
+#af-cancel:hover { background: #e5e7eb; }
+#af-status { margin-top: 8px; font-size: 12.5px; color: #b91c1c; }

@@ -93,6 +93,7 @@
   <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
   <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
   <button class="main-tab-btn" data-tab="payment" onclick="switchMainTab('payment')">💰 입금현황</button>
+  <button class="main-tab-btn" data-tab="anemail" onclick="switchMainTab('anemail')">📧 AN 연락처</button>
 
   <div class="tab-group" data-group="schedule">
     <button class="tab-group-btn" onclick="toggleTabGroup('schedule')">🗓 일정관리 <span class="tab-group-caret">▾</span></button>
@@ -237,6 +238,11 @@
       title="입금현황 (BLCONFIRM.xlsx)">
     </iframe>
   </div>
+</div>
+
+<!-- ===== 📧 AN 연락처 탭 ===== -->
+<div class="tab-page" id="page-anemail">
+  <div id="an-anemail-tab"></div>
 </div>
 
 <!-- ===== 📦 오비엘 접수 탭 ===== -->
@@ -586,6 +592,7 @@
 </div>
 
 <script src="bl_list_tool.js"></script>
+<script src="contacts_script.js"></script>
 <script src="guide_script.js"></script>
 
 </body>
