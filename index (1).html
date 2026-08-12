@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>🐳 CS 팀 길라잡이</title>
+
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+</head>
+
+<body>
+
+<!-- ===== 🔒 비밀번호 화면 (진짜 보안이 아니라, 아무나 우연히 못 들어오게 하는 정도) ===== -->
+<div id="passwordGateOverlay" style="position:fixed;inset:0;z-index:99999;background:#f6f4ee;display:flex;align-items:center;justify-content:center;">
+  <div style="max-width:320px;width:90%;text-align:center;">
+    <div style="font-size:40px;margin-bottom:8px;">🐳🔒</div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:6px;">CS 팀 길라잡이</div>
+    <div style="font-size:13px;color:#6b7280;margin-bottom:18px;">팀 공지로 안내드린 비밀번호를 입력해주세요.</div>
+    <input id="passwordGateInput" type="password" placeholder="비밀번호"
+      style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;text-align:center;box-sizing:border-box;">
+    <button onclick="checkPasswordGate()"
+      style="width:100%;margin-top:10px;padding:10px 12px;border:none;border-radius:8px;background:#111827;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">입장하기</button>
+    <div id="passwordGateError" style="color:#dc2626;font-size:13px;margin-top:10px;display:none;">비밀번호가 틀렸어요, 다시 확인해주세요.</div>
+  </div>
+</div>
+<script>
+  (function () {
+    var PASSWORD_GATE_CODE = "0501";
+    var savedOk = localStorage.getItem("csGuidePwOk");
+    if (savedOk === "1") {
+      document.getElementById("passwordGateOverlay").style.display = "none";
+    }
+    window.checkPasswordGate = function () {
+      var input = document.getElementById("passwordGateInput");
+      if (input.value === PASSWORD_GATE_CODE) {
+        localStorage.setItem("csGuidePwOk", "1");
+        document.getElementById("passwordGateOverlay").style.display = "none";
+      } else {
+        document.getElementById("passwordGateError").style.display = "block";
+        input.value = "";
+        input.focus();
+      }
+    };
+    document.addEventListener("DOMContentLoaded", function () {
+      var input = document.getElementById("passwordGateInput");
+      if (input) {
+        input.focus();
+        input.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") checkPasswordGate();
+        });
+      }
+    });
+  })();
+</script>
+
+<div class="header">
+  <div class="header-left">
+    <span>🐳✨</span>
+    <div class="header-titles">
+      <div>CS 팀 길라잡이</div>
+      <div class="header-subtitle">궁금할 땐 여기부터, 든든한 우리 팀 길라잡이 🌷</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <button class="admin-toggle" onclick="openAdminList()">⚙️ 관리<span class="feedback-badge" id="feedbackBadge" style="display:none;"></span></button>
+  </div>
+</div>
+
+<div class="notice-banner" id="noticeBannerWrap" style="display:none;"></div>
+
+<div class="main-tabs">
+  <div class="tab-group" data-group="work">
+    <button class="tab-group-btn" onclick="toggleTabGroup('work')">📋 업무가이드 <span class="tab-group-caret">▾</span></button>
+    <div class="tab-group-dropdown" id="tabGroupDropdown-work">
+      <button class="main-tab-btn" data-tab="procedures" onclick="switchMainTab('procedures')">📋 업무 절차</button>
+      <button class="main-tab-btn" data-tab="faqs" onclick="switchMainTab('faqs')">❓ FAQ</button>
+      <button class="main-tab-btn" data-tab="templates" onclick="switchMainTab('templates')">✉️ 메일 템플릿</button>
+      <button class="main-tab-btn" data-tab="ntf" onclick="switchMainTab('ntf')">📨 공문 발송</button>
+    </div>
+  </div>
+
+  <div class="tab-group" data-group="reference">
+    <button class="tab-group-btn" onclick="toggleTabGroup('reference')">📚 참고자료 <span class="tab-group-caret">▾</span></button>
+    <div class="tab-group-dropdown" id="tabGroupDropdown-reference">
+      <button class="main-tab-btn" data-tab="resources" onclick="switchMainTab('resources')">🔗 자료 모음</button>
+      <button class="main-tab-btn" data-tab="vessels" onclick="switchMainTab('vessels')">🚢 모선 일정</button>
+      <button class="main-tab-btn" data-tab="contacts" onclick="switchMainTab('contacts')">📞 연락처</button>
+    </div>
+  </div>
+
+  <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
+  <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
+  <button class="main-tab-btn" data-tab="payment" onclick="switchMainTab('payment')">💰 입금현황</button>
+
+  <div class="tab-group" data-group="schedule">
+    <button class="tab-group-btn" onclick="toggleTabGroup('schedule')">🗓 일정관리 <span class="tab-group-caret">▾</span></button>
+    <div class="tab-group-dropdown" id="tabGroupDropdown-schedule">
+      <button class="main-tab-btn" data-tab="vacations" onclick="switchMainTab('vacations')">🌴 휴가 일정</button>
+      <button class="main-tab-btn" data-tab="teamEvents" onclick="switchMainTab('teamEvents')">🗓 팀 일정</button>
+    </div>
+  </div>
+
+  <div class="tab-group" data-group="tools">
+    <button class="tab-group-btn" onclick="toggleTabGroup('tools')">🧮 도구 <span class="tab-group-caret">▾</span></button>
+    <div class="tab-group-dropdown" id="tabGroupDropdown-tools">
+      <button class="main-tab-btn" data-tab="calc" onclick="switchMainTab('calc')">🧮 계산기</button>
+      <button class="main-tab-btn" data-tab="memo" onclick="switchMainTab('memo')">📝 메모</button>
+      <button class="main-tab-btn" data-tab="excelTool" onclick="switchMainTab('excelTool')">📦 엑셀 정리</button>
+    </div>
+  </div>
+
+  <button class="main-tab-btn howto-tab-btn" data-tab="howto" onclick="switchMainTab('howto')">📖 사용법</button>
+</div>
+
+<div class="search-bar-wrap">
+  <input id="globalSearch" placeholder="🔍 전체 검색 - 절차, FAQ, 자료, 메일 템플릿, 공문 전체에서 한 번에 찾아요" oninput="onSearchInput()">
+</div>
+
+<div id="recentItemsRow" class="recent-items-row" style="display:none;"></div>
+
+<!-- ===== 검색 결과 ===== -->
+<div class="tab-page" id="page-search">
+  <div id="searchResultsList"></div>
+</div>
+
+
+<!-- ===== 업무 절차 탭 ===== -->
+<div class="tab-page" id="page-procedures">
+  <div id="procFavRow"></div>
+  <div id="procList"></div>
+</div>
+
+<!-- ===== FAQ 탭 ===== -->
+<div class="tab-page" id="page-faqs">
+  <div id="faqFavRow"></div>
+  <div class="cat-filter" id="faqCatFilter"></div>
+  <div id="faqTopicsWrap"></div>
+  <div id="faqList"></div>
+</div>
+
+<!-- ===== 자료 모음 탭 ===== -->
+<div class="tab-page" id="page-resources">
+  <div class="cat-filter" id="resCatFilter"></div>
+  <div id="resList"></div>
+</div>
+
+<!-- ===== 모선 입출항 일정 탭 ===== -->
+<div class="tab-page" id="page-vessels">
+  <div class="hint" style="margin-bottom:14px;">💡 D/O 발행은 <b>모선 입항일</b>, B/L 발행은 <b>모선 출항일</b> 기준이에요. 7월부터 월별로 정리해서 볼 수 있어요.<br>🔴 <b>실시간 공유돼요</b> — 한 명이 배를 등록·수정·삭제하면 팀원 전체 화면에 바로 반영되니, 같은 배를 여러 명이 각자 입력할 필요 없어요. (15분마다 자동으로 최신화되지만, 방금 등록된 걸 바로 보고 싶으면 새로고침을 눌러주세요.)</div>
+  <div id="vesselMonthsWrap"></div>
+  <div class="vessel-bottom-actions">
+    <button class="btn secondary-btn" onclick="openAddVesselMonth()">＋ 새 달 추가</button>
+    <button class="btn secondary-btn" onclick="openVesselEditor(null, null)">＋ 배 추가</button>
+    <button class="btn secondary-btn" onclick="loadVesselTab()">🔄 새로고침</button>
+  </div>
+</div>
+
+<!-- ===== 🧮 계산기 탭 ===== -->
+<div class="tab-page" id="page-calc">
+  <div class="calc-sub-tabs">
+    <button class="calc-sub-tab-btn" data-calc="lap" onclick="switchCalcTool('lap')">💸 LAP 계산기 (연체료)</button>
+    <button class="calc-sub-tab-btn" data-calc="do" onclick="switchCalcTool('do')">💱 D/O 비용 계산기 (환율)</button>
+  </div>
+  <div id="calcToolBody"></div>
+</div>
+
+<!-- ===== 📝 메모 탭 (나만 보이는 개인 포스트잇, 이 브라우저에만 저장됨) ===== -->
+<div class="tab-page" id="page-memo">
+  <div class="hint" style="margin-bottom:10px;">🔒 이 메모는 이 브라우저에만 저장돼요. 다른 팀원에게는 안 보이고, 내보내기/가져오기에도 포함 안 돼요.</div>
+  <button class="btn generate-btn" onclick="addMemoNote()">🐳 새 포스트잇 추가</button>
+  <div id="memoBoard" class="memo-board"></div>
+  <div id="memoFormatToolbar" class="memo-format-toolbar">
+    <button class="fmt-bold" title="굵게" onclick="applyMemoBold()">B</button>
+    <button class="fmt-hl fmt-hl-yellow" title="노랑 형광펜" onclick="applyMemoHighlight('')"></button>
+    <button class="fmt-hl fmt-hl-pink" title="핑크 형광펜" onclick="applyMemoHighlight('hl-pink')"></button>
+    <button class="fmt-hl fmt-hl-blue" title="파랑 형광펜" onclick="applyMemoHighlight('hl-blue')"></button>
+    <button class="fmt-hl fmt-hl-green" title="초록 형광펜" onclick="applyMemoHighlight('hl-green')"></button>
+    <button class="fmt-clear" title="서식 지우기" onclick="applyMemoClearFormat()">✕</button>
+  </div>
+</div>
+
+<!-- ===== 연락처 탭 ===== -->
+<div class="tab-page" id="page-contacts">
+  <input id="contactsFilter" class="contacts-filter-input" placeholder="🔍 대륙·국가·카테고리·담당자·이메일로 찾기" oninput="renderContactsTable()">
+  <div id="contactsTableWrap"></div>
+</div>
+
+<!-- ===== 🖋️ 위임장 현황 탭 ===== -->
+<div class="tab-page" id="page-poa">
+  <div class="hint" style="margin-bottom:10px;">신청업체(포워더/관세사무소)나 실화주 이름으로 검색해서 위임장 제출 여부를 바로 확인해요. 목록에 없으면 아직 제출 안 된 거예요. (15분마다 자동으로 최신화되지만, 방금 등록된 걸 바로 보고 싶으면 새로고침을 눌러주세요.)<br><span style="color:#b91c1c;font-weight:bold;font-size:13px;">⚠️ 위임 권한은 최대 1년이에요. 1년이 지난 건은 검색 결과에 자동으로 경고가 뜨니, 그 업체는 새로 위임장을 받아주세요.</span></div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn generate-btn" onclick="openPoaForm()">➕ 새 업체 등록하기 (팀원 누구나)</button>
+    <button class="btn secondary-btn" onclick="loadPoaTab()">🔄 새로고침</button>
+  </div>
+
+  <div id="poaInlineFormWrap" class="poa-form-wrap" style="display:none;">
+    <div class="hint" style="margin:12px 0 8px;">여기서 입력하고 등록하기를 누르면 바로 목록에 반영돼요.</div>
+    <input id="poaInlineApplicant" class="contacts-filter-input" placeholder="신청업체 (포워더/관세사무소)">
+    <input id="poaInlineShipper" class="contacts-filter-input" placeholder="실화주" style="margin-top:8px;">
+    <div class="poa-date-field">
+      <label for="poaInlineDate">제출일자</label>
+      <input id="poaInlineDate" type="date" class="poa-date-input">
+    </div>
+    <button id="poaInlineSubmitBtn" class="btn generate-btn" style="margin-top:10px;" onclick="submitPoaInlineForm()">✅ 등록하기</button>
+  </div>
+
+  <input id="poaFilter" class="contacts-filter-input" placeholder="🔍 신청업체 또는 실화주로 검색" oninput="renderPoaTable()" style="margin-top:18px;">
+  <div id="poaTableWrap"></div>
+</div>
+
+<!-- ===== 💰 입금현황 탭 (비엘번호 조회 + 재무팀 원드라이브 엑셀 임베드) ===== -->
+<div class="tab-page" id="page-payment">
+
+  <!-- 🔍 비엘번호 발행가능 여부 조회 -->
+  <div class="payment-check-box">
+    <div class="hint" style="margin-bottom:8px;">비엘번호를 입력하면 입금확인·발행가능 여부를 알려드려요. 여러 개는 줄바꿈(엔터) 또는 콤마(,)로 구분해서 한 번에 입력하세요.</div>
+    <textarea id="paymentBlInput" class="payment-bl-textarea" rows="3" placeholder="예시&#10;MSCU1234567&#10;ZIMU7654321, ABCD9999999"></textarea>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center;">
+      <button class="btn generate-btn" onclick="checkPaymentStatus()">🔍 발행가능 여부 조회</button>
+      <button class="btn secondary-btn" onclick="refreshPaymentData()">🔄 데이터 갱신</button>
+      <span id="paymentRefreshStatus" class="hint" style="margin-top:0;"></span>
+    </div>
+    <div id="paymentResultList" class="payment-result-list"></div>
+  </div>
+
+  <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
+
+  <div class="hint" style="margin-bottom:10px;">위 조회로 안 되거나 직접 원본을 보고 싶을 땐 아래 화면에서 확인하세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요. 원본 파일이 바뀌면 이 화면도 그대로 반영돼요.</div>
+  <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
+  <div class="payment-embed-wrap">
+    <iframe
+      src="https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True"
+      width="100%" height="800" frameborder="0" scrolling="yes"
+      title="입금현황 (BLCONFIRM.xlsx)">
+    </iframe>
+  </div>
+</div>
+
+<!-- ===== 📦 오비엘 접수 탭 ===== -->
+<div class="tab-page" id="page-obl">
+  <div class="hint" style="margin-bottom:10px;">오비엘 접수하면 여기서 바로 등록하세요. 등록하면 팀원 전체 화면에 바로 반영되고, 노션에 올릴 코드(BL번호 뒷 7자리)도 자동으로 같이 보여줘요. (15분마다 자동으로 최신화되지만, 방금 등록된 걸 바로 보고 싶으면 새로고침을 눌러주세요.)</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn generate-btn" onclick="toggleOblInlineForm()">➕ 오비엘 접수 등록하기</button>
+    <button class="btn secondary-btn" onclick="loadOblTab()">🔄 새로고침</button>
+  </div>
+
+  <div id="oblInlineFormWrap" class="poa-form-wrap" style="display:none;">
+    <div class="hint" style="margin:12px 0 8px;">입력하고 등록하기를 누르면 바로 목록에 반영돼요.</div>
+
+    <div class="poa-date-field">
+      <label for="oblInlineDate">날짜</label>
+      <input id="oblInlineDate" type="date" class="poa-date-input">
+    </div>
+
+    <div class="poa-date-field" style="margin-top:10px;">
+      <label for="oblInlineName">이름</label>
+      <select id="oblInlineName" class="poa-date-input" style="max-width:140px;">
+        <option value="">선택</option>
+      </select>
+    </div>
+
+    <input id="oblInlineBl" class="contacts-filter-input" placeholder="BL번호" style="margin-top:10px;" oninput="updateOblNotionPreview()">
+    <div id="oblNotionPreview" class="hint" style="margin-top:4px;font-weight:600;"></div>
+
+    <button id="oblInlineSubmitBtn" class="btn generate-btn" style="margin-top:10px;" onclick="submitOblInlineForm()">✅ 등록하기</button>
+  </div>
+
+  <input id="oblFilter" class="contacts-filter-input" placeholder="🔍 이름 또는 BL번호로 검색" oninput="renderOblTable()" style="margin-top:18px;">
+  <div id="oblTableWrap"></div>
+</div>
+
+<!-- ===== 휴가 일정 탭 ===== -->
+<div class="tab-page" id="page-vacations">
+  <div id="vacationNoticeWrap"></div>
+  <div id="vacationSummaryWrap"></div>
+  <div class="section-title-row" style="margin-top:24px;">
+    <div class="section-title" style="margin:0;">📋 상세 일정</div>
+    <button class="btn generate-btn" style="padding:7px 14px;font-size:13px;" onclick="openVacationEditor()">+ 휴가 추가하기</button>
+  </div>
+  <div id="vacationList"></div>
+</div>
+
+<!-- ===== 팀 일정 탭 (교육/출장/공휴일/행사 등 전체 일정 캘린더) ===== -->
+<div class="tab-page" id="page-teamEvents">
+  <div class="calendar-nav">
+    <button class="btn secondary-btn" onclick="shiftCalendarMonth(-1)">← 이전 달</button>
+    <div class="calendar-nav-title"><span id="calendarMonthIcon"></span> <span id="calendarMonthTitle"></span></div>
+    <button class="btn secondary-btn" onclick="shiftCalendarMonth(1)">다음 달 →</button>
+  </div>
+  <div id="teamCalendarGrid"></div>
+  <div class="guide-box" style="margin-top:14px;"><div class="guide-box-title">📌 팀 일정 캘린더 사용법</div>휴가·교육·출장·공휴일·행사 등 팀 일정을 한눈에 볼 수 있어요.<br><br>🔵 회사 일정(교육/출장/행사)&nbsp;&nbsp;&nbsp;🔴 공휴일 · 강조 표시&nbsp;&nbsp;&nbsp;🌴 확정 연차&nbsp;&nbsp;&nbsp;🏖️ 휴가 찜(승인 전)<br><br><b>날짜 칸을 클릭하면 그 자리에서 바로 일정을 추가·수정·삭제할 수 있어요.</b></div>
+</div>
+
+<!-- ===== 메일 템플릿 탭 ===== -->
+<div class="tab-page" id="page-templates">
+  <div class="container">
+    <div class="card left">
+      <div class="title">✏️ 메일 작성</div>
+      <div class="label"><span class="icon">📂</span>메일 유형</div>
+      <div class="type-select-row">
+        <select id="type" onchange="onTypeChange()"></select>
+        <button class="star-btn" id="favToggleBtn" onclick="toggleFavoriteTemplate()" title="즐겨찾기">☆</button>
+      </div>
+      <div id="favTemplateRow" class="fav-row"></div>
+      <div id="guideBox"></div>
+      <div id="fields"></div>
+      <div id="tableEditorWrap"></div>
+      <button class="btn generate-btn full" onclick="generate()">✨ 메일 생성하기</button>
+    </div>
+    <div class="card right">
+      <div class="title">📄 미리보기</div>
+      <div class="tabs" id="tabs"></div>
+      <div id="outputs"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 📨 공문 발송(NTF) 탭 ===== -->
+<div class="tab-page" id="page-ntf">
+  <div class="container">
+    <div class="card left">
+      <div class="title">📨 공문 작성</div>
+      <div class="hint" style="margin-bottom:12px;">여기서 만드는 건 "제목"과 "본문"만이에요. 로고 배너나 TO/FROM 줄은 발송 시스템에서 자동으로 붙으니 따로 만들 필요 없어요.</div>
+      <div class="label"><span class="icon">📂</span>공문 유형</div>
+      <select id="ntfType" onchange="onNtfTypeChange()"></select>
+      <div id="ntfGuideBox"></div>
+      <div id="ntfFields"></div>
+      <div id="ntfTableEditorWrap"></div>
+      <button class="btn generate-btn full" onclick="generateNtf()">⚡ 공문 생성하기</button>
+    </div>
+    <div class="card right">
+      <div class="title">📄 미리보기</div>
+      <div class="tabs" id="ntfTabs"></div>
+      <div id="ntfOutputs"></div>
+    </div>
+  </div>
+
+  <div class="pdf-convert-card">
+    <div class="title">📄 PDF(CA) → HTML 변환</div>
+    <div class="hint" style="margin-bottom:10px;">본사에서 받은 CA(PDF)를 업로드하면 텍스트를 뽑아서 편집 가능한 형태로 보여드려요. 날짜는 변환하는 오늘 날짜로 자동 표시되고, 표는 아래 "표 만들기" 도구로 직접 만들어서 원하는 위치에 넣을 수 있어요. (인터넷 연결이 필요해요)</div>
+    <input type="file" id="pdfConvertInput" accept="application/pdf" onchange="handlePdfSelected(event)">
+    <div class="hint" id="pdfConvertStatus" style="margin:10px 0 0;"></div>
+
+    <div id="pdfConvertToolbar" class="pdf-toolbar" style="display:none;">
+      <button type="button" class="btn secondary-btn" onmousedown="event.preventDefault()" onclick="applyPdfFormat('bold')"><b>B</b> 굵게</button>
+      <button type="button" class="btn secondary-btn" onmousedown="event.preventDefault()" onclick="applyPdfFormat('underline')"><u>U</u> 밑줄</button>
+      <button type="button" class="btn secondary-btn" onmousedown="event.preventDefault()" onclick="applyPdfFormat('justifyLeft')">⬅ 왼쪽정렬</button>
+      <button type="button" class="btn secondary-btn" onmousedown="event.preventDefault()" onclick="applyPdfFormat('justifyCenter')">↔ 가운데정렬</button>
+      <button type="button" class="btn secondary-btn" onmousedown="event.preventDefault()" onclick="applyPdfFormat('justifyRight')">➡ 오른쪽정렬</button>
+    </div>
+    <div class="hint" id="pdfConvertToolbarHint" style="display:none;margin:6px 0 0;">본문에서 굵게/밑줄/정렬하고 싶은 글자를 드래그해서 선택한 뒤, 위 버튼을 눌러보세요 (예: 제목은 굵게+밑줄+가운데정렬, "Sincerely," 부분은 오른쪽정렬).</div>
+
+    <div id="pdfConvertPreview" class="ntf-body-preview preview-html pdf-conv-preview" contenteditable="true" style="display:none;margin-top:10px;"></div>
+
+    <div id="pdfConvertTableBuilder" style="display:none;margin-top:18px;">
+      <div class="section-title" style="margin-top:0;">📊 표 만들기 (필요할 때만)</div>
+      <div class="hint" style="margin-bottom:8px;">PDF에서 본 표 내용을 여기 직접 입력한 뒤, 위 본문에서 표가 들어갈 자리를 한 번 클릭하고 "본문에 표 삽입"을 누르세요.</div>
+      <div id="pdfTableColWrap"></div>
+      <button class="add-row-btn" onclick="addPdfTableColumn()">＋ 열 추가</button>
+      <div id="pdfTableRowsWrap" style="margin-top:10px;"></div>
+      <button class="add-row-btn" onclick="addPdfTableRow()">＋ 행 추가</button>
+      <button class="btn secondary-btn full" style="margin-top:10px;" onclick="insertPdfTable()">📥 본문에 표 삽입</button>
+    </div>
+
+    <button class="btn generate-btn full" id="pdfSaveHtmlBtn" style="display:none;margin-top:16px;" onclick="savePdfConvertedHtml()">💾 HTML 파일로 저장</button>
+  </div>
+</div>
+
+<!-- ===== 📦 엑셀 정리 탭 ===== -->
+<div class="tab-page" id="page-excelTool">
+  <div class="hint" style="margin-bottom:14px;">터미널에 보내는 원본 엑셀(Container Report)을 업로드하면, 정해진 규칙대로 자동으로 정리해줘요. 규칙에 안 맞거나 애매한 부분은 화면에 알려드리니 꼭 확인 후 다운로드해주세요.</div>
+
+  <div class="calc-sub-tabs" id="excelModeTabs">
+    <button class="calc-sub-tab-btn active" data-mode="lt" onclick="switchExcelMode('lt')">🚚 LT LIST</button>
+    <button class="calc-sub-tab-btn" data-mode="unloading_busan" onclick="switchExcelMode('unloading_busan')">⚓ 양하리스트 (부산)</button>
+    <button class="calc-sub-tab-btn" data-mode="unloading_incheon" onclick="switchExcelMode('unloading_incheon')">⚓ 양하리스트 (인천)</button>
+    <button class="calc-sub-tab-btn" data-mode="unloading_gwangyang" onclick="switchExcelMode('unloading_gwangyang')">⚓ 양하리스트 (광양)</button>
+    <button class="calc-sub-tab-btn" data-mode="crosscheck_msc" onclick="switchExcelMode('crosscheck_msc')">🔎 선적 대조</button>
+    <button class="calc-sub-tab-btn" data-mode="bl_list" onclick="switchExcelMode('bl_list')">🧾 비엘리스트</button>
+  </div>
+
+  <div id="excelToolBody"></div>
+</div>
+
+<!-- ===== 📖 사용법 탭 ===== -->
+<div class="tab-page" id="page-howto">
+  <div class="card" style="margin-bottom:18px;">
+    <div style="font-size:20px;font-weight:800;margin-bottom:6px;">👋 처음이시면 여기부터 봐주세요!</div>
+    <div class="hint" style="margin:0;">이 페이지는 CS팀이 매일 쓰는 업무 가이드예요. 아래 순서대로 한 번만 훑어보시면 5분 안에 다 파악하실 수 있어요.</div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">📋</div>
+    <div class="howto-body">
+      <div class="howto-title">업무가이드 <span class="howto-badge">업무 절차 · FAQ · 메일 템플릿 · 공문 발송</span></div>
+      <div class="howto-desc">상단 "📋 업무가이드"를 누르면 드롭다운으로 4개 메뉴가 펼쳐져요. 업무 절차나 FAQ는 화면 오른쪽 위 "🔍 전체 검색"창에 키워드만 치면 바로 찾아져요 (표 안 내용까지 다 검색돼요). 메일 템플릿은 유형을 고르고 빈칸만 채우면 바로 답장 문구가 완성돼요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">📚</div>
+    <div class="howto-body">
+      <div class="howto-title">참고자료 <span class="howto-badge">자료 모음 · 연락처</span></div>
+      <div class="howto-desc">외부 링크나 첨부파일, 규정표, 해외 오피스 연락처처럼 "찾아봐야 하는" 정보가 모여있어요. 표가 여러 개인 자료(예: 중남미·아프리카 BL 발행 참고사항)는 하위 탭으로 나뉘어 있고, 표 헤더는 스크롤해도 상단에 고정돼서 보기 편해요. 연락처는 국가/구분/담당자 아무거나 검색하면 돼요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item howto-live">
+    <div class="howto-icon">🚢</div>
+    <div class="howto-body">
+      <div class="howto-title">모선 일정 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
+      <div class="howto-desc">새로 들어온 배 스케줄은 "＋ 배 추가"로 한 번만 입력해주세요 (날짜뿐 아니라 시간까지 입력·표시돼요). <b>한 명이 입력하면 팀원 전체 화면에 바로 반영</b>돼서, 다른 사람이 같은 배를 또 입력할 필요 없어요. 트레드링스에서 복사해서 붙여넣으면 선명·항차·시간까지 자동으로 채워져요. 수정·삭제도 마찬가지로 바로 공유돼요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item howto-live">
+    <div class="howto-icon">🖋️</div>
+    <div class="howto-body">
+      <div class="howto-title">위임장 현황 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
+      <div class="howto-desc">신청업체나 실화주 이름으로 검색하면 위임장 제출 여부를 바로 확인할 수 있어요. <b>위임 권한은 최대 1년</b>이라, 제출일자가 1년 넘었거나 아예 없는 업체는 자동으로 경고 문구가 떠요 (검색 안 해도 목록 전체에서 바로 보여요). 새 업체가 위임장을 냈으면 "➕ 새 업체 등록하기"로 직접 등록해주세요 — <b>등록하는 순간 팀원 전체 화면에 반영</b>돼요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item howto-live">
+    <div class="howto-icon">📦</div>
+    <div class="howto-body">
+      <div class="howto-title">오비엘 접수 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
+      <div class="howto-desc">오비엘 접수하면 "➕ 오비엘 접수 등록하기"로 날짜·이름·BL번호만 입력하세요. <b>노션에 올릴 코드(BL번호 뒷 7자리)가 자동으로 옆에 떠요.</b> 등록도 팀원 전체 화면에 바로 반영돼요. "📊 담당자별 접수 현황 보기"를 누르면 이번 달(또는 이전 달) 누가 몇 건 접수했는지 바로 볼 수 있어요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">💰</div>
+    <div class="howto-body">
+      <div class="howto-title">입금현황 <span class="howto-badge">재무팀 원드라이브 파일 보기</span></div>
+      <div class="howto-desc">재무팀에서 관리하는 입금증파일을 그대로 볼 수 있어요. 비엘번호로 찾을 땐 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색하세요. 원본이 재무팀에서 바뀌면 여기도 그대로 반영돼요. 여기서 직접 입력·수정은 안 되고, 보기 전용이에요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item howto-live">
+    <div class="howto-icon">🗓</div>
+    <div class="howto-body">
+      <div class="howto-title">일정관리 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
+      <div class="howto-desc">내 휴가나 팀원들 휴가, 회사 일정, 공휴일을 한눈에 볼 수 있고, 전부 실시간으로 공유돼요. 팀 일정 탭은 달력 형태라, 날짜 칸을 클릭하면 바로 확인할 수 있어요.</div>
+      <div class="howto-legend">
+        <div class="howto-legend-item"><span class="howto-legend-dot" style="background:#4338ca;"></span>🔵 회사 일정 (교육/출장/행사)</div>
+        <div class="howto-legend-item"><span class="howto-legend-dot" style="background:#f87171;"></span>🔴 공휴일 · 강조 표시</div>
+        <div class="howto-legend-item"><span class="howto-legend-dot" style="background:#f59e0b;"></span>🌴 확정 연차 (노란색)</div>
+        <div class="howto-legend-item"><span class="howto-legend-dot" style="background:#8b5cf6;"></span>🏖️ 휴가 찜하기 (보라색, 승인 전 · 팀원 누구나 등록 가능)</div>
+      </div>
+      <div class="howto-desc" style="margin-top:8px;">🔐 <b>확정 휴가·공휴일·회사 일정을 추가/수정/삭제하려면 관리자 키가 필요해요</b> (조회는 누구나 가능). 휴가 찜하기만 팀원 누구나 키 없이 바로 등록할 수 있어요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">🧮</div>
+    <div class="howto-body">
+      <div class="howto-title">도구 <span class="howto-badge">계산기 · 메모 · 엑셀 정리</span></div>
+      <div class="howto-desc">디오 비용 계산, 간단한 메모, 그리고 LT LIST · 양하리스트(부산/인천/광양) 추출 · 선적 대조 · 비엘리스트 만들기 같은 엑셀 자동 정리 기능이 모여있어요. 선적 대조는 우리 양하리스트에 있는 컨테이너가 선사 양하목록(같은 POD)에서도 확인되는지 대조해줘요 — 실제로 안 실렸거나 리스트 오류가 있는 컨테이너를 바로 찾아줘요. 비엘리스트 만들기는 수입 마감할 때 원본 비엘 리스트와 Customer Name 파일 두 개를 올리면, 규칙대로 정리하고 삭제/이동/COLLECT 처리된 내역까지 화면에 보여줘요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">🔍</div>
+    <div class="howto-body">
+      <div class="howto-title">전체 검색 &amp; 즐겨찾기</div>
+      <div class="howto-desc">화면 위쪽 검색창에 키워드를 치면 절차·FAQ·자료(표 안 내용 포함)·메일템플릿·공문·위임장·연락처 등 전체에서 한 번에 찾아줘요. 결과는 종류별로 묶여서 나오고, 2건 이상인 종류는 "펼쳐보기"로 접혀있어요 (1건뿐이면 바로 펼쳐져서 나와요). "바로가기"를 누르면 그 항목이 있는 정확한 하위 탭까지 자동으로 열려요. 자주 쓰는 템플릿은 별(☆) 아이콘을 눌러 즐겨찾기 해두면 다음에 더 빨리 찾을 수 있어요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">🔐</div>
+    <div class="howto-body">
+      <div class="howto-title">어디까지 내가 고친 게 다른 사람한테 보일까?</div>
+      <div class="howto-desc"><b>모선 일정, 위임장 현황, 오비엘 접수, 의견 남기기, 휴가 찜하기, 확정휴가, 공휴일, 팀 일정, 공지 배너</b> — 이것들은 진짜 실시간으로 모두에게 반영돼요 (일부는 관리자 키가 필요해요, 위 "일정관리" 항목 참고). "⚙️ 관리" 버튼은 <b>비밀번호를 알아야 들어갈 수 있고,</b> 그 안에서 고친 나머지(절차/FAQ/메일템플릿/공문/자료모음/연락처/팀원 휴가일수/명언문구/메모)는 자기 브라우저에만 남고 다른 팀원에게는 보이지 않습니다. 수정 또는 추가를 원한다면 의견 남기기로 요청해 주세요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">📝</div>
+    <div class="howto-body">
+      <div class="howto-title">건의사항이 있다면</div>
+      <div class="howto-desc">화면 오른쪽 아래 "📝 의견 남기기" 버튼으로 언제든 건의/오류 제보를 남겨주세요. 관리자 화면에는 실시간으로 뜨지만, 관리자가 확인 후 반영 예정이에요.</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== 관리자 패널 ===== -->
+<div class="admin-overlay" id="adminOverlay" style="display:none;">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div class="admin-title">⚙️ 길라잡이 페이지 관리</div>
+      <button class="close-btn" onclick="closeAdmin()">✕ 닫기</button>
+    </div>
+    <div id="storageUsageIndicator" class="storage-usage-box"></div>
+    <div class="admin-section-tabs" id="adminSectionTabs"></div>
+    <div id="adminBody"></div>
+  </div>
+</div>
+
+<datalist id="vacationNameOptions"></datalist>
+
+<input type="file" id="importInput" class="file-input-hidden" accept=".json" onchange="handleImportFile(event)">
+<input type="file" id="partialImportInput" class="file-input-hidden" accept=".json" onchange="handlePartialImportFile(event)">
+
+<!-- ===== 의견/오탈자 제보 버튼 + 모달 ===== -->
+<button class="feedback-fab" onclick="openFeedbackModal()">📝 의견 남기기</button>
+
+<div class="admin-overlay" id="pinOverlay" style="display:none;" onclick="if(event.target===this) closePinModal()">
+  <div class="admin-panel small-panel pin-panel">
+    <div class="admin-header">
+      <div class="admin-title">🔒 관리자 암호</div>
+      <button class="close-btn" onclick="closePinModal()">✕ 닫기</button>
+    </div>
+    <div class="hint" style="margin-bottom:10px;">이 안에서는 팀원 전체가 보는 내용을 편집할 수 있어요. 암호를 입력해주세요.</div>
+    <input type="password" id="pinInput" inputmode="numeric" maxlength="8" placeholder="암호 입력" onkeydown="if(event.key==='Enter') submitAdminPin()">
+    <div id="pinError" class="pin-error" style="display:none;">암호가 맞지 않아요. 다시 시도해주세요.</div>
+    <button class="btn generate-btn full" style="margin-top:12px;" onclick="submitAdminPin()">확인</button>
+  </div>
+</div>
+
+<div class="admin-overlay" id="dailyQuoteOverlay" style="display:none;" onclick="if(event.target===this) closeDailyQuote()">
+  <div class="daily-quote-panel">
+    <div class="daily-quote-emoji">🐳✨</div>
+    <div class="daily-quote-date" id="dailyQuoteDate"></div>
+    <div class="daily-quote-text" id="dailyQuoteText"></div>
+    <button class="btn generate-btn" onclick="closeDailyQuote()">오늘 하루도 시작해볼까요 💪</button>
+  </div>
+</div>
+
+<div class="admin-overlay" id="feedbackOverlay" style="display:none;">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title">📝 의견 / 오탈자 제보</div>
+      <button class="close-btn" onclick="closeFeedbackModal()">✕ 닫기</button>
+    </div>
+    <div class="hint" style="margin-bottom:10px;">불편한 점, 오탈자, 추가됐으면 하는 내용을 자유롭게 남겨주세요. 관리자에게 전달돼요.</div>
+    <textarea id="feedbackText" rows="5" placeholder="예: FAQ에 OOO 관련 답변도 추가해주시면 좋을 것 같아요!"></textarea>
+    <button class="btn generate-btn full" onclick="submitFeedback()">등록하기</button>
+  </div>
+</div>
+
+<div class="admin-overlay" id="dayEditOverlay" style="display:none;" onclick="if(event.target===this) closeDayEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="dayEditTitle">📅 일정</div>
+      <button class="close-btn" onclick="closeDayEditor()">✕ 닫기</button>
+    </div>
+    <div id="dayEditBody"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="vacationEditOverlay" style="display:none;" onclick="if(event.target===this) closeVacationEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="vacationEditTitle">🌴 휴가 추가</div>
+      <button class="close-btn" onclick="closeVacationEditor()">✕ 닫기</button>
+    </div>
+    <div id="vacationEditBody"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="vesselEditOverlay" style="display:none;" onclick="if(event.target===this) closeVesselEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="vesselEditTitle">🚢 모선 일정</div>
+      <button class="close-btn" onclick="closeVesselEditor()">✕ 닫기</button>
+    </div>
+    <div id="vesselEditBody"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="personVacationOverlay" style="display:none;" onclick="if(event.target===this) closePersonVacationEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="personVacationTitle">🏖️ 휴가</div>
+      <button class="close-btn" onclick="closePersonVacationEditor()">✕ 닫기</button>
+    </div>
+    <div id="personVacationBody"></div>
+  </div>
+</div>
+
+<script src="bl_list_tool.js"></script>
+<script src="guide_script.js"></script>
+
+</body>
+</html>
