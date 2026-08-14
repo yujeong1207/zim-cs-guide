@@ -15889,7 +15889,7 @@ function renderSearchResults(query) {
       const jumpBtn = document.createElement("button");
       jumpBtn.className = "search-jump-btn";
       jumpBtn.textContent = "바로가기 →";
-      jumpBtn.onclick = () => jumpToResult(r.kind, r.id, r.path);
+      jumpBtn.onclick = () => jumpToResult(r.kind, r.id, r.path, query);
       row.appendChild(jumpBtn);
 
       card.appendChild(row);
@@ -15911,7 +15911,29 @@ function clickProcPillPath(rootEl, path, i) {
   }
 }
 
-function jumpToResult(kind, id, path) {
+/* 자료/절차 페이지 안의 표(step-table)에서 검색어와 일치하는 행을 찾아 노란색으로
+   하이라이트하고 그 행이 화면 중앙에 오도록 스크롤한다. (예: "BELIZE" 검색 → 국가별 규정
+   표에서 BELIZE 행을 바로 찾아줌 - 첫 번째 칸이 정확히 일치하는 행을 우선으로 찾음) */
+function highlightTableRowByQuery(containerEl, qLower) {
+  if (!containerEl || !qLower) return;
+  const rows = Array.from(containerEl.querySelectorAll(".step-table tbody tr"));
+  if (!rows.length) return;
+  let target = rows.find((tr) => {
+    const firstCell = tr.querySelector("td");
+    return firstCell && firstCell.textContent.trim().toLowerCase() === qLower;
+  });
+  if (!target) {
+    target = rows.find((tr) => tr.textContent.toLowerCase().includes(qLower));
+  }
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.classList.add("step-table-row-highlight");
+    setTimeout(() => target.classList.remove("step-table-row-highlight"), 2500);
+  }
+}
+
+function jumpToResult(kind, id, path, query) {
+  const qLower = query ? query.toLowerCase().trim() : "";
   if (kind === "procedure") {
     switchMainTab("procedures");
     setTimeout(() => {
@@ -15926,7 +15948,12 @@ function jumpToResult(kind, id, path) {
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.querySelector(".content-card-body").classList.add("open");
         if (path && path.length) {
-          setTimeout(() => clickProcPillPath(el, path, 0), 80);
+          setTimeout(() => {
+            clickProcPillPath(el, path, 0);
+            setTimeout(() => highlightTableRowByQuery(el, qLower), 150);
+          }, 80);
+        } else {
+          setTimeout(() => highlightTableRowByQuery(el, qLower), 150);
         }
       }
     }, 50);
@@ -15959,7 +15986,12 @@ function jumpToResult(kind, id, path) {
         if (ownBody) {
           ownBody.classList.add("open");
           if (path && path.length) {
-            setTimeout(() => clickProcPillPath(ownBody, path, 0), 80);
+            setTimeout(() => {
+              clickProcPillPath(ownBody, path, 0);
+              setTimeout(() => highlightTableRowByQuery(ownBody, qLower), 150);
+            }, 80);
+          } else {
+            setTimeout(() => highlightTableRowByQuery(ownBody, qLower), 150);
           }
         }
         el.scrollIntoView({ behavior: "smooth", block: "center" });
