@@ -19377,9 +19377,16 @@ function buildNtfTableParts(tpl) {
   const columns = tpl.table.columns;
   const rows = currentNtfTableRows.filter((r) => r.some((cell) => cell && cell.trim() !== ""));
   const plain = columns.join("\t") + "\n" + rows.map((r) => r.map((c) => c || "").join("\t")).join("\n");
-  let html = "<table>";
-  html += "<tr>" + columns.map((c) => `<th>${escapeHtml(c)}</th>`).join("") + "</tr>";
-  rows.forEach((r) => { html += "<tr>" + columns.map((c, i) => `<td>${escapeHtml(r[i] || "")}</td>`).join("") + "</tr>"; });
+
+  /* 표 스타일은 인라인으로 직접 넣는다 - 일부 발송 시스템이 <head><style> 안 규칙을 못 읽거나
+     이상하게 처리해서(빈 박스로 남는 등), 태그마다 style 속성을 직접 박아넣어야 확실히 유지된다. */
+  const tableStyle = "border-collapse:collapse;margin:12px 0;font-size:12px;width:100%;";
+  const thStyle = "background:#003366;color:#fff;padding:6px 10px;text-align:left;font-weight:600;font-size:11px;";
+  const tdStyle = "padding:6px 10px;border:1px solid #ccc;font-size:12px;";
+
+  let html = `<table style="${tableStyle}">`;
+  html += "<tr>" + columns.map((c) => `<th style="${thStyle}">${escapeHtml(c)}</th>`).join("") + "</tr>";
+  rows.forEach((r) => { html += "<tr>" + columns.map((c, i) => `<td style="${tdStyle}">${escapeHtml(r[i] || "")}</td>`).join("") + "</tr>"; });
   html += "</table>";
   return { plain, html };
 }
@@ -19539,24 +19546,23 @@ function saveNtfAsHtml(idx) {
   const previewEl = document.getElementById("ntf_htmlpreview_" + idx);
   const bodyHtml = previewEl ? previewEl.innerHTML : (info.htmlText || "");
 
-  const letterheadHtml = `<div class="ntf-date">${escapeHtml(dateStr)}</div>
-    <div class="ntf-to">TO&nbsp;&nbsp;&nbsp;&nbsp;: ${escapeHtml(NTF_LETTERHEAD.to)}</div>
-    <div class="ntf-from">FROM : ${escapeHtml(NTF_LETTERHEAD.from)}</div>
-    <div class="ntf-title-line">NOTIFICATION TITLE : <span>${escapeHtml(title)}</span></div>`;
+  /* 일부 발송 시스템이 <head><style> 규칙을 못 읽거나 이상하게 처리해서(내용 없는 빈 박스로
+     남는 등), <style> 태그를 아예 안 쓰고 각 요소에 style 속성을 직접 박아넣는 방식으로 전환. */
+  const dateStyle = "text-align:right;color:#555;font-size:11pt;margin-bottom:12px;";
+  const toFromStyle = "font-size:11pt;margin-bottom:4px;";
+  const titleLineStyle = "font-size:11pt;margin:16px 0 24px;";
+  const titleSpanStyle = "color:#00bcd4;font-weight:600;";
 
-  const styles = "<style>"
-    + "html,body{margin:0;}"
-    + "body{font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;"
-    + "max-width:620px;margin:0 auto;padding:18px 20px;box-sizing:border-box;}"
-    + "strong,b{font-weight:700;}.ntf-date,.ntf-to,.ntf-from,.ntf-title-line{font-size:11pt;}"
-    + ".ntf-date{text-align:right;color:#555;margin-bottom:12px;}"
-    + ".ntf-to,.ntf-from{margin-bottom:4px;}.ntf-title-line{margin:16px 0 24px;}.ntf-title-line span{color:#00bcd4;font-weight:600;}"
-    + "table{border-collapse:collapse;margin:12px 0;font-size:12px;width:100%;}"
-    + "th{background:#003366;color:#fff;padding:6px 10px;text-align:left;font-weight:600;font-size:11px;}"
-    + "td{padding:6px 10px;border:1px solid #ccc;font-size:12px;}</style>";
+  const letterheadHtml = `<div style="${dateStyle}">${escapeHtml(dateStr)}</div>
+    <div style="${toFromStyle}">TO&nbsp;&nbsp;&nbsp;&nbsp;: ${escapeHtml(NTF_LETTERHEAD.to)}</div>
+    <div style="${toFromStyle}">FROM : ${escapeHtml(NTF_LETTERHEAD.from)}</div>
+    <div style="${titleLineStyle}">NOTIFICATION TITLE : <span style="${titleSpanStyle}">${escapeHtml(title)}</span></div>`;
+
+  const bodyStyle = "margin:0 auto;padding:18px 20px;box-sizing:border-box;max-width:620px;"
+    + "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;background:#ffffff;";
 
   const htm = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + darkModeSafeMeta()
-    + "<title>" + escapeHtml(title) + "</title>" + styles + darkModeSafeCss("#ffffff", "#333") + "</head><body>"
+    + "<title>" + escapeHtml(title) + "</title></head><body style=\"" + bodyStyle + "\">"
     + letterheadHtml + bodyHtml + "</body></html>";
 
   const blob = new Blob([htm], { type: "text/html;charset=utf-8" });
