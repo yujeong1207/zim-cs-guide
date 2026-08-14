@@ -582,8 +582,8 @@ input, select, textarea {
 
 .step-image { max-width: 100%; border-radius: 10px; margin: 6px 0 12px; display: block; border: 1px solid #eef0f3; }
 .step-table-wrap { overflow: auto; margin: 8px 0 2px; border: 1px solid #eef0f3; border-radius: 8px; max-height: 480px; }
-.step-table { width: auto; max-width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.4; }
-.step-table caption { text-align: left; font-size: 12px; font-weight: bold; color: #0c447c; padding: 5px 10px 4px; }
+.step-table { width: auto; max-width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.5; }
+.step-table caption { text-align: left; font-size: 13px; font-weight: bold; color: #0c447c; padding: 5px 10px 4px; }
 .step-table th {
   background: #e6f1fb; color: #0c447c; font-weight: bold; padding: 8px 18px;
   border-bottom: 1px solid #cfe0f2; white-space: nowrap; text-align: center;
