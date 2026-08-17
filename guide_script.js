@@ -15151,8 +15151,8 @@ function aqiGrade(pm10, pm25) {
 
 async function fetchCityWeather(city) {
   const [wxRes, aqRes] = await Promise.all([
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul&forecast_days=1`),
-    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=pm10,pm2_5&timezone=Asia%2FSeoul`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code&hourly=precipitation_probability&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=1`),
+    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=pm10,pm2_5&timezone=auto`)
   ]);
   const wx = await wxRes.json();
   const aq = await aqRes.json().catch(() => null);
@@ -15194,6 +15194,36 @@ async function loadWeatherWidget() {
   }
 }
 
+function formatKoreanHour(hourNum) {
+  const h = hourNum % 24;
+  const period = h < 5 ? "새벽" : h < 12 ? "오전" : h < 18 ? "오후" : h < 21 ? "저녁" : "밤";
+  let h12 = h % 12;
+  if (h12 === 0) h12 = 12;
+  return `${period} ${h12}시`;
+}
+
+/* 시간대별 강수확률(hourly.precipitation_probability) 중, 지금 이후로 처음 임계값(기본 50%)을
+   넘는 시각을 찾아서 "오후 3시경부터 비 소식이 있어요 (65%)" 같은 문구를 만듦.
+   넘는 시간이 없으면 null 반환(호출부에서 오늘 최고 강수확률로 대체 표시함) */
+function findRainForecastMessage(wx, threshold) {
+  threshold = threshold || 50;
+  if (!wx.hourly || !wx.hourly.time || !wx.hourly.precipitation_probability) return null;
+  if (!wx.current || !wx.current.time) return null;
+
+  const nowKey = wx.current.time.slice(0, 13); // "2026-08-17T15" 형태로 자르기 - hourly.time과 시간 단위까지만 비교
+  const times = wx.hourly.time;
+  const probs = wx.hourly.precipitation_probability;
+
+  for (let i = 0; i < times.length; i++) {
+    if (times[i].slice(0, 13) < nowKey) continue; // 이미 지난 시각은 건너뜀
+    if (probs[i] >= threshold) {
+      const hour = parseInt(times[i].slice(11, 13), 10);
+      return { label: formatKoreanHour(hour) + "경부터 비 소식", prob: probs[i] };
+    }
+  }
+  return null;
+}
+
 function buildWeatherCityBlockHtml(cityKey) {
   const city = cityKey === "extra" ? extraWeatherCity : WEATHER_CITIES[cityKey];
   const data = weatherWidgetData[cityKey];
@@ -15203,10 +15233,18 @@ function buildWeatherCityBlockHtml(cityKey) {
   const temp = Math.round(wx.current.temperature_2m);
   const tMax = wx.daily ? Math.round(wx.daily.temperature_2m_max[0]) : null;
   const tMin = wx.daily ? Math.round(wx.daily.temperature_2m_min[0]) : null;
-  const pop = wx.daily ? wx.daily.precipitation_probability_max[0] : null;
+  const rainForecast = findRainForecastMessage(wx, 50);
+  const dailyMaxPop = wx.daily ? wx.daily.precipitation_probability_max[0] : null;
   const pm10 = aq && aq.current ? aq.current.pm10 : null;
   const pm25 = aq && aq.current ? aq.current.pm2_5 : null;
   const grade = aqiGrade(pm10, pm25);
+
+  let rainRowHtml = "";
+  if (rainForecast) {
+    rainRowHtml = `<div class="weather-detail-row"><span>☔ ${escapeHtml(rainForecast.label)}</span><b>${rainForecast.prob}%</b></div>`;
+  } else if (dailyMaxPop !== null) {
+    rainRowHtml = `<div class="weather-detail-row"><span>오늘 최고 강수확률</span><b>${dailyMaxPop}%</b></div>`;
+  }
 
   return `
     <div class="weather-city-block">
@@ -15219,7 +15257,7 @@ function buildWeatherCityBlockHtml(cityKey) {
         </div>
       </div>
       ${tMax !== null ? `<div class="weather-detail-row"><span>최고/최저</span><b>${tMax}° / ${tMin}°</b></div>` : ""}
-      ${pop !== null ? `<div class="weather-detail-row"><span>강수확률</span><b>${pop}%</b></div>` : ""}
+      ${rainRowHtml}
       ${(pm10 !== null || pm25 !== null) ? `<div class="weather-detail-row"><span>미세먼지</span><b><span class="aqi-badge ${grade.cls}">${grade.label}</span></b></div>` : ""}
     </div>
   `;
