@@ -14649,6 +14649,9 @@ function flattenProcNodeText(node) {
     if (isTableValue(s)) {
       return (s.caption || "") + " " + (s.headers || []).join(" ") + " " + (s.rows || []).map((r) => r.join(" ")).join(" ");
     }
+    if (isLinkValue(s)) {
+      return s.label || "";
+    }
     return typeof s === "string" ? s : "";
   }).join(" ");
 }
@@ -15180,46 +15183,11 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /* =========================================================================
-   🕐 세계시간 위젯 (API 불필요 - 브라우저 내장 시간대 계산 기능만 사용)
+   🕐 세계시간 위젯 (Open-Meteo 지오코딩 API로 전세계 아무 도시나 실시간 검색 -
+   날씨 도시 검색과 같은 방식. 결과에 timezone이 같이 오기 때문에 이것만으로 충분함)
    ========================================================================= */
-const WORLD_CLOCK_CITIES = [
-  { label: "서울", tz: "Asia/Seoul" },
-  { label: "도쿄", tz: "Asia/Tokyo" },
-  { label: "베이징·상하이", tz: "Asia/Shanghai" },
-  { label: "홍콩", tz: "Asia/Hong_Kong" },
-  { label: "타이베이", tz: "Asia/Taipei" },
-  { label: "싱가포르", tz: "Asia/Singapore" },
-  { label: "방콕", tz: "Asia/Bangkok" },
-  { label: "자카르타", tz: "Asia/Jakarta" },
-  { label: "마닐라", tz: "Asia/Manila" },
-  { label: "호치민", tz: "Asia/Ho_Chi_Minh" },
-  { label: "뭄바이·인도", tz: "Asia/Kolkata" },
-  { label: "두바이", tz: "Asia/Dubai" },
-  { label: "이스탄불", tz: "Europe/Istanbul" },
-  { label: "런던", tz: "Europe/London" },
-  { label: "파리", tz: "Europe/Paris" },
-  { label: "함부르크·베를린", tz: "Europe/Berlin" },
-  { label: "로테르담·암스테르담", tz: "Europe/Amsterdam" },
-  { label: "모스크바", tz: "Europe/Moscow" },
-  { label: "아테네·피레우스", tz: "Europe/Athens" },
-  { label: "카이로", tz: "Africa/Cairo" },
-  { label: "요하네스버그", tz: "Africa/Johannesburg" },
-  { label: "라고스", tz: "Africa/Lagos" },
-  { label: "나이로비", tz: "Africa/Nairobi" },
-  { label: "다르에스살람·탄자니아", tz: "Africa/Dar_es_Salaam" },
-  { label: "뉴욕", tz: "America/New_York" },
-  { label: "로스앤젤레스", tz: "America/Los_Angeles" },
-  { label: "시카고", tz: "America/Chicago" },
-  { label: "밴쿠버", tz: "America/Vancouver" },
-  { label: "파나마", tz: "America/Panama" },
-  { label: "멕시코시티", tz: "America/Mexico_City" },
-  { label: "산투스·상파울루", tz: "America/Sao_Paulo" },
-  { label: "시드니", tz: "Australia/Sydney" },
-  { label: "오클랜드", tz: "Pacific/Auckland" }
-];
-
-const WORLD_CLOCK_PINNED_KEY = "world_clock_pinned_v1";
-let worldClockPinned = [];
+const WORLD_CLOCK_PINNED_KEY = "world_clock_pinned_v2";
+let worldClockPinned = []; // [{ label, tz }, ...]
 try {
   const saved = localStorage.getItem(WORLD_CLOCK_PINNED_KEY);
   if (saved) worldClockPinned = JSON.parse(saved);
@@ -15255,9 +15223,7 @@ function renderWorldClockPanel() {
   const panel = document.getElementById("worldClockPanel");
   if (!panel) return;
 
-  const pinnedHtml = worldClockPinned.map((tz) => {
-    const cityInfo = WORLD_CLOCK_CITIES.find((c) => c.tz === tz);
-    const label = cityInfo ? cityInfo.label : tz;
+  const pinnedHtml = worldClockPinned.map(({ label, tz }) => {
     const { timeStr, dateStr, diffLabel } = formatWorldClockTime(tz);
     return `
       <div class="world-clock-row">
@@ -15267,7 +15233,7 @@ function renderWorldClockPanel() {
         </div>
         <div class="world-clock-time-wrap">
           <div class="world-clock-time">${escapeHtml(timeStr)}</div>
-          <button class="weather-remove-city-btn" onclick="event.stopPropagation(); removeWorldClockCity('${tz}')">✕</button>
+          <button class="weather-remove-city-btn" onclick="event.stopPropagation(); removeWorldClockCity('${escapeHtml(tz)}')">✕</button>
         </div>
       </div>
     `;
@@ -15276,29 +15242,40 @@ function renderWorldClockPanel() {
   panel.innerHTML = `
     ${pinnedHtml || '<div class="world-clock-empty">아래에서 도시를 검색해서 추가해보세요</div>'}
     <div class="weather-add-city-row">
-      <input type="text" id="worldClockSearchInput" placeholder="도시 검색 (예: 뉴욕, 탄자니아)" oninput="renderWorldClockSuggestions(this.value)" onkeydown="if(event.key==='Enter') addFirstWorldClockSuggestion()">
+      <input type="text" id="worldClockSearchInput" placeholder="도시 검색 (예: 워싱턴, 뉴욕)" oninput="handleWorldClockSearchInput(this.value)" onkeydown="if(event.key==='Enter') addFirstWorldClockSuggestion()">
     </div>
     <div id="worldClockSuggestions" class="world-clock-suggestions"></div>
   `;
 }
 
-function renderWorldClockSuggestions(query) {
+let worldClockSearchDebounce = null;
+function handleWorldClockSearchInput(query) {
+  clearTimeout(worldClockSearchDebounce);
+  const wrap = document.getElementById("worldClockSuggestions");
+  const q = query.trim();
+  if (!q) { if (wrap) wrap.innerHTML = ""; return; }
+  if (wrap) wrap.innerHTML = '<div class="world-clock-no-match">검색 중...</div>';
+  worldClockSearchDebounce = setTimeout(() => searchWorldClockCities(q), 350);
+}
+
+async function searchWorldClockCities(q) {
   const wrap = document.getElementById("worldClockSuggestions");
   if (!wrap) return;
-  const q = query.trim().toLowerCase();
-  if (!q) { wrap.innerHTML = ""; return; }
-
-  const matches = WORLD_CLOCK_CITIES.filter((c) =>
-    c.label.toLowerCase().includes(q) && !worldClockPinned.includes(c.tz)
-  ).slice(0, 6);
-
-  if (matches.length === 0) {
-    wrap.innerHTML = '<div class="world-clock-no-match">일치하는 도시가 없어요.</div>';
-    return;
+  try {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=6&language=ko&format=json`);
+    const data = await res.json();
+    const results = (data && data.results) || [];
+    if (results.length === 0) {
+      wrap.innerHTML = '<div class="world-clock-no-match">일치하는 도시가 없어요. 영문 도시명으로도 시도해보세요.</div>';
+      return;
+    }
+    wrap.innerHTML = results.map((r) => {
+      const label = r.name + (r.admin1 && r.admin1 !== r.name ? `, ${r.admin1}` : "") + (r.country ? ` (${r.country})` : "");
+      return `<div class="world-clock-suggestion" onclick="addWorldClockCity('${escapeHtml(label).replace(/'/g, "\\'")}', '${r.timezone}')">${escapeHtml(label)}</div>`;
+    }).join("");
+  } catch (err) {
+    wrap.innerHTML = '<div class="world-clock-no-match">검색에 실패했어요. 다시 시도해주세요.</div>';
   }
-  wrap.innerHTML = matches.map((c) =>
-    `<div class="world-clock-suggestion" onclick="addWorldClockCity('${c.tz}')">${escapeHtml(c.label)}</div>`
-  ).join("");
 }
 
 function addFirstWorldClockSuggestion() {
@@ -15307,8 +15284,8 @@ function addFirstWorldClockSuggestion() {
   if (first) first.click();
 }
 
-function addWorldClockCity(tz) {
-  if (!worldClockPinned.includes(tz)) worldClockPinned.push(tz);
+function addWorldClockCity(label, tz) {
+  if (!worldClockPinned.some((c) => c.tz === tz)) worldClockPinned.push({ label, tz });
   try { localStorage.setItem(WORLD_CLOCK_PINNED_KEY, JSON.stringify(worldClockPinned)); } catch (e) {}
   renderWorldClockPanel();
   const input = document.getElementById("worldClockSearchInput");
@@ -15316,7 +15293,7 @@ function addWorldClockCity(tz) {
 }
 
 function removeWorldClockCity(tz) {
-  worldClockPinned = worldClockPinned.filter((t) => t !== tz);
+  worldClockPinned = worldClockPinned.filter((c) => c.tz !== tz);
   try { localStorage.setItem(WORLD_CLOCK_PINNED_KEY, JSON.stringify(worldClockPinned)); } catch (e) {}
   renderWorldClockPanel();
 }
@@ -16068,6 +16045,22 @@ function todayStr() {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return y + "-" + m + "-" + day; // getFullYear/getMonth/getDate는 브라우저의 로컬 시간대 기준
+}
+
+/* 절차/자료 단계 안에 "바로가기" 버튼(외부 사이트 링크)을 넣기 위한 데이터 형식 판별
+   형식: { type: "link", label: "터미널명 등 버튼에 보일 문구", url: "https://..." } */
+function isLinkValue(s) {
+  return s && typeof s === "object" && s.type === "link";
+}
+
+function buildStepLinkEl(l) {
+  const a = document.createElement("a");
+  a.className = "step-link-btn";
+  a.href = l.url || "#";
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.textContent = "🔗 " + (l.label || l.url || "바로가기");
+  return a;
 }
 
 function isImageValue(s) {
@@ -16907,6 +16900,8 @@ function renderProcNode(node, container) {
         stepsWrap.appendChild(img);
       } else if (isTableValue(s)) {
         stepsWrap.appendChild(buildStepTableEl(s));
+      } else if (isLinkValue(s)) {
+        stepsWrap.appendChild(buildStepLinkEl(s));
       } else {
         const item = document.createElement("div");
         item.className = "step-item";
@@ -21464,6 +21459,15 @@ function renderSubItemRows(wrap, items) {
       };
       block.appendChild(addTableBtn);
 
+      const addLinkBtn = document.createElement("button");
+      addLinkBtn.className = "add-row-btn";
+      addLinkBtn.textContent = "🔗 링크 추가";
+      addLinkBtn.onclick = () => {
+        sub.steps.push({ type: "link", label: "", url: "" });
+        renderStepRows(stepsWrap, sub);
+      };
+      block.appendChild(addLinkBtn);
+
       renderAttachEditSection(block, sub);
       renderExampleEmailEditSection(block, sub);
     }
@@ -21579,6 +21583,23 @@ function renderStepRows(wrap, sub) {
     } else if (isTableValue(s)) {
       row.className = "step-table-edit-wrap";
       renderTableEditor(row, s, () => { sub.steps.splice(idx, 1); renderStepRows(wrap, sub); });
+    } else if (isLinkValue(s)) {
+      row.className = "step-link-edit-wrap";
+      const labelInput = document.createElement("input");
+      labelInput.value = s.label || "";
+      labelInput.placeholder = "버튼에 보일 문구 (예: USSAV 터미널 스케줄)";
+      labelInput.oninput = (e) => { s.label = e.target.value; };
+      const urlInput = document.createElement("input");
+      urlInput.value = s.url || "";
+      urlInput.placeholder = "https://...";
+      urlInput.oninput = (e) => { s.url = e.target.value; };
+      const removeBtn = document.createElement("button");
+      removeBtn.className = "remove-row";
+      removeBtn.textContent = "링크 삭제";
+      removeBtn.onclick = () => { sub.steps.splice(idx, 1); renderStepRows(wrap, sub); };
+      row.appendChild(labelInput);
+      row.appendChild(urlInput);
+      row.appendChild(removeBtn);
     } else {
       row.className = "field-row-top";
       const input = document.createElement("input");
