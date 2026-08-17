@@ -1295,6 +1295,35 @@ input, select, textarea {
 }
 .world-clock-suggestion:hover { background: #f3f4f6; }
 .world-clock-no-match { font-size: 12px; color: #9ca3af; padding: 6px 8px; }
+
+/* ===== 🚢 서비스라인 T/T ===== */
+.tt-line-card {
+  background: white; border-radius: 14px; padding: 16px 18px; margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+.tt-line-title { font-size: 15px; font-weight: bold; color: #0c447c; margin-bottom: 10px; }
+.tt-line-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tt-line-table th {
+  background: #e6f1fb; color: #0c447c; font-weight: bold; padding: 8px 14px;
+  text-align: left; border-bottom: 1px solid #cfe0f2;
+}
+.tt-line-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.tt-line-table tr:last-child td { border-bottom: none; }
+.tt-code-cell { font-weight: bold; font-variant-numeric: tabular-nums; }
+.tt-port-link { color: #4f46e5; text-decoration: underline; font-weight: bold; }
+.tt-port-link:hover { color: #3730a3; }
+.tt-days-cell { font-variant-numeric: tabular-nums; }
+.tt-diff { color: #ef4444; font-size: 12px; font-weight: bold; margin-left: 4px; }
+
+/* ===== 🔗 단계/절차 안 "바로가기" 링크 버튼 ===== */
+.step-link-btn {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: bold;
+  color: #4f46e5; background: #eef2ff; padding: 8px 14px; border-radius: 8px;
+  text-decoration: none; margin: 4px 0; width: fit-content;
+}
+.step-link-btn:hover { background: #e0e7ff; }
+.step-link-edit-wrap { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.step-link-edit-wrap input { flex: 1; min-width: 140px; }
 .aqi-good { background: #d1fae5; color: #065f46; }
 .aqi-normal { background: #fef3c7; color: #92400e; }
 .aqi-bad { background: #fee2e2; color: #991b1b; }

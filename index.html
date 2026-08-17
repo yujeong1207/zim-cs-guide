@@ -99,6 +99,7 @@
     </div>
   </div>
 
+  <button class="main-tab-btn" data-tab="ttlines" onclick="switchMainTab('ttlines')">🚢 서비스라인 T/T</button>
   <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
   <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
   <button class="main-tab-btn" data-tab="payment" onclick="switchMainTab('payment')">💰 입금현황</button>
@@ -204,6 +205,12 @@
 <div class="tab-page" id="page-contacts">
   <input id="contactsFilter" class="contacts-filter-input" placeholder="🔍 대륙·국가·카테고리·담당자·이메일로 찾기" oninput="renderContactsTable()">
   <div id="contactsTableWrap"></div>
+</div>
+
+<!-- ===== 🚢 서비스라인 T/T 탭 ===== -->
+<div class="tab-page" id="page-ttlines">
+  <div class="hint" style="margin-bottom:14px;">💡 서비스 라인별 예상 T/T(항구 도착까지 소요일)예요. 포트 코드가 파란색 링크로 되어있으면 눌러서 그 터미널의 실제 배 접안 스케줄을 바로 볼 수 있어요.</div>
+  <div id="ttLinesWrap"></div>
 </div>
 
 <!-- ===== 🖋️ 위임장 현황 탭 ===== -->

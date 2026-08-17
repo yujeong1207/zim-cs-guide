@@ -519,6 +519,47 @@ async function loadNewsTab() {
   }).join("");
 }
 
+/* =========================================================================
+   🚢 서비스라인 T/T 탭
+   ========================================================================= */
+function renderTTLinesTab() {
+  const wrap = document.getElementById("ttLinesWrap");
+  if (!wrap) return;
+
+  if (!TT_LINES || TT_LINES.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">아직 등록된 라인이 없어요.</div>';
+    return;
+  }
+
+  wrap.innerHTML = TT_LINES.map((line) => {
+    const rowsHtml = (line.ports || []).map((port, idx) => {
+      const prevTt = idx > 0 ? line.ports[idx - 1].tt : null;
+      const diff = prevTt !== null && typeof port.tt === "number" && typeof prevTt === "number" ? port.tt - prevTt : null;
+      const diffHtml = diff !== null ? `<span class="tt-diff">+${diff}</span>` : "";
+      const codeHtml = port.url
+        ? `<a href="${escapeHtml(port.url)}" target="_blank" rel="noopener" class="tt-port-link">${escapeHtml(port.code)}</a>`
+        : `<span>${escapeHtml(port.code)}</span>`;
+      return `
+        <tr>
+          <td class="tt-code-cell">${codeHtml}</td>
+          <td>${escapeHtml(port.name)}</td>
+          <td class="tt-days-cell">${port.tt}일 ${diffHtml}</td>
+        </tr>
+      `;
+    }).join("");
+
+    return `
+      <div class="tt-line-card">
+        <div class="tt-line-title">${escapeHtml(line.label)}</div>
+        <table class="tt-line-table">
+          <thead><tr><th>Port Code</th><th>To Port</th><th>Planned T/T</th></tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+  }).join("");
+}
+
 let vesselLoadFailed = false;
 
 async function fetchVesselListFromServer() {
@@ -4281,6 +4322,77 @@ const CITI_FX_WORKER_URL = "https://citi-fx.syo26740212.workers.dev";
 /* 씨티은행 워커는 브라우저에서 직접 fetch하면 CORS에 막혀서,
    구글 앱스스크립트로 만든 중계 프록시(CORS 허용 헤더를 붙여 그대로 전달만 함)를 대신 거쳐온다. */
 const CITI_FX_PROXY_URL = "https://script.google.com/macros/s/AKfycbyFbPJcHPgXo6oZDDD9uovqxFXDxEUQf6gC5uZPCbYGFCtdiske3XH62HMuaVqcfAIc/exec";
+
+/* 🚢 서비스 라인별 T/T (예상 소요일). 항구별 url은 터미널 스케줄 사이트가 있을 때만 채움
+   (없으면 null - 화면에서 그냥 글자로만 뜨고 클릭 안 됨). +N(전 항구 대비 며칠 늘었는지)은
+   여기 저장 안 하고 화면에서 Planned T/T 숫자로 자동 계산함. */
+const DEFAULT_TT_LINES = [
+  {
+    "id": "ttl_zcp", "label": "ZCP (BCT)",
+    "ports": [
+      { "id": "ttp_1", "code": "MXMZL", "name": "Manzanillo", "tt": 16, "url": null },
+      { "id": "ttp_2", "code": "COCRT", "name": "Cartegena", "tt": 23, "url": null },
+      { "id": "ttp_3", "code": "USCHS", "name": "Charleston", "tt": 28, "url": "https://scspa.com/cargo/vessels/vessel-schedule/" },
+      { "id": "ttp_4", "code": "USSAV", "name": "Savannah", "tt": 29, "url": "https://gaports.com/vessel-schedule/" },
+      { "id": "ttp_5", "code": "USJAX", "name": "Jacksonville", "tt": 32, "url": "https://vesselschedule.jaxport.com/webx/" }
+    ]
+  },
+  {
+    "id": "ttl_zns", "label": "ZNS (BCT)",
+    "ports": [
+      { "id": "ttp_6", "code": "USNYC", "name": "New York", "tt": 27, "url": "https://www.pnct.net/VesselSchedule" },
+      { "id": "ttp_7", "code": "USBAL", "name": "Baltimore", "tt": 31, "url": "https://www.portsamerica.com/our-locations/schedules/baltimore-md" },
+      { "id": "ttp_8", "code": "USORF", "name": "Norfolk", "tt": 33, "url": "https://vessels.portofvirginia.com/" },
+      { "id": "ttp_9", "code": "USPEL", "name": "Port Everglades", "tt": 36, "url": "https://www.petpev.com/" },
+      { "id": "ttp_10", "code": "PAROD", "name": "Rodman", "tt": 41, "url": null }
+    ]
+  },
+  {
+    "id": "ttl_zsl", "label": "ZSL (BCT)",
+    "ports": [
+      { "id": "ttp_11", "code": "USIAH", "name": "Houston", "tt": 25, "url": "https://www.apmterminals.com/track-and-trace/vessel-schedule?terminal=INNSA" },
+      { "id": "ttp_12", "code": "USMOB", "name": "Mobile", "tt": 29, "url": "https://losangeles.trapac.com/" },
+      { "id": "ttp_13", "code": "USTPA", "name": "Tampa", "tt": 32, "url": null },
+      { "id": "ttp_14", "code": "USMIA", "name": "Miami", "tt": 35, "url": "https://pomtoc.com/vessel-schedules/" }
+    ]
+  },
+  {
+    "id": "ttl_znp", "label": "ZNP (HPNT)",
+    "ports": [
+      { "id": "ttp_15", "code": "CAVAN", "name": "Vancouver", "tt": 14, "url": "https://globalterminals.com/terminal-operations/gate-schedule/" },
+      { "id": "ttp_16", "code": "CAPRP", "name": "Prince Rupert", "tt": 21, "url": null }
+    ]
+  },
+  {
+    "id": "ttl_zmp", "label": "ZMP",
+    "ports": [
+      { "id": "ttp_17", "code": "CNQIN", "name": "Qingdao", "tt": 2, "url": null },
+      { "id": "ttp_18", "code": "CNSNH", "name": "Shanghai", "tt": 4, "url": null },
+      { "id": "ttp_19", "code": "CNNGB", "name": "Ningbo", "tt": 6, "url": null },
+      { "id": "ttp_20", "code": "CNSAD", "name": "Da Chan Bay", "tt": 10, "url": null },
+      { "id": "ttp_21", "code": "VNTCT", "name": "Cai Mep", "tt": 13, "url": null },
+      { "id": "ttp_22", "code": "ESVLC", "name": "Valencia", "tt": 46, "url": null },
+      { "id": "ttp_23", "code": "ESBCN", "name": "Barcelona", "tt": 48, "url": null },
+      { "id": "ttp_24", "code": "ITGOA", "name": "Genoa", "tt": 50, "url": null },
+      { "id": "ttp_25", "code": "ILASH", "name": "Ashdod", "tt": 56, "url": null },
+      { "id": "ttp_26", "code": "ILHFA", "name": "Haifa", "tt": 61, "url": null }
+    ]
+  },
+  {
+    "id": "ttl_zax", "label": "ZAX (PNIT)",
+    "ports": [
+      { "id": "ttp_27", "code": "CNQIN", "name": "Qingdao", "tt": 2, "url": null },
+      { "id": "ttp_28", "code": "CNSNH", "name": "Shanghai", "tt": 5, "url": null },
+      { "id": "ttp_29", "code": "CNNGB", "name": "Ningbo", "tt": 7, "url": null },
+      { "id": "ttp_30", "code": "CNNSJ", "name": "Nansha", "tt": 10, "url": null },
+      { "id": "ttp_31", "code": "HKHKG", "name": "Hong Kong", "tt": 11, "url": "https://www.modernports.com.hk/mtlportal/public-enquiry/vessel-schedule" },
+      { "id": "ttp_32", "code": "CNOJA", "name": "Yantian", "tt": 12, "url": null },
+      { "id": "ttp_33", "code": "AUBNE", "name": "Brisbane", "tt": 23, "url": "https://elink.patrick.com.au/elink/" },
+      { "id": "ttp_34", "code": "AUSYD", "name": "Sydney", "tt": 27, "url": "https://elink.patrick.com.au/elink/" },
+      { "id": "ttp_35", "code": "AUMEL", "name": "Melbourne", "tt": 31, "url": "https://elink.patrick.com.au/elink/" }
+    ]
+  }
+];
 
 /* 공지사항 배너 (모든 탭 상단에 공통으로 표시) */
 const DEFAULT_NOTICE_BANNER = {
@@ -14501,6 +14613,7 @@ let QUOTES = DATA.quotes;
 let POA_LIST = DATA.poaList;
 let HOLIDAYS = DATA.holidays;
 let EXCHANGE_RATES = DATA.exchangeRates;
+let TT_LINES = DATA.ttLines;
 
 if (!DATA.faqProcedureMigrated) {
   migrateFaqProcedureToTopics();
@@ -14798,7 +14911,8 @@ function loadData() {
         quotes: parsed.quotes || JSON.parse(JSON.stringify(DEFAULT_QUOTES)),
         poaList: parsed.poaList || JSON.parse(JSON.stringify(DEFAULT_POA_LIST)),
         holidays: parsed.holidays || JSON.parse(JSON.stringify(DEFAULT_HOLIDAYS)),
-        exchangeRates: parsed.exchangeRates || JSON.parse(JSON.stringify(DEFAULT_EXCHANGE_RATES))
+        exchangeRates: parsed.exchangeRates || JSON.parse(JSON.stringify(DEFAULT_EXCHANGE_RATES)),
+        ttLines: parsed.ttLines || JSON.parse(JSON.stringify(DEFAULT_TT_LINES))
       };
     }
   } catch (e) {}
@@ -14833,7 +14947,8 @@ function loadData() {
     quotes: JSON.parse(JSON.stringify(DEFAULT_QUOTES)),
     poaList: JSON.parse(JSON.stringify(DEFAULT_POA_LIST)),
     holidays: JSON.parse(JSON.stringify(DEFAULT_HOLIDAYS)),
-    exchangeRates: JSON.parse(JSON.stringify(DEFAULT_EXCHANGE_RATES))
+    exchangeRates: JSON.parse(JSON.stringify(DEFAULT_EXCHANGE_RATES)),
+    ttLines: JSON.parse(JSON.stringify(DEFAULT_TT_LINES))
   };
 }
 
@@ -14851,7 +14966,7 @@ function saveData() {
       favoriteTemplateIds: FAVORITE_TEMPLATE_IDS,
       favoriteProcIds: FAVORITE_PROC_IDS, favoriteFaqIds: FAVORITE_FAQ_IDS,
       vesselMonths: VESSEL_MONTHS, vessels: VESSELS, quotes: QUOTES, poaList: POA_LIST, holidays: HOLIDAYS,
-      exchangeRates: EXCHANGE_RATES
+      exchangeRates: EXCHANGE_RATES, ttLines: TT_LINES
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     return true;
@@ -16204,6 +16319,7 @@ function switchMainTab(tab) {
   if (tab === "resources") renderResList();
   if (tab === "vessels") loadVesselTab();
   if (tab === "news") loadNewsTab();
+  if (tab === "ttlines") renderTTLinesTab();
   if (tab === "contacts") renderContactsTable();
   if (tab === "poa") loadPoaTab();
   if (tab === "obl") loadOblTab();
@@ -23411,6 +23527,7 @@ const PARTIAL_IMPORT_SETTERS = {
   ltMailSettings: (v) => { LT_MAIL_SETTINGS = v; },
   ntfLetterhead: (v) => { NTF_LETTERHEAD = v; },
   exchangeRates: (v) => { EXCHANGE_RATES = v; },
+  ttLines: (v) => { TT_LINES = v; },
   favoriteTemplateIds: (v) => { FAVORITE_TEMPLATE_IDS = v; },
   favoriteProcIds: (v) => { FAVORITE_PROC_IDS = v; },
   favoriteFaqIds: (v) => { FAVORITE_FAQ_IDS = v; },
@@ -23546,7 +23663,7 @@ function exportAll() {
     favoriteTemplateIds: FAVORITE_TEMPLATE_IDS,
     favoriteProcIds: FAVORITE_PROC_IDS, favoriteFaqIds: FAVORITE_FAQ_IDS,
     vesselMonths: VESSEL_MONTHS, vessels: VESSELS, quotes: QUOTES, poaList: POA_LIST, holidays: HOLIDAYS,
-    exchangeRates: EXCHANGE_RATES
+    exchangeRates: EXCHANGE_RATES, ttLines: TT_LINES
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
