@@ -64,6 +64,14 @@
     </div>
   </div>
   <div class="header-actions">
+    <div id="weatherWidget" class="weather-widget" onclick="toggleWeatherDetail()">
+      <span id="weatherWidgetContent" class="weather-widget-content">🌤 불러오는 중...</span>
+      <div id="weatherDetailPanel" class="weather-detail-panel" style="display:none;" onclick="event.stopPropagation()"></div>
+    </div>
+    <div id="worldClockWidget" class="weather-widget" onclick="toggleWorldClockDetail()">
+      <span class="weather-widget-content">🕐 세계시간</span>
+      <div id="worldClockPanel" class="weather-detail-panel world-clock-panel" style="display:none;" onclick="event.stopPropagation()"></div>
+    </div>
     <button class="admin-toggle" onclick="openAdminList()">⚙️ 관리<span class="feedback-badge" id="feedbackBadge" style="display:none;"></span></button>
   </div>
 </div>

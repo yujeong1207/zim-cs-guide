@@ -14982,6 +14982,365 @@ function closeDailyNewsPopup() {
 }
 
 /* =========================================================================
+   🌤 날씨 위젯 (Open-Meteo - 무료 공개 API, 키/백엔드 불필요)
+   서울·부산 두 곳을 항상 같이 보여줌 (도시 전환 아님)
+   ========================================================================= */
+const WEATHER_CITIES = {
+  seoul: { label: "서울", lat: 37.5665, lon: 126.9780 },
+  busan: { label: "부산", lat: 35.1796, lon: 129.0756 }
+};
+let weatherWidgetData = {}; // { seoul: {wx,aq}, busan: {wx,aq}, extra: {wx,aq} }
+let extraWeatherCity = null; // { label, lat, lon } - 검색해서 추가한 도시 (서울/부산 외 추가로 하나)
+const EXTRA_WEATHER_CITY_KEY = "weather_extra_city_v1";
+try {
+  const saved = localStorage.getItem(EXTRA_WEATHER_CITY_KEY);
+  if (saved) extraWeatherCity = JSON.parse(saved);
+} catch (e) {}
+
+/* WMO 날씨 코드 -> 한국어 설명 + 이모지 (https://open-meteo.com/en/docs 코드표 기준) */
+function wmoWeatherInfo(code) {
+  const table = {
+    0: ["맑음", "☀️"], 1: ["대체로 맑음", "🌤"], 2: ["구름 조금", "⛅"], 3: ["흐림", "☁️"],
+    45: ["안개", "🌫"], 48: ["안개", "🌫"],
+    51: ["약한 이슬비", "🌦"], 53: ["이슬비", "🌦"], 55: ["강한 이슬비", "🌧"],
+    61: ["약한 비", "🌦"], 63: ["비", "🌧"], 65: ["강한 비", "🌧"],
+    71: ["약한 눈", "🌨"], 73: ["눈", "🌨"], 75: ["강한 눈", "❄️"],
+    80: ["소나기", "🌦"], 81: ["소나기", "🌧"], 82: ["강한 소나기", "⛈"],
+    95: ["뇌우", "⛈"], 96: ["뇌우(우박)", "⛈"], 99: ["강한 뇌우(우박)", "⛈"]
+  };
+  return table[code] || ["-", "🌡"];
+}
+
+/* 국내 대기환경기준(간이) 기준 등급 */
+function aqiGrade(pm10, pm25) {
+  const gradeOf = (v, breaks) => {
+    if (v == null) return 0;
+    if (v <= breaks[0]) return 0; // 좋음
+    if (v <= breaks[1]) return 1; // 보통
+    if (v <= breaks[2]) return 2; // 나쁨
+    return 3; // 매우나쁨
+  };
+  const g10 = gradeOf(pm10, [30, 80, 150]);
+  const g25 = gradeOf(pm25, [15, 35, 75]);
+  const g = Math.max(g10, g25);
+  return [
+    { label: "좋음", cls: "aqi-good" },
+    { label: "보통", cls: "aqi-normal" },
+    { label: "나쁨", cls: "aqi-bad" },
+    { label: "매우나쁨", cls: "aqi-verybad" }
+  ][g];
+}
+
+async function fetchCityWeather(city) {
+  const [wxRes, aqRes] = await Promise.all([
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=Asia%2FSeoul&forecast_days=1`),
+    fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}&longitude=${city.lon}&current=pm10,pm2_5&timezone=Asia%2FSeoul`)
+  ]);
+  const wx = await wxRes.json();
+  const aq = await aqRes.json().catch(() => null);
+  if (!wx || !wx.current) throw new Error("날씨 데이터를 못 받아왔어요.");
+  return { wx, aq };
+}
+
+async function loadWeatherWidget() {
+  const contentEl = document.getElementById("weatherWidgetContent");
+
+  try {
+    const fetches = [
+      fetchCityWeather(WEATHER_CITIES.seoul),
+      fetchCityWeather(WEATHER_CITIES.busan)
+    ];
+    if (extraWeatherCity) fetches.push(fetchCityWeather(extraWeatherCity));
+
+    const results = await Promise.all(fetches);
+    weatherWidgetData = { seoul: results[0], busan: results[1] };
+    if (extraWeatherCity) weatherWidgetData.extra = results[2];
+
+    const seoulTemp = Math.round(results[0].wx.current.temperature_2m);
+    const busanTemp = Math.round(results[1].wx.current.temperature_2m);
+    const seoulEmoji = wmoWeatherInfo(results[0].wx.current.weather_code)[1];
+    const busanEmoji = wmoWeatherInfo(results[1].wx.current.weather_code)[1];
+
+    let text = `${seoulEmoji} 서울 ${seoulTemp}° · ${busanEmoji} 부산 ${busanTemp}°`;
+    if (extraWeatherCity && weatherWidgetData.extra) {
+      const t = Math.round(weatherWidgetData.extra.wx.current.temperature_2m);
+      const e = wmoWeatherInfo(weatherWidgetData.extra.wx.current.weather_code)[1];
+      text += ` · ${e} ${extraWeatherCity.label} ${t}°`;
+    }
+    if (contentEl) contentEl.textContent = text;
+
+    renderWeatherDetailPanel();
+  } catch (err) {
+    console.error("날씨 위젯 불러오기 실패:", err);
+    if (contentEl) contentEl.textContent = "🌡 날씨 불러오기 실패";
+  }
+}
+
+function buildWeatherCityBlockHtml(cityKey) {
+  const city = cityKey === "extra" ? extraWeatherCity : WEATHER_CITIES[cityKey];
+  const data = weatherWidgetData[cityKey];
+  if (!data || !city) return "";
+  const { wx, aq } = data;
+  const [desc, emoji] = wmoWeatherInfo(wx.current.weather_code);
+  const temp = Math.round(wx.current.temperature_2m);
+  const tMax = wx.daily ? Math.round(wx.daily.temperature_2m_max[0]) : null;
+  const tMin = wx.daily ? Math.round(wx.daily.temperature_2m_min[0]) : null;
+  const pop = wx.daily ? wx.daily.precipitation_probability_max[0] : null;
+  const pm10 = aq && aq.current ? aq.current.pm10 : null;
+  const pm25 = aq && aq.current ? aq.current.pm2_5 : null;
+  const grade = aqiGrade(pm10, pm25);
+
+  return `
+    <div class="weather-city-block">
+      <div class="weather-detail-city">${escapeHtml(city.label)}${cityKey === "extra" ? ` <button class="weather-remove-city-btn" onclick="event.stopPropagation(); removeExtraWeatherCity()">✕</button>` : ""}</div>
+      <div class="weather-detail-main">
+        <span class="weather-detail-emoji">${emoji}</span>
+        <div>
+          <div class="weather-detail-temp">${temp}°C</div>
+          <div class="weather-detail-desc">${escapeHtml(desc)}</div>
+        </div>
+      </div>
+      ${tMax !== null ? `<div class="weather-detail-row"><span>최고/최저</span><b>${tMax}° / ${tMin}°</b></div>` : ""}
+      ${pop !== null ? `<div class="weather-detail-row"><span>강수확률</span><b>${pop}%</b></div>` : ""}
+      ${(pm10 !== null || pm25 !== null) ? `<div class="weather-detail-row"><span>미세먼지</span><b><span class="aqi-badge ${grade.cls}">${grade.label}</span></b></div>` : ""}
+    </div>
+  `;
+}
+
+function renderWeatherDetailPanel() {
+  const panel = document.getElementById("weatherDetailPanel");
+  if (!panel) return;
+  panel.innerHTML = `
+    <div class="weather-detail-cities">
+      ${buildWeatherCityBlockHtml("seoul")}
+      ${buildWeatherCityBlockHtml("busan")}
+      ${extraWeatherCity ? buildWeatherCityBlockHtml("extra") : ""}
+    </div>
+    ${!extraWeatherCity ? `
+      <div class="weather-add-city-row">
+        <input type="text" id="weatherCitySearchInput" placeholder="다른 도시 검색 (예: 뉴욕, 상하이)" onkeydown="if(event.key==='Enter') searchAndAddWeatherCity()">
+        <button onclick="searchAndAddWeatherCity()">추가</button>
+      </div>
+      <div id="weatherCitySearchStatus" class="weather-add-city-status"></div>
+    ` : ""}
+  `;
+}
+
+async function searchAndAddWeatherCity() {
+  const input = document.getElementById("weatherCitySearchInput");
+  const statusEl = document.getElementById("weatherCitySearchStatus");
+  const q = input ? input.value.trim() : "";
+  if (!q) return;
+
+  if (statusEl) statusEl.textContent = "검색 중...";
+  try {
+    const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(q)}&count=1&language=ko&format=json`);
+    const data = await res.json();
+    const result = data && data.results && data.results[0];
+    if (!result) {
+      if (statusEl) statusEl.textContent = `"${q}"를 못 찾았어요. 영문 도시명으로도 시도해보세요.`;
+      return;
+    }
+    const label = result.name + (result.admin1 && result.admin1 !== result.name ? `, ${result.admin1}` : "") + (result.country ? ` (${result.country})` : "");
+    extraWeatherCity = { label, lat: result.latitude, lon: result.longitude };
+    try { localStorage.setItem(EXTRA_WEATHER_CITY_KEY, JSON.stringify(extraWeatherCity)); } catch (e) {}
+    if (statusEl) statusEl.textContent = "";
+    await loadWeatherWidget();
+    const panel = document.getElementById("weatherDetailPanel");
+    if (panel) panel.style.display = "block"; // 검색 후에도 패널 열려있게 유지
+  } catch (err) {
+    if (statusEl) statusEl.textContent = "검색에 실패했어요. 다시 시도해주세요.";
+  }
+}
+
+function removeExtraWeatherCity() {
+  extraWeatherCity = null;
+  try { localStorage.removeItem(EXTRA_WEATHER_CITY_KEY); } catch (e) {}
+  delete weatherWidgetData.extra;
+  loadWeatherWidget();
+  const panel = document.getElementById("weatherDetailPanel");
+  if (panel) panel.style.display = "block";
+}
+
+function toggleWeatherDetail() {
+  const panel = document.getElementById("weatherDetailPanel");
+  if (!panel) return;
+  panel.style.display = panel.style.display === "none" ? "block" : "none";
+}
+
+document.addEventListener("click", (e) => {
+  const widget = document.getElementById("weatherWidget");
+  const panel = document.getElementById("weatherDetailPanel");
+  if (widget && panel && !widget.contains(e.target)) panel.style.display = "none";
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadWeatherWidget();
+  setInterval(loadWeatherWidget, 30 * 60 * 1000); // 30분마다 자동 갱신
+});
+
+/* =========================================================================
+   🕐 세계시간 위젯 (API 불필요 - 브라우저 내장 시간대 계산 기능만 사용)
+   ========================================================================= */
+const WORLD_CLOCK_CITIES = [
+  { label: "서울", tz: "Asia/Seoul" },
+  { label: "도쿄", tz: "Asia/Tokyo" },
+  { label: "베이징·상하이", tz: "Asia/Shanghai" },
+  { label: "홍콩", tz: "Asia/Hong_Kong" },
+  { label: "타이베이", tz: "Asia/Taipei" },
+  { label: "싱가포르", tz: "Asia/Singapore" },
+  { label: "방콕", tz: "Asia/Bangkok" },
+  { label: "자카르타", tz: "Asia/Jakarta" },
+  { label: "마닐라", tz: "Asia/Manila" },
+  { label: "호치민", tz: "Asia/Ho_Chi_Minh" },
+  { label: "뭄바이·인도", tz: "Asia/Kolkata" },
+  { label: "두바이", tz: "Asia/Dubai" },
+  { label: "이스탄불", tz: "Europe/Istanbul" },
+  { label: "런던", tz: "Europe/London" },
+  { label: "파리", tz: "Europe/Paris" },
+  { label: "함부르크·베를린", tz: "Europe/Berlin" },
+  { label: "로테르담·암스테르담", tz: "Europe/Amsterdam" },
+  { label: "모스크바", tz: "Europe/Moscow" },
+  { label: "아테네·피레우스", tz: "Europe/Athens" },
+  { label: "카이로", tz: "Africa/Cairo" },
+  { label: "요하네스버그", tz: "Africa/Johannesburg" },
+  { label: "라고스", tz: "Africa/Lagos" },
+  { label: "나이로비", tz: "Africa/Nairobi" },
+  { label: "다르에스살람·탄자니아", tz: "Africa/Dar_es_Salaam" },
+  { label: "뉴욕", tz: "America/New_York" },
+  { label: "로스앤젤레스", tz: "America/Los_Angeles" },
+  { label: "시카고", tz: "America/Chicago" },
+  { label: "밴쿠버", tz: "America/Vancouver" },
+  { label: "파나마", tz: "America/Panama" },
+  { label: "멕시코시티", tz: "America/Mexico_City" },
+  { label: "산투스·상파울루", tz: "America/Sao_Paulo" },
+  { label: "시드니", tz: "Australia/Sydney" },
+  { label: "오클랜드", tz: "Pacific/Auckland" }
+];
+
+const WORLD_CLOCK_PINNED_KEY = "world_clock_pinned_v1";
+let worldClockPinned = [];
+try {
+  const saved = localStorage.getItem(WORLD_CLOCK_PINNED_KEY);
+  if (saved) worldClockPinned = JSON.parse(saved);
+} catch (e) {}
+
+function formatWorldClockTime(tz) {
+  const now = new Date();
+  const timeStr = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: tz, hour: "2-digit", minute: "2-digit", hour12: false
+  }).format(now);
+  const dateStr = new Intl.DateTimeFormat("ko-KR", {
+    timeZone: tz, month: "2-digit", day: "2-digit", weekday: "short"
+  }).format(now);
+  // 서울과 시차 계산 (offset 비교 방식)
+  const seoulOffset = getTzOffsetMinutes("Asia/Seoul", now);
+  const tzOffset = getTzOffsetMinutes(tz, now);
+  const diffH = (tzOffset - seoulOffset) / 60;
+  const diffLabel = diffH === 0 ? "서울과 동일" : `서울보다 ${diffH > 0 ? "+" : ""}${diffH}시간`;
+  return { timeStr, dateStr, diffLabel };
+}
+
+function getTzOffsetMinutes(tz, date) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, hour12: false, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit"
+  });
+  const parts = dtf.formatToParts(date).reduce((acc, p) => { acc[p.type] = p.value; return acc; }, {});
+  const asUTC = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour === "24" ? 0 : parts.hour, parts.minute, parts.second);
+  return (asUTC - date.getTime()) / 60000;
+}
+
+function renderWorldClockPanel() {
+  const panel = document.getElementById("worldClockPanel");
+  if (!panel) return;
+
+  const pinnedHtml = worldClockPinned.map((tz) => {
+    const cityInfo = WORLD_CLOCK_CITIES.find((c) => c.tz === tz);
+    const label = cityInfo ? cityInfo.label : tz;
+    const { timeStr, dateStr, diffLabel } = formatWorldClockTime(tz);
+    return `
+      <div class="world-clock-row">
+        <div>
+          <div class="world-clock-city">${escapeHtml(label)}</div>
+          <div class="world-clock-diff">${escapeHtml(dateStr)} · ${escapeHtml(diffLabel)}</div>
+        </div>
+        <div class="world-clock-time-wrap">
+          <div class="world-clock-time">${escapeHtml(timeStr)}</div>
+          <button class="weather-remove-city-btn" onclick="event.stopPropagation(); removeWorldClockCity('${tz}')">✕</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  panel.innerHTML = `
+    ${pinnedHtml || '<div class="world-clock-empty">아래에서 도시를 검색해서 추가해보세요</div>'}
+    <div class="weather-add-city-row">
+      <input type="text" id="worldClockSearchInput" placeholder="도시 검색 (예: 뉴욕, 탄자니아)" oninput="renderWorldClockSuggestions(this.value)" onkeydown="if(event.key==='Enter') addFirstWorldClockSuggestion()">
+    </div>
+    <div id="worldClockSuggestions" class="world-clock-suggestions"></div>
+  `;
+}
+
+function renderWorldClockSuggestions(query) {
+  const wrap = document.getElementById("worldClockSuggestions");
+  if (!wrap) return;
+  const q = query.trim().toLowerCase();
+  if (!q) { wrap.innerHTML = ""; return; }
+
+  const matches = WORLD_CLOCK_CITIES.filter((c) =>
+    c.label.toLowerCase().includes(q) && !worldClockPinned.includes(c.tz)
+  ).slice(0, 6);
+
+  if (matches.length === 0) {
+    wrap.innerHTML = '<div class="world-clock-no-match">일치하는 도시가 없어요.</div>';
+    return;
+  }
+  wrap.innerHTML = matches.map((c) =>
+    `<div class="world-clock-suggestion" onclick="addWorldClockCity('${c.tz}')">${escapeHtml(c.label)}</div>`
+  ).join("");
+}
+
+function addFirstWorldClockSuggestion() {
+  const wrap = document.getElementById("worldClockSuggestions");
+  const first = wrap && wrap.querySelector(".world-clock-suggestion");
+  if (first) first.click();
+}
+
+function addWorldClockCity(tz) {
+  if (!worldClockPinned.includes(tz)) worldClockPinned.push(tz);
+  try { localStorage.setItem(WORLD_CLOCK_PINNED_KEY, JSON.stringify(worldClockPinned)); } catch (e) {}
+  renderWorldClockPanel();
+  const input = document.getElementById("worldClockSearchInput");
+  if (input) input.focus();
+}
+
+function removeWorldClockCity(tz) {
+  worldClockPinned = worldClockPinned.filter((t) => t !== tz);
+  try { localStorage.setItem(WORLD_CLOCK_PINNED_KEY, JSON.stringify(worldClockPinned)); } catch (e) {}
+  renderWorldClockPanel();
+}
+
+function toggleWorldClockDetail() {
+  const panel = document.getElementById("worldClockPanel");
+  if (!panel) return;
+  const willOpen = panel.style.display === "none";
+  panel.style.display = willOpen ? "block" : "none";
+  if (willOpen) renderWorldClockPanel();
+}
+
+document.addEventListener("click", (e) => {
+  const widget = document.getElementById("worldClockWidget");
+  const panel = document.getElementById("worldClockPanel");
+  if (widget && panel && !widget.contains(e.target)) panel.style.display = "none";
+});
+
+setInterval(() => {
+  const panel = document.getElementById("worldClockPanel");
+  if (panel && panel.style.display !== "none") renderWorldClockPanel();
+}, 30000); // 패널이 열려있으면 30초마다 시각 갱신
+
+/* =========================================================================
    🕘 최근 사용한 메뉴 (이 브라우저에만 저장되는 개인 기록, 내보내기/가져오기에 포함 안 됨)
    ========================================================================= */
 const RECENT_ITEMS_KEY = "cs_guide_recent_items";
