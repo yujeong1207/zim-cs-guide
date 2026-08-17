@@ -5,7 +5,7 @@
    - bl_list_tool.js(수입 마감용 비엘리스트 만들기)와도 별개의 도구예요.
    - 매핑표는 구글시트에 저장돼서 팀 전체가 공유해요 (contacts_script.js의
      AN 연락처 탭과 같은 방식 - 탭 열 때 전체를 받아와서 메모리에 캐시).
-   - 지금은 KCI 라인만 시범 운영. 라인 입력칸에 다른 라인명을 넣으면
+   - KCI / ZAX / ZCP / ZNS / ZSL / ZNP 라인 지원. 드롭다운에서 라인 고르면
      그 라인은 그 라인대로 구글시트 안에서 별도로 관리돼요 (한 시트, line 컬럼으로 구분).
    ========================================================================= */
 
@@ -13,6 +13,7 @@
 const AN_EMAIL_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzfmlWLBJVi3vUJxsCk7s_vnwu7t5TJQbJUSXBZyZ0KWbqYjKqrzHWvmYKWtqD_lkgX/exec";
 
 const AN_EMAIL_DEFAULT_LINE = "KCI";
+const AN_EMAIL_KNOWN_LINES = ["KCI", "ZAX", "ZCP", "ZNS", "ZSL", "ZNP"];
 
 function freshAnEmailState() {
   return {
@@ -131,19 +132,21 @@ function markAnEmailSeenTimestamp(line, maxUpdatedAt) {
 /* 페이지 로드 시 백그라운드로 한 번 조용히 확인 (탭을 안 열어봐도 새소식 배너가 뜨게) */
 function checkAnEmailUpdatesInBackground() {
   if (!AN_EMAIL_SHEET_API_URL) return;
-  fetch(AN_EMAIL_SHEET_API_URL + "?line=" + encodeURIComponent(AN_EMAIL_DEFAULT_LINE))
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.ok) return;
-      let maxUpdatedAt = null;
-      (data.list || []).forEach((row) => {
-        if (row.updatedAt && (!maxUpdatedAt || new Date(row.updatedAt) > new Date(maxUpdatedAt))) {
-          maxUpdatedAt = row.updatedAt;
-        }
-      });
-      checkAnEmailUpdatesForNotice(AN_EMAIL_DEFAULT_LINE, maxUpdatedAt);
-    })
-    .catch(() => {}); // 조용히 실패 (백그라운드 체크라 사용자에게 에러 안 띄움)
+  AN_EMAIL_KNOWN_LINES.forEach((line) => {
+    fetch(AN_EMAIL_SHEET_API_URL + "?line=" + encodeURIComponent(line))
+      .then((res) => res.json())
+      .then((data) => {
+        if (!data.ok) return;
+        let maxUpdatedAt = null;
+        (data.list || []).forEach((row) => {
+          if (row.updatedAt && (!maxUpdatedAt || new Date(row.updatedAt) > new Date(maxUpdatedAt))) {
+            maxUpdatedAt = row.updatedAt;
+          }
+        });
+        checkAnEmailUpdatesForNotice(line, maxUpdatedAt);
+      })
+      .catch(() => {}); // 조용히 실패 (백그라운드 체크라 사용자에게 에러 안 띄움)
+  });
 }
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(checkAnEmailUpdatesInBackground, 1500);
@@ -171,6 +174,19 @@ function clearAnEmailMap() {
       loadAnEmailMapFromServer(true);
     })
     .catch((err) => alert("삭제 실패: " + err));
+}
+
+function handleAnEmailLineSelectChange(value) {
+  if (value === "__custom__") {
+    const input = prompt("라인명을 입력하세요 (예: ZDV)", "");
+    if (input && input.trim()) {
+      changeAnEmailLine(input.trim());
+    } else {
+      renderExcelTool(); // 취소하면 드롭다운을 원래 값으로 되돌리기 위해 다시 그림
+    }
+    return;
+  }
+  changeAnEmailLine(value);
 }
 
 function changeAnEmailLine(newLine) {
@@ -452,16 +468,27 @@ function buildAnEmailHtml() {
 
   let html = `<div class="hint" style="margin-bottom:14px;">
     NOTIFY 코드 ↔ AN EMAIL 매핑표를 라인별로 구글시트에 저장해서 팀 전체가 공유해요. 새 비엘리스트를 올리면 AN EMAIL 칸을 자동으로 채워줘요.
-    <b>지금은 KCI 라인만 시범 운영 중</b>이에요.
+    <b>KCI / ZAX / ZCP / ZNS / ZSL / ZNP 라인</b>을 지원해요. 위 드롭다운에서 골라 쓰세요.
   </div>`;
 
   if (anEmailState.mapLoadError) {
     html += `<div class="excel-warning-box" style="margin-bottom:14px;"><div class="excel-warning-title">⚠️ 불러오기 오류</div>${escapeHtml(anEmailState.mapLoadError)}</div>`;
   }
 
+  const lineOptions = AN_EMAIL_KNOWN_LINES.map((l) =>
+    `<option value="${l}" ${l === anEmailState.line ? "selected" : ""}>${l}</option>`
+  ).join("");
+  const isCustomLine = AN_EMAIL_KNOWN_LINES.indexOf(anEmailState.line) === -1;
+  const customOption = isCustomLine
+    ? `<option value="${escapeHtml(anEmailState.line)}" selected>${escapeHtml(anEmailState.line)} (직접입력)</option>`
+    : "";
+
   html += `<div style="display:flex; align-items:center; gap:10px; margin-bottom:18px; flex-wrap:wrap;">
     <div style="font-size:13px;font-weight:bold;color:#4b5563;">라인</div>
-    <input type="text" id="anEmailLineInput" value="${escapeHtml(anEmailState.line)}" style="width:100px; padding:6px 10px; border:1px solid #e5e7eb; border-radius:8px; font-weight:bold;" onchange="changeAnEmailLine(this.value)">
+    <select id="anEmailLineSelect" style="padding:6px 10px; border:1px solid #e5e7eb; border-radius:8px; font-weight:bold;" onchange="handleAnEmailLineSelectChange(this.value)">
+      ${lineOptions}${customOption}
+      <option value="__custom__">✏️ 직접 입력...</option>
+    </select>
     <div class="excel-result-stat">현재 매핑 코드 수 <b>${mapCount.toLocaleString()}</b>건</div>
     <button class="btn" style="padding:6px 12px;font-size:12px;" onclick="loadAnEmailMapFromServer(true)" title="다른 팀원이 방금 추가한 내용까지 새로 불러와요">🔄 새로고침</button>
     ${mapCount ? `<button class="btn" style="padding:6px 12px;font-size:12px;" onclick="clearAnEmailMap()">🗑️ 이 라인 매핑 초기화</button>` : ""}
