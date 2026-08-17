@@ -15515,6 +15515,52 @@ function badgeHtml(category) {
 }
 
 /* =========================================================================
+   🔔 공유 데이터 새 소식 알림 (화면 오른쪽 아래 배너)
+   - 팀원이 AN 연락처나 AN 주소채우기 매핑을 새로 추가/수정했을 때, 굳이 말 안 해도
+     화면에 떠서 알 수 있게 해주는 용도예요. contacts_script.js / an_email_tool.js에서
+     pushSharedUpdateNotice(key, message, onClick)를 호출해서 띄워요.
+   ========================================================================= */
+let sharedUpdateNotices = {};
+
+function pushSharedUpdateNotice(key, message, onClick) {
+  sharedUpdateNotices[key] = { message, onClick };
+  renderSharedUpdateBanner();
+}
+function dismissSharedUpdateNotice(key) {
+  delete sharedUpdateNotices[key];
+  renderSharedUpdateBanner();
+}
+function renderSharedUpdateBanner() {
+  let el = document.getElementById("sharedUpdatesBanner");
+  const keys = Object.keys(sharedUpdateNotices);
+  if (!keys.length) { if (el) el.remove(); return; }
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "sharedUpdatesBanner";
+    el.className = "shared-updates-banner";
+    document.body.appendChild(el);
+  }
+  el.innerHTML = keys.map((k) => `
+    <div class="shared-update-item" data-key="${escapeHtml(k)}">
+      <span class="shared-update-dot"></span>
+      <span class="shared-update-text">${sharedUpdateNotices[k].message}</span>
+      <button class="shared-update-close" title="닫기">✕</button>
+    </div>`).join("");
+  el.querySelectorAll(".shared-update-item").forEach((itemEl) => {
+    const key = itemEl.dataset.key;
+    itemEl.querySelector(".shared-update-text").addEventListener("click", () => {
+      const notice = sharedUpdateNotices[key];
+      if (notice && notice.onClick) notice.onClick();
+      dismissSharedUpdateNotice(key);
+    });
+    itemEl.querySelector(".shared-update-close").addEventListener("click", (e) => {
+      e.stopPropagation();
+      dismissSharedUpdateNotice(key);
+    });
+  });
+}
+
+/* =========================================================================
    이미지 삽입 공통 헬퍼 (업무 절차 단계 / FAQ 답변 등에서 공용으로 사용)
    ========================================================================= */
 
@@ -15679,6 +15725,7 @@ function switchMainTab(tab) {
   if (tab === "ntf" && !currentNtfType) initNtfTypeSelect();
   if (tab === "excelTool") renderExcelTool();
   if (tab === "anemail" && typeof initContactsTab === "function") initContactsTab();
+  if (tab === "anemail" && typeof markContactsUpdatesSeen === "function") markContactsUpdatesSeen();
 
   const MAIN_TAB_RECENT_LABELS = { calc: "🧮 계산기", memo: "📝 메모", excelTool: "📦 엑셀 정리" };
   if (MAIN_TAB_RECENT_LABELS[tab]) recordRecentItem("mainTab", tab, MAIN_TAB_RECENT_LABELS[tab]);
@@ -23717,6 +23764,7 @@ function switchExcelMode(mode) {
   excelToolState = freshExcelToolState();
   crossCheckState = freshCrossCheckState();
   if (typeof resetBlListState === "function") resetBlListState(); // bl_list_tool.js
+  if (typeof resetAnEmailState === "function") resetAnEmailState(); // an_email_tool.js
   renderExcelTool();
 }
 
@@ -23745,6 +23793,13 @@ function renderExcelTool() {
     // bl_list_tool.js (용량 문제로 분리된 파일)에 렌더링을 위임
     body.innerHTML = buildBlListHtml();
     attachBlListHandlers();
+    return;
+  }
+
+  if (excelMode === "an_email") {
+    // an_email_tool.js (새 파일)에 렌더링을 위임
+    body.innerHTML = buildAnEmailHtml();
+    attachAnEmailHandlers();
     return;
   }
 

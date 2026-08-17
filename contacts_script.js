@@ -87,6 +87,7 @@ function loadAllContacts(forceReload) {
       contactsAllItems = data.list;
       inputEl.disabled = false;
       applyContactsFilter(inputEl.value);
+      checkContactsUpdatesForNotice();
     })
     .catch((err) => {
       listEl.innerHTML = `<div class="anemail-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
@@ -245,6 +246,49 @@ function escapeHtml(str) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/* ===== 🔔 새 소식 알림 (다른 팀원이 등록/수정한 게 있으면 화면에 배너로 알려줌) =====
+   구글시트 G열(수정시각)을 기준으로 판단해요 (contacts_apps_script.gs 참고) - 새로
+   추가된 것뿐 아니라 기존 항목의 이메일만 살짝 고친 경우도 정확히 잡혀요.
+   - 페이지 열자마자 백그라운드에서 항상 전체를 한 번 불러오기 때문에(위 DOMContentLoaded),
+     탭을 안 열어봐도 알림이 뜸. */
+const CONTACTS_SEEN_TS_KEY = "contacts_seen_ts_v2";
+
+function getContactsMaxUpdatedAt_() {
+  if (!contactsAllItems || !contactsAllItems.length) return null;
+  let max = null;
+  contactsAllItems.forEach((item) => {
+    if (item.updatedAt && (!max || new Date(item.updatedAt) > new Date(max))) max = item.updatedAt;
+  });
+  return max;
+}
+
+function checkContactsUpdatesForNotice() {
+  const maxUpdatedAt = getContactsMaxUpdatedAt_();
+  if (!maxUpdatedAt) return; // updatedAt이 아직 없는 옛날 데이터만 있으면(초기화 전) 알림 안 띄움
+
+  const seenRaw = localStorage.getItem(CONTACTS_SEEN_TS_KEY);
+  if (seenRaw === null) {
+    // 이 브라우저에서 처음 확인하는 거면 알림 없이 기준점만 저장
+    localStorage.setItem(CONTACTS_SEEN_TS_KEY, maxUpdatedAt);
+    return;
+  }
+  if (new Date(maxUpdatedAt) > new Date(seenRaw) && typeof pushSharedUpdateNotice === "function") {
+    pushSharedUpdateNotice(
+      "contacts",
+      `🔔 AN 연락처가 새로 추가/수정됐어요 - 눌러서 확인`,
+      () => { if (typeof switchMainTab === "function") switchMainTab("anemail"); }
+    );
+  }
+  // 여기선 기준점을 안 건드리고, "확인"(탭 진입)했을 때만 갱신함
+}
+
+/* AN 연락처 탭에 실제로 들어왔을 때 호출 - 지금까지의 최신 수정시각을 "확인함"으로 처리 */
+function markContactsUpdatesSeen() {
+  const maxUpdatedAt = getContactsMaxUpdatedAt_();
+  if (maxUpdatedAt) localStorage.setItem(CONTACTS_SEEN_TS_KEY, maxUpdatedAt);
+  if (typeof dismissSharedUpdateNotice === "function") dismissSharedUpdateNotice("contacts");
 }
 
 // 연락처 탭이 클릭되어 화면에 나타날 때 초기화 (기존 탭 전환 로직에 맞춰 호출 위치 조정 필요)
