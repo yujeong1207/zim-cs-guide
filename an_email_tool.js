@@ -248,6 +248,10 @@ function handleAnEmailRefFiles(event) {
 
 function processAnEmailRefFiles(files) {
   if (!AN_EMAIL_SHEET_API_URL) { alert("AN_EMAIL_SHEET_API_URL이 아직 설정되지 않았어요."); return; }
+  if (anEmailState.refBusy) {
+    alert("아직 이전 파일들을 처리하고 있어요. 완료될 때까지 잠시만 기다렸다가 다시 올려주세요.");
+    return;
+  }
 
   anEmailState.refBusy = true;
   anEmailState.refLastResult = null;
@@ -495,7 +499,7 @@ function buildAnEmailHtml() {
   </div>`;
 
   html += `<div class="section-title">① 참고 파일로 매핑 갱신</div>
-  <div class="hint" style="margin-bottom:8px;">NOTIFY·AN EMAIL 컬럼이 있는 예전 비엘리스트 파일들을 올리면, 제목에 있는 날짜(예: 08/18)를 기준으로 제일 최신 값으로 정리해서 매핑표에 반영해요 (팀 전체에 바로 공유돼요). 여러 개를 한 번에 올려도 돼요.</div>
+  <div class="hint" style="margin-bottom:8px;">NOTIFY·AN EMAIL 컬럼이 있는 예전 비엘리스트 파일들을 올리면, 제목에 있는 날짜(예: 08/18)를 기준으로 제일 최신 값으로 정리해서 매핑표에 반영해요 (팀 전체에 바로 공유돼요). 파일 선택 창에서 여러 개를 한 번에 골라서 올리는 걸 추천해요 (Ctrl 또는 Shift로 여러 개 선택). 따로따로 올리실 거면, 이전 파일 처리(⏳ 표시)가 끝난 다음에 올려주세요.</div>
   <label class="excel-upload-box" id="anEmailRefUploadBox" style="padding:22px 14px;">
     <input type="file" id="anEmailRefFileInput" accept=".xlsx,.xls" multiple onchange="handleAnEmailRefFiles(event)">
     <div class="excel-upload-icon">📄</div>
