@@ -201,6 +201,7 @@ async function fetchOblListFromServer() {
       date: row.date || "",
       name: row.name || "",
       blNumber: row.blNumber || "",
+      createdAt: row.createdAt || "",
     }));
   } catch (err) {
     console.error("오비엘 서버 목록 불러오기 실패:", err);
