@@ -1302,12 +1302,12 @@ input, select, textarea {
   box-shadow: 0 4px 14px rgba(0,0,0,0.05);
 }
 .tt-line-title { font-size: 15px; font-weight: bold; color: #0c447c; margin-bottom: 10px; }
-.tt-line-table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.tt-line-table { width: auto; border-collapse: collapse; font-size: 13.5px; }
 .tt-line-table th {
-  background: #e6f1fb; color: #0c447c; font-weight: bold; padding: 8px 14px;
+  background: #e6f1fb; color: #0c447c; font-weight: bold; padding: 8px 22px 8px 10px;
   text-align: left; border-bottom: 1px solid #cfe0f2;
 }
-.tt-line-table td { padding: 8px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+.tt-line-table td { padding: 8px 22px 8px 10px; border-bottom: 1px solid #f3f4f6; color: #374151; }
 .tt-line-table tr:last-child td { border-bottom: none; }
 .tt-code-cell { font-weight: bold; font-variant-numeric: tabular-nums; }
 .tt-port-link { color: #4f46e5; text-decoration: underline; font-weight: bold; }
