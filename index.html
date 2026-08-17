@@ -87,6 +87,7 @@
       <button class="main-tab-btn" data-tab="resources" onclick="switchMainTab('resources')">🔗 자료 모음</button>
       <button class="main-tab-btn" data-tab="vessels" onclick="switchMainTab('vessels')">🚢 모선 일정</button>
       <button class="main-tab-btn" data-tab="contacts" onclick="switchMainTab('contacts')">📞 연락처</button>
+      <button class="main-tab-btn" data-tab="news" onclick="switchMainTab('news')">📰 오늘의 물류뉴스</button>
     </div>
   </div>
 
@@ -156,6 +157,15 @@
     <button class="btn secondary-btn" onclick="openVesselEditor(null, null)">＋ 배 추가</button>
     <button class="btn secondary-btn" onclick="loadVesselTab()">🔄 새로고침</button>
   </div>
+</div>
+
+<!-- ===== 📰 오늘의 물류뉴스 탭 ===== -->
+<div class="tab-page" id="page-news">
+  <div class="hint" style="margin-bottom:14px;">💡 매일 아침 AI가 신뢰할 수 있는 해운·물류 전문지(gCaptain, Splash247, FreightWaves, Reuters, 코리아쉬핑가제트, 한국해운신문)에서 골라 요약해줘요. 평소엔 하루 1건, 파나마 운하처럼 큰 이슈가 진행 중일 땐 2건까지 뜰 수 있어요.</div>
+  <div style="margin-bottom:12px;">
+    <button class="btn secondary-btn" onclick="loadNewsTab()">🔄 새로고침</button>
+  </div>
+  <div id="newsListWrap"></div>
 </div>
 
 <!-- ===== 🧮 계산기 탭 ===== -->
@@ -545,6 +555,17 @@
     <div class="daily-quote-date" id="dailyQuoteDate"></div>
     <div class="daily-quote-text" id="dailyQuoteText"></div>
     <button class="btn generate-btn" onclick="closeDailyQuote()">오늘 하루도 시작해볼까요 💪</button>
+  </div>
+</div>
+
+<div class="admin-overlay" id="dailyNewsOverlay" style="display:none;" onclick="if(event.target===this) closeDailyNewsPopup()">
+  <div class="daily-news-panel">
+    <div class="daily-news-header"><span class="emoji">📰</span><span class="title" id="dailyNewsTitle">오늘의 물류뉴스</span></div>
+    <div id="dailyNewsItemsWrap"></div>
+    <div class="daily-news-actions">
+      <button class="btn secondary-btn" onclick="closeDailyNewsPopup()">닫기</button>
+      <button class="btn generate-btn" onclick="closeDailyNewsPopup(); switchMainTab('news');">탭에서 더 보기</button>
+    </div>
   </div>
 </div>
 

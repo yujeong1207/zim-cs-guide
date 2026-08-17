@@ -433,6 +433,72 @@ async function loadOblTab() {
    ========================================================================= */
 const VESSEL_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwpBFi27f35ybP3oARGAYU5JlJjvDZ1bzZSCsA6-716xgSDB2WwNwF95d61Kf-EU0B2LA/exec";
 
+/* =========================================================================
+   📰 오늘의 물류뉴스 - 실시간 연동 설정
+   매일 아침 Apps Script(logistics_news_apps_script.gs)가 신뢰 출처 안에서
+   뉴스를 골라 요약해서 구글시트에 쌓아두고, 여기서는 그걸 조회만 해요.
+   ========================================================================= */
+const LOGISTICS_NEWS_API_URL = "https://script.google.com/macros/s/AKfycbxukpS3jZK7h6KPvlehTqW2GLvYCTFr8I55Z6YwlC1_Zg6U9JjHQyNtEv65BLUZbIkSLw/exec";
+
+const NEWS_CATEGORY_ICON = {
+  "항로/통항 이슈 (파나마운하, 수에즈/홍해, 주요 항만 정체 등)": "🚢",
+  "지정학/규제 (관세, 제재, 항만 파업, 환경 규제 등)": "⚖️",
+  "선사/얼라이언스 동향 (합병, 신규 항로 개설/축소 등)": "🤝",
+  "국내 물류 이슈 (부산항 등 국내 항만, 관세청 정책 등)": "🇰🇷"
+};
+
+let newsLoadFailed = false;
+
+async function fetchNewsListFromServer() {
+  if (!LOGISTICS_NEWS_API_URL) return null;
+  try {
+    const res = await fetch(LOGISTICS_NEWS_API_URL + "?limit=14", { method: "GET" });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    newsLoadFailed = false;
+    return data.items || [];
+  } catch (err) {
+    console.error("물류뉴스 불러오기 실패:", err);
+    newsLoadFailed = true;
+    return null;
+  }
+}
+
+async function loadNewsTab() {
+  const wrap = document.getElementById("newsListWrap");
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="empty-state">불러오는 중...</div>';
+
+  if (!LOGISTICS_NEWS_API_URL) {
+    wrap.innerHTML = '<div class="empty-state">연동 주소가 아직 설정되지 않았어요.</div>';
+    return;
+  }
+
+  const items = await fetchNewsListFromServer();
+  if (items === null) {
+    wrap.innerHTML = '<div class="empty-state">⚠️ 불러오기에 실패했어요. 새로고침을 눌러 다시 시도해주세요.</div>';
+    return;
+  }
+  if (items.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">아직 등록된 뉴스가 없어요. 내일 아침에 첫 소식이 올라올 거예요.</div>';
+    return;
+  }
+
+  wrap.innerHTML = items.map((item) => {
+    const icon = NEWS_CATEGORY_ICON[item.category] || "📰";
+    return `
+      <div class="content-card" style="margin-bottom:12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
+          <span class="hint" style="margin:0; font-size:12px;">📅 ${escapeHtml(item.date)} · ${icon} ${escapeHtml((item.category || "").split(" (")[0])} · 출처: ${escapeHtml(item.source)}</span>
+        </div>
+        <div class="content-card-title" style="margin-bottom:6px;">${escapeHtml(item.title)}</div>
+        <div style="white-space:pre-line; line-height:1.7; color:#374151; margin-bottom:8px;">${escapeHtml(item.summary)}</div>
+        ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="hint" style="margin:0;">🔗 원문 보기</a>` : ""}
+      </div>
+    `;
+  }).join("");
+}
+
 let vesselLoadFailed = false;
 
 async function fetchVesselListFromServer() {
@@ -14822,9 +14888,9 @@ function checkAndShowDailyQuote() {
   let lastSeen = "";
   try { lastSeen = localStorage.getItem(DAILY_QUOTE_SEEN_KEY) || ""; } catch (e) {}
   const today = todayStr();
-  if (lastSeen === today) return; // 오늘 이미 봤으면 다시 안 보여줌
+  if (lastSeen === today) { checkAndShowDailyNewsPopup(); return; } // 오늘 이미 봤으면 다시 안 보여줌 (대신 뉴스 팝업은 체크)
   const quote = pickDailyQuote();
-  if (!quote) return;
+  if (!quote) { checkAndShowDailyNewsPopup(); return; }
 
   const dateEl = document.getElementById("dailyQuoteDate");
   const textEl = document.getElementById("dailyQuoteText");
@@ -14841,6 +14907,56 @@ function checkAndShowDailyQuote() {
 
 function closeDailyQuote() {
   const overlay = document.getElementById("dailyQuoteOverlay");
+  if (overlay) overlay.style.display = "none";
+  checkAndShowDailyNewsPopup();
+}
+
+/* =========================================================================
+   📰 오늘의 물류뉴스 팝업 (한마디 팝업 닫으면 이어서, 하루에 한 번만 보여줌)
+   ========================================================================= */
+const DAILY_NEWS_SEEN_KEY = "cs_guide_daily_news_seen";
+
+async function checkAndShowDailyNewsPopup() {
+  if (!LOGISTICS_NEWS_API_URL) return;
+  let lastSeen = "";
+  try { lastSeen = localStorage.getItem(DAILY_NEWS_SEEN_KEY) || ""; } catch (e) {}
+  const today = todayStr();
+  if (lastSeen === today) return; // 오늘 이미 봤으면 다시 안 보여줌
+
+  const items = await fetchNewsListFromServer();
+  if (!items || items.length === 0) return; // 못 불러왔거나 아직 하나도 없으면 조용히 스킵 (에러 팝업 X)
+
+  const todayItems = items.filter((it) => it.date === today);
+  if (todayItems.length === 0) return; // 오늘자 뉴스가 아직 안 올라왔으면 스킵
+
+  const wrap = document.getElementById("dailyNewsItemsWrap");
+  const titleEl = document.getElementById("dailyNewsTitle");
+  if (titleEl) {
+    const d = new Date();
+    titleEl.textContent = (d.getMonth() + 1) + "월 " + d.getDate() + "일의 물류뉴스";
+  }
+  if (wrap) {
+    wrap.innerHTML = todayItems.map((item) => {
+      const icon = NEWS_CATEGORY_ICON[item.category] || "📰";
+      return `
+        <div class="daily-news-item">
+          <div class="daily-news-meta">${icon} ${escapeHtml((item.category || "").split(" (")[0])} · 출처: ${escapeHtml(item.source)}</div>
+          <div class="daily-news-item-title">${escapeHtml(item.title)}</div>
+          <div class="daily-news-item-summary">${escapeHtml(item.summary)}</div>
+          ${item.url ? `<a class="daily-news-item-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원문 보기</a>` : ""}
+        </div>
+      `;
+    }).join("");
+  }
+
+  const overlay = document.getElementById("dailyNewsOverlay");
+  if (overlay) overlay.style.display = "flex";
+
+  try { localStorage.setItem(DAILY_NEWS_SEEN_KEY, today); } catch (e) {}
+}
+
+function closeDailyNewsPopup() {
+  const overlay = document.getElementById("dailyNewsOverlay");
   if (overlay) overlay.style.display = "none";
 }
 
@@ -15714,6 +15830,7 @@ function switchMainTab(tab) {
   if (tab === "faqs") { renderFaqTopics(); renderFaqList(); }
   if (tab === "resources") renderResList();
   if (tab === "vessels") loadVesselTab();
+  if (tab === "news") loadNewsTab();
   if (tab === "contacts") renderContactsTable();
   if (tab === "poa") loadPoaTab();
   if (tab === "obl") loadOblTab();
@@ -15734,7 +15851,7 @@ function switchMainTab(tab) {
 
 const TAB_GROUPS = {
   work: ["procedures", "faqs", "templates", "ntf"],
-  reference: ["resources", "vessels", "contacts"],
+  reference: ["resources", "vessels", "contacts", "news"],
   schedule: ["vacations", "teamEvents"],
   tools: ["calc", "memo", "excelTool"],
 };

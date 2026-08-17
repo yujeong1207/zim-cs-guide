@@ -1180,6 +1180,24 @@ input, select, textarea {
 .daily-quote-text { font-size: 16px; font-weight: bold; color: #111827; line-height: 1.6; margin: 6px 0 14px; }
 #dailyQuoteOverlay { align-items: center; justify-content: center; }
 
+/* ===== 📰 오늘의 물류뉴스 (한마디 팝업 닫으면 이어서 뜨는 팝업) ===== */
+.daily-news-panel {
+  background: white; border-radius: 20px; padding: 30px 28px; max-width: 460px; width: 90%;
+  margin: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.daily-news-header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.daily-news-header .emoji { font-size: 26px; }
+.daily-news-header .title { font-size: 15px; font-weight: bold; color: #111827; }
+.daily-news-item { border-top: 1px solid #f0f1f3; padding-top: 14px; margin-top: 14px; }
+.daily-news-item:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
+.daily-news-meta { font-size: 11.5px; color: #9ca3af; margin-bottom: 4px; }
+.daily-news-item-title { font-size: 14.5px; font-weight: bold; color: #111827; margin-bottom: 4px; }
+.daily-news-item-summary { font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-line; }
+.daily-news-item-link { font-size: 12.5px; margin-top: 4px; display: inline-block; }
+.daily-news-actions { display: flex; gap: 8px; margin-top: 18px; }
+.daily-news-actions .btn { flex: 1; }
+#dailyNewsOverlay { align-items: center; justify-content: center; }
+
 /* ===== 의견함 (피드백) 플로팅 버튼 ===== */
 .feedback-fab {
   position: fixed; right: 24px; bottom: 24px; z-index: 90;
