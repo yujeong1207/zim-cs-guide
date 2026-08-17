@@ -523,6 +523,40 @@ input, select, textarea {
 .badge-export { background: #dcfce7; color: #166534; }
 .badge-common { background: #f3e8ff; color: #6b21a8; }
 
+/* ===== 📰 오늘의 물류뉴스 카드 ===== */
+.news-card {
+  background: white; border-radius: 16px; padding: 18px 20px; margin-bottom: 14px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05); border-left: 5px solid #e5e7eb;
+}
+.news-card.cat-route { border-left-color: #3b82f6; }
+.news-card.cat-regulation { border-left-color: #f59e0b; }
+.news-card.cat-carrier { border-left-color: #8b5cf6; }
+.news-card.cat-domestic { border-left-color: #10b981; }
+.news-card-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.news-card-badge {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: bold;
+  padding: 4px 10px; border-radius: 999px; white-space: nowrap;
+}
+.news-card-badge.cat-route { background: #dbeafe; color: #1e40af; }
+.news-card-badge.cat-regulation { background: #fef3c7; color: #92400e; }
+.news-card-badge.cat-carrier { background: #ede9fe; color: #5b21b6; }
+.news-card-badge.cat-domestic { background: #d1fae5; color: #065f46; }
+.news-card-date { font-size: 12px; color: #9ca3af; }
+.news-card-source { font-size: 12px; color: #9ca3af; }
+.news-card-title { font-size: 16px; font-weight: bold; color: #111827; margin-bottom: 10px; line-height: 1.5; }
+.news-card-summary { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.news-card-summary li {
+  font-size: 13.5px; line-height: 1.6; color: #374151; padding-left: 16px; position: relative;
+}
+.news-card-summary li::before {
+  content: "•"; position: absolute; left: 0; color: #c7cdd6; font-weight: bold;
+}
+.news-card-link {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12.5px; font-weight: bold;
+  color: #6366f1; text-decoration: none;
+}
+.news-card-link:hover { text-decoration: underline; }
+
 .content-card {
   background: white; border-radius: 14px; padding: 16px 18px;
   box-shadow: 0 4px 14px rgba(0,0,0,0.05); margin-bottom: 12px; cursor: pointer;
@@ -1192,7 +1226,10 @@ input, select, textarea {
 .daily-news-item:first-of-type { border-top: none; padding-top: 0; margin-top: 0; }
 .daily-news-meta { font-size: 11.5px; color: #9ca3af; margin-bottom: 4px; }
 .daily-news-item-title { font-size: 14.5px; font-weight: bold; color: #111827; margin-bottom: 4px; }
-.daily-news-item-summary { font-size: 13px; color: #4b5563; line-height: 1.6; white-space: pre-line; }
+.daily-news-item-summary { font-size: 13px; color: #4b5563; line-height: 1.6; }
+.daily-news-item-summary ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+.daily-news-item-summary li { padding-left: 14px; position: relative; }
+.daily-news-item-summary li::before { content: "•"; position: absolute; left: 0; color: #c7cdd6; font-weight: bold; }
 .daily-news-item-link { font-size: 12.5px; margin-top: 4px; display: inline-block; }
 .daily-news-actions { display: flex; gap: 8px; margin-top: 18px; }
 .daily-news-actions .btn { flex: 1; }

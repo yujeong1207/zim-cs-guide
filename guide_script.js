@@ -440,12 +440,29 @@ const VESSEL_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwpBFi27f3
    ========================================================================= */
 const LOGISTICS_NEWS_API_URL = "https://script.google.com/macros/s/AKfycbxukpS3jZK7h6KPvlehTqW2GLvYCTFr8I55Z6YwlC1_Zg6U9JjHQyNtEv65BLUZbIkSLw/exec";
 
-const NEWS_CATEGORY_ICON = {
-  "항로/통항 이슈 (파나마운하, 수에즈/홍해, 주요 항만 정체 등)": "🚢",
-  "지정학/규제 (관세, 제재, 항만 파업, 환경 규제 등)": "⚖️",
-  "선사/얼라이언스 동향 (합병, 신규 항로 개설/축소 등)": "🤝",
-  "국내 물류 이슈 (부산항 등 국내 항만, 관세청 정책 등)": "🇰🇷"
+const NEWS_CATEGORY_META = {
+  "항로/통항 이슈 (파나마운하, 수에즈/홍해, 주요 항만 정체 등)": { icon: "🚢", cls: "cat-route" },
+  "지정학/규제 (관세, 제재, 항만 파업, 환경 규제 등)": { icon: "⚖️", cls: "cat-regulation" },
+  "선사/얼라이언스 동향 (합병, 신규 항로 개설/축소 등)": { icon: "🤝", cls: "cat-carrier" },
+  "국내 물류 이슈 (부산항 등 국내 항만, 관세청 정책 등)": { icon: "🇰🇷", cls: "cat-domestic" }
 };
+function newsCategoryMeta(category) {
+  return NEWS_CATEGORY_META[category] || { icon: "📰", cls: "" };
+}
+
+/* 요약 텍스트를 문장 단위로 쪼개서 불릿 리스트용 배열로 만듦.
+   AI가 이미 줄바꿈(개행)해서 줬으면 그걸 우선 쓰고, 한 문단으로 죽 이어붙여 왔으면
+   "-함." "-됨." "-중." 같은 개조식 문장 끝 + 마침표 뒤에서 끊어줌. */
+function splitNewsSummaryToBullets(summary) {
+  if (!summary) return [];
+  const byLine = summary.split(/\n+/).map((s) => s.trim()).filter(Boolean);
+  if (byLine.length > 1) return byLine;
+  return summary
+    .split(/\.\s+/) // "~함. ~됨. ~중." 처럼 마침표+공백 기준으로 문장 단위 분리
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .map((s) => (/[.!?]$/.test(s) ? s : s + "."));
+}
 
 let newsLoadFailed = false;
 
@@ -485,15 +502,18 @@ async function loadNewsTab() {
   }
 
   wrap.innerHTML = items.map((item) => {
-    const icon = NEWS_CATEGORY_ICON[item.category] || "📰";
+    const meta = newsCategoryMeta(item.category);
+    const bullets = splitNewsSummaryToBullets(item.summary);
     return `
-      <div class="content-card" style="margin-bottom:12px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-          <span class="hint" style="margin:0; font-size:12px;">📅 ${escapeHtml(item.date)} · ${icon} ${escapeHtml((item.category || "").split(" (")[0])} · 출처: ${escapeHtml(item.source)}</span>
+      <div class="news-card ${meta.cls}">
+        <div class="news-card-meta">
+          <span class="news-card-badge ${meta.cls}">${meta.icon} ${escapeHtml((item.category || "").split(" (")[0])}</span>
+          <span class="news-card-date">📅 ${escapeHtml(item.date)}</span>
+          <span class="news-card-source">🏷 ${escapeHtml(item.source)}</span>
         </div>
-        <div class="content-card-title" style="margin-bottom:6px;">${escapeHtml(item.title)}</div>
-        <div style="white-space:pre-line; line-height:1.7; color:#374151; margin-bottom:8px;">${escapeHtml(item.summary)}</div>
-        ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="hint" style="margin:0;">🔗 원문 보기</a>` : ""}
+        <div class="news-card-title">${escapeHtml(item.title)}</div>
+        <ul class="news-card-summary">${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul>
+        ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener" class="news-card-link">🔗 원문 보기</a>` : ""}
       </div>
     `;
   }).join("");
@@ -14937,12 +14957,13 @@ async function checkAndShowDailyNewsPopup() {
   }
   if (wrap) {
     wrap.innerHTML = todayItems.map((item) => {
-      const icon = NEWS_CATEGORY_ICON[item.category] || "📰";
+      const meta = newsCategoryMeta(item.category);
+      const bullets = splitNewsSummaryToBullets(item.summary);
       return `
         <div class="daily-news-item">
-          <div class="daily-news-meta">${icon} ${escapeHtml((item.category || "").split(" (")[0])} · 출처: ${escapeHtml(item.source)}</div>
+          <div class="daily-news-meta">${meta.icon} ${escapeHtml((item.category || "").split(" (")[0])} · 출처: ${escapeHtml(item.source)}</div>
           <div class="daily-news-item-title">${escapeHtml(item.title)}</div>
-          <div class="daily-news-item-summary">${escapeHtml(item.summary)}</div>
+          <div class="daily-news-item-summary"><ul>${bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("")}</ul></div>
           ${item.url ? `<a class="daily-news-item-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">🔗 원문 보기</a>` : ""}
         </div>
       `;
