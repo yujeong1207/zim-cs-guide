@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>확정휴가·공휴일·팀일정·배너 마이그레이션 (1회용)</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+  button { font-size: 16px; padding: 10px 20px; cursor: pointer; }
+  #log { white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 6px; margin-top: 16px; font-size: 13px; max-height: 400px; overflow-y: auto; }
+  .warn { color: #b45309; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h2>⚠️ 확정휴가·공휴일·팀일정·배너 1회용 마이그레이션</h2>
+  <p>기존 구글시트(Apps Script)에 있는 4가지 데이터를 Firestore로 옮겨요.</p>
+  <p class="warn">이 버튼은 딱 한 번만 눌러주세요. 두 번 누르면 데이터가 중복으로 쌓여요.</p>
+  <p>버튼을 누르면 <b>관리자 키를 입력하라는 창</b>이 떠요 — 이건 Firestore 쪽 쓰기 권한 확인용이에요.</p>
+  <button id="startBtn">마이그레이션 시작</button>
+  <div id="log"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+  <script src="firebase-init.js"></script>
+  <script>
+    const OLD_CORE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzLftWNL8gZOvPlpn9ReB7tvkZw4c3OEarX-y7uW2Bct0xtMYLf3tBuBOdJ65bigWXq/exec";
+    const logEl = document.getElementById("log");
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    /* 관리자 키로 세션을 하나 발급받는다 (guide_script.js의 ensureAdminSession과 동일한 방식) */
+    async function createAdminSession() {
+      const key = prompt("관리자 키를 입력해주세요");
+      if (!key) return "";
+      const sessionId = "s_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
+      await window.fbDb.collection("adminSessions").doc(sessionId).set({ key: key });
+      return sessionId;
+    }
+
+    async function migrateEntity(entity, collName, sessionId, mapRow) {
+      log(`[${entity}] 기존 구글시트에서 목록 불러오는 중...`);
+      const res = await fetch(OLD_CORE_SHEET_API_URL + "?entity=" + entity, { method: "GET" });
+      const data = await res.json();
+      if (!data.ok) throw new Error(entity + ": " + (data.error || "목록을 불러오지 못했어요."));
+
+      const existingSnap = await window.fbDb.collection(collName).limit(1).get();
+      if (!existingSnap.empty) {
+        log(`[${entity}] ⚠️ 이미 ${collName} 컬렉션에 데이터가 있어요. 건너뛸게요.`);
+        return;
+      }
+
+      log(`[${entity}] 총 ${data.list.length}건 불러옴. 저장 시작...`);
+      let batch = window.fbDb.batch();
+      let count = 0;
+      for (const row of data.list) {
+        const docRef = window.fbDb.collection(collName).doc();
+        batch.set(docRef, Object.assign({}, mapRow(row), { sessionId: sessionId, isDeleted: false }));
+        count++;
+        if (count % 400 === 0) {
+          await batch.commit();
+          batch = window.fbDb.batch();
+        }
+      }
+      await batch.commit();
+      log(`[${entity}] ✅ 완료! 총 ${count}건 이전됐어요.`);
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      document.getElementById("startBtn").disabled = true;
+      try {
+        log("Firebase 로그인 대기 중...");
+        await window.fbReady;
+
+        log("관리자 세션 발급 중...");
+        const sessionId = await createAdminSession();
+        if (!sessionId) { log("❌ 관리자 키 입력이 취소됐어요."); return; }
+
+        await migrateEntity("vacations", "vacations", sessionId, (row) => ({
+          name: row.name || "", startDate: row.startDate || "", endDate: row.endDate || "",
+          note: row.note || "", unit: row.unit || "full",
+        }));
+
+        await migrateEntity("holidays", "holidays", sessionId, (row) => ({
+          date: row.date || "", name: row.name || "",
+        }));
+
+        await migrateEntity("teamEvents", "teamEvents", sessionId, (row) => ({
+          date: row.date || "", text: row.text || "", highlight: row.highlight === true,
+        }));
+
+        log("[banner] 기존 공지 배너 불러오는 중...");
+        const bannerRes = await fetch(OLD_CORE_SHEET_API_URL + "?entity=banner", { method: "GET" });
+        const bannerData = await bannerRes.json();
+        if (bannerData.ok) {
+          await window.fbDb.collection("settings").doc("banner").set({
+            enabled: bannerData.enabled === true, text: bannerData.text || "",
+            updatedAt: bannerData.updatedAt || "", sessionId: sessionId,
+          });
+          log("[banner] ✅ 완료!");
+        }
+
+        log("\n🎉 전체 완료! 이제 이 파일(migrate-core.html)은 삭제하셔도 돼요.");
+      } catch (err) {
+        log("❌ 오류 발생: " + err);
+      }
+    });
+  </script>
+</body>
+</html>
