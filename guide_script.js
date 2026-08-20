@@ -513,10 +513,10 @@ function splitNewsSummaryToBullets(summary) {
 
 let newsLoadFailed = false;
 
-async function fetchNewsListFromServer() {
+async function fetchNewsListFromServer(limit) {
   if (!LOGISTICS_NEWS_API_URL) return null;
   try {
-    const res = await fetch(LOGISTICS_NEWS_API_URL + "?limit=14", { method: "GET" });
+    const res = await fetch(LOGISTICS_NEWS_API_URL + "?limit=" + (limit || 14), { method: "GET" });
     const data = await res.json();
     if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
     newsLoadFailed = false;
@@ -529,6 +529,9 @@ async function fetchNewsListFromServer() {
 }
 
 let newsSelectedDate = null; // 지금 선택된 날짜 탭 (null이면 제일 최신 날짜)
+let newsExpanded = false;    // "지난 뉴스 더 보기" 눌렀는지 (누르기 전엔 이번 주만 보여줌)
+let newsFetchLimit = 14;
+const NEWS_LOAD_MORE_STEP = 20; // "더 보기" 한 번 누를 때마다 이만큼 더 불러옴
 
 async function loadNewsTab() {
   const wrap = document.getElementById("newsListWrap");
@@ -540,7 +543,11 @@ async function loadNewsTab() {
     return;
   }
 
-  const items = await fetchNewsListFromServer();
+  newsExpanded = false;
+  newsFetchLimit = 14;
+  newsSelectedDate = null;
+
+  const items = await fetchNewsListFromServer(newsFetchLimit);
   if (items === null) {
     wrap.innerHTML = '<div class="empty-state">⚠️ 불러오기에 실패했어요. 새로고침을 눌러 다시 시도해주세요.</div>';
     return;
@@ -554,25 +561,75 @@ async function loadNewsTab() {
   renderNewsTabbed(items);
 }
 
-/* 날짜별로 묶어서 탭으로 보여줌 (선박 일정 탭이랑 같은 느낌) */
+/* "지난 뉴스 더 보기" - 더 많이 불러와서 이전 주(들)까지 펼쳐 보여줌 */
+async function loadMoreNews() {
+  newsExpanded = true;
+  newsFetchLimit += NEWS_LOAD_MORE_STEP;
+  const items = await fetchNewsListFromServer(newsFetchLimit);
+  if (items) {
+    window.newsItemsCache = items;
+    renderNewsTabbed(items);
+  }
+}
+
+/* 평일(월~금)인지 확인 - 주말 뉴스는 탭 자체를 안 만듦 */
+function isWeekdayDateStr(dateStr) {
+  const m = String(dateStr || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return false;
+  const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay();
+  return day >= 1 && day <= 5; // 0=일요일, 6=토요일
+}
+
+/* 오늘 기준 "이번 주" 월요일~금요일 날짜 범위 (문자열 YYYY-MM-DD로 비교) */
+function getThisWeekMonFriRange() {
+  const today = new Date();
+  const day = today.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMonday);
+  const friday = new Date(monday);
+  friday.setDate(monday.getDate() + 4);
+  const fmt = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  return { start: fmt(monday), end: fmt(friday) };
+}
+
+/* 날짜별로 묶어서 탭으로 보여줌 (선박 일정 탭이랑 같은 느낌) - 평일만, 기본은 이번 주만 */
 function renderNewsTabbed(items) {
   const wrap = document.getElementById("newsListWrap");
   if (!wrap) return;
 
-  const dateSet = new Set(items.map((it) => it.date));
+  let visibleItems = items.filter((it) => isWeekdayDateStr(it.date));
+
+  if (!newsExpanded) {
+    const range = getThisWeekMonFriRange();
+    visibleItems = visibleItems.filter((it) => it.date >= range.start && it.date <= range.end);
+  }
+
+  const dateSet = new Set(visibleItems.map((it) => it.date));
   const dates = Array.from(dateSet).sort((a, b) => (a < b ? 1 : -1)); // 최신 날짜가 맨 앞
+
+  // 이전 주까지 더 불러올 게 남아있는지: 요청한 개수만큼 꽉 채워서 왔으면 더 있을 가능성이 높음
+  const hasMore = items.length >= newsFetchLimit;
+  const moreBtnHtml = hasMore
+    ? `<button type="button" class="btn" style="margin-top:14px;" onclick="loadMoreNews()">📅 지난 뉴스 더 보기</button>`
+    : "";
+
+  if (dates.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">이번 주 뉴스가 아직 없어요.</div>' + moreBtnHtml;
+    return;
+  }
 
   if (!newsSelectedDate || !dates.includes(newsSelectedDate)) {
     newsSelectedDate = dates[0];
   }
 
   const tabsHtml = dates.map((d) => {
-    const count = items.filter((it) => it.date === d).length;
+    const count = visibleItems.filter((it) => it.date === d).length;
     const active = d === newsSelectedDate ? " active" : "";
     return `<button type="button" class="news-date-tab${active}" onclick="switchNewsDate('${d}')">${escapeHtml(formatNewsDateLabel(d))} <span class="news-date-tab-count">${count}</span></button>`;
   }).join("");
 
-  const dayItems = items.filter((it) => it.date === newsSelectedDate);
+  const dayItems = visibleItems.filter((it) => it.date === newsSelectedDate);
   const cardsHtml = dayItems.map((item) => {
     const meta = newsCategoryMeta(item.category);
     const bullets = splitNewsSummaryToBullets(item.summary);
@@ -589,7 +646,7 @@ function renderNewsTabbed(items) {
     `;
   }).join("");
 
-  wrap.innerHTML = `<div class="news-date-tabs">${tabsHtml}</div><div class="news-date-panel">${cardsHtml}</div>`;
+  wrap.innerHTML = `<div class="news-date-tabs">${tabsHtml}</div><div class="news-date-panel">${cardsHtml}</div>${moreBtnHtml}`;
 }
 
 function switchNewsDate(date) {
