@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>연락처 데이터 마이그레이션 (1회용)</title>
+<style>
+  body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+  button { font-size: 16px; padding: 10px 20px; cursor: pointer; }
+  #log { white-space: pre-wrap; background: #f5f5f5; padding: 12px; border-radius: 6px; margin-top: 16px; font-size: 13px; max-height: 400px; overflow-y: auto; }
+  .warn { color: #b45309; font-weight: bold; }
+</style>
+</head>
+<body>
+  <h2>⚠️ 연락처 데이터 1회용 마이그레이션</h2>
+  <p>기존 구글시트(Apps Script)에 있는 연락처 약 6,885건을 Firestore로 옮겨요.</p>
+  <p class="warn">이 버튼은 딱 한 번만 눌러주세요. 두 번 누르면 데이터가 중복으로 쌓여요.</p>
+  <p>건수가 많아서 1~2분 정도 걸릴 수 있어요. 창을 닫지 말고 기다려주세요.</p>
+  <button id="startBtn">마이그레이션 시작</button>
+  <div id="log"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-check-compat.js"></script>
+  <script src="firebase-init.js"></script>
+  <script>
+    const OLD_CONTACT_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbz7qB6NXJ421ynHQ3J8I30Sha2CvzYfWZPO54FuZoe44-nFFL5mN-x7k4jvqz6Z1T87vA/exec";
+    const logEl = document.getElementById("log");
+    function log(msg) {
+      logEl.textContent += msg + "\n";
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    document.getElementById("startBtn").addEventListener("click", async () => {
+      document.getElementById("startBtn").disabled = true;
+      try {
+        log("Firebase 로그인 대기 중...");
+        await window.fbReady;
+
+        log("Firestore에 이미 데이터가 있는지 확인 중...");
+        const existingSnap = await window.fbDb.collection("contacts").limit(1).get();
+        if (!existingSnap.empty) {
+          log("⚠️ 이미 contacts 컬렉션에 데이터가 있어요. 중복 방지를 위해 중단할게요.");
+          log("(진짜로 다시 옮기고 싶으면, Firebase 콘솔에서 contacts 컬렉션을 먼저 비워주세요.)");
+          return;
+        }
+
+        log("기존 구글시트에서 연락처 목록 불러오는 중... (건수가 많아서 시간이 좀 걸려요)");
+        const res = await fetch(OLD_CONTACT_SHEET_API_URL + "?limit=20000", { method: "GET" });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+
+        log(`총 ${data.list.length}건 불러옴. Firestore에 저장 시작...`);
+
+        let batch = window.fbDb.batch();
+        let count = 0;
+        for (const row of data.list) {
+          const docRef = window.fbDb.collection("contacts").doc();
+          batch.set(docRef, {
+            eng: row.eng || "",
+            kor: row.kor || "",
+            email: row.email || "",
+            manager: row.manager || "",
+            note: row.note || "",
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          });
+          count++;
+          if (count % 400 === 0) {
+            await batch.commit();
+            log(`${count}건 저장 완료...`);
+            batch = window.fbDb.batch();
+          }
+        }
+        await batch.commit();
+        log(`✅ 완료! 총 ${count}건이 Firestore로 이전됐어요.`);
+        log("이제 이 파일(migrate-contacts.html)은 삭제하셔도 돼요.");
+      } catch (err) {
+        log("❌ 오류 발생: " + err);
+      }
+    });
+  </script>
+</body>
+</html>

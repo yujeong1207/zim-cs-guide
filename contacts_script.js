@@ -12,7 +12,8 @@
  *   내 화면에 바로 안 보일 수 있어요. (등록/수정은 항상 서버에 바로 반영되니, 데이터 자체는 안전해요)
  */
 
-const CONTACT_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbz7qB6NXJ421ynHQ3J8I30Sha2CvzYfWZPO54FuZoe44-nFFL5mN-x7k4jvqz6Z1T87vA/exec";
+const CONTACT_SHEET_API_URL = true; // 🔥 Firebase로 이전 완료 (이 값은 이제 "연락처 실시간 공유 켜짐" 표시 용도로만 쓰임)
+const CONTACTS_COLLECTION = "contacts"; // Firestore 컬렉션 이름
 
 const CONTACTS_RENDER_PAGE_SIZE = 200; // 검색 결과가 많을 때 한 번에 화면에 그릴 개수 ("더 보기"로 늘어남)
 
@@ -70,28 +71,29 @@ function loadAllContacts(forceReload) {
   listEl.innerHTML = `<div class="anemail-loading">전체 연락처 불러오는 중... (처음 한 번만 시간이 좀 걸려요)</div>`;
   inputEl.disabled = true;
 
-  if (!CONTACT_SHEET_API_URL) {
-    listEl.innerHTML = `<div class="anemail-empty">CONTACT_SHEET_API_URL이 아직 설정되지 않았어요.</div>`;
-    return;
-  }
-
-  const url = CONTACT_SHEET_API_URL + "?limit=20000"; // 전체를 한 번에 (현재 6,885건보다 넉넉하게)
-
-  fetch(url)
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.ok) {
-        listEl.innerHTML = `<div class="anemail-empty">오류: ${escapeHtml(data.error || "알 수 없는 오류")}</div>`;
-        return;
-      }
-      contactsAllItems = data.list;
+  (async () => {
+    try {
+      await window.fbReady;
+      const snapshot = await window.fbDb.collection(CONTACTS_COLLECTION).get();
+      contactsAllItems = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          eng: d.eng || "",
+          kor: d.kor || "",
+          email: d.email || "",
+          manager: d.manager || "",
+          note: d.note || "",
+          updatedAt: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toISOString() : "",
+        };
+      });
       inputEl.disabled = false;
       applyContactsFilter(inputEl.value);
       checkContactsUpdatesForNotice();
-    })
-    .catch((err) => {
+    } catch (err) {
       listEl.innerHTML = `<div class="anemail-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
-    });
+    }
+  })();
 }
 
 /* 캐시된 전체 데이터 안에서 검색어로 걸러서 화면에 그림 (서버 호출 없음 - 즉시 반응) */
@@ -216,26 +218,30 @@ function renderContactForm(item) {
     document.getElementById("af-save").disabled = true;
     document.getElementById("af-status").textContent = "저장 중...";
 
-    fetch(CONTACT_SHEET_API_URL, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.ok) {
-          document.getElementById("af-status").textContent = "오류: " + data.error;
-          document.getElementById("af-save").disabled = false;
-          return;
+    (async () => {
+      try {
+        await window.fbReady;
+        const now = firebase.firestore.FieldValue.serverTimestamp();
+        if (payload.action === "update") {
+          await window.fbDb.collection(CONTACTS_COLLECTION).doc(payload.id).update({
+            eng: payload.eng, kor: payload.kor, email: payload.email,
+            manager: payload.manager, note: payload.note, updatedAt: now,
+          });
+        } else {
+          await window.fbDb.collection(CONTACTS_COLLECTION).add({
+            eng: payload.eng, kor: payload.kor, email: payload.email,
+            manager: payload.manager, note: payload.note, updatedAt: now,
+          });
         }
         formEl.style.display = "none";
         formEl.innerHTML = "";
         // 방금 등록/수정한 게 바로 보이도록 캐시를 새로 불러옴 (여기선 한 번 더 기다리는 게 맞음)
         loadAllContacts(true);
-      })
-      .catch((err) => {
+      } catch (err) {
         document.getElementById("af-status").textContent = "저장 실패: " + err;
         document.getElementById("af-save").disabled = false;
-      });
+      }
+    })();
   });
 }
 
