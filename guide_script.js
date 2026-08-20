@@ -248,74 +248,123 @@ async function deleteOblFromServer(id) {
    파라미터로 서버에서 구분). 확정휴가·공휴일·팀일정·공지배너 저장(추가·
    수정·삭제)은 관리자 키가 맞아야만 되고, 보기는 누구나 가능해요.
    ========================================================================= */
-const CORE_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzLftWNL8gZOvPlpn9ReB7tvkZw4c3OEarX-y7uW2Bct0xtMYLf3tBuBOdJ65bigWXq/exec";
+const CORE_SHEET_API_URL = true; // 🔥 Firebase로 이전 완료 (이 값은 이제 "확정휴가·공휴일·팀일정·배너 실시간 공유 켜짐" 표시 용도로만 쓰임)
 
-/* ---- 관리자 키 처리: 한 번 물어보고 이 브라우저에 저장, 틀리면 다시 물어봄 ---- */
-const ADMIN_KEY_STORAGE = "csGuideAdminKey";
+/* ---- 관리자 키 처리: Firestore 규칙 안에서만 검증돼요 (실제 키 값은 이 코드 어디에도 없어요) ----
+   동작 방식: 관리자가 키를 입력하면, 그 키로 "adminSessions" 컬렉션에 세션 문서를 하나 만들려고
+   시도해요. 이 시도는 Firestore 규칙이 키 값을 직접 비교해서 맞을 때만 성공시켜줘요 (규칙은
+   GitHub 같은 공개 저장소에 올라가는 게 아니라 Firebase 프로젝트 안에만 있어서, 외부에서 볼 수
+   없어요). 세션 생성에 성공하면 그 세션ID를 이 브라우저에 기억해두고, 그 뒤로는 실제 데이터를
+   쓸 때마다 "이 세션ID로 만든 세션이 존재하니?"만 확인해요 (세션 문서 자체는 아무도 못 읽게
+   막아놔서, 다른 사람이 세션ID를 알아내도 키 값을 역으로 알아낼 방법이 없어요). */
+const ADMIN_SESSION_STORAGE = "csGuideAdminSessionId";
 
-function getCachedAdminKey() {
-  return localStorage.getItem(ADMIN_KEY_STORAGE) || "";
+function getCachedAdminSessionId() {
+  return localStorage.getItem(ADMIN_SESSION_STORAGE) || "";
+}
+function setCachedAdminSessionId(id) {
+  localStorage.setItem(ADMIN_SESSION_STORAGE, id);
+}
+function clearCachedAdminSessionId() {
+  localStorage.removeItem(ADMIN_SESSION_STORAGE);
 }
 
-function promptAdminKey() {
+/* 캐시된 세션이 있으면 그대로 쓰고, 없으면 키를 물어봐서 새 세션을 만든다 */
+async function ensureAdminSession(forceNew) {
+  if (!forceNew) {
+    const cached = getCachedAdminSessionId();
+    if (cached) return cached;
+  }
   const key = prompt("관리자 키를 입력해주세요 (확정휴가·공휴일·팀일정·공지배너 편집 권한)");
-  if (key) localStorage.setItem(ADMIN_KEY_STORAGE, key);
-  return key || "";
-}
-
-function clearCachedAdminKey() {
-  localStorage.removeItem(ADMIN_KEY_STORAGE);
-}
-
-/* 캐시된 키가 있으면 그대로 쓰고, 없으면 물어봐서 저장 */
-function ensureAdminKey() {
-  const cached = getCachedAdminKey();
-  if (cached) return cached;
-  return promptAdminKey();
-}
-
-/* ---- entity 기반 공통 GET/POST 헬퍼 ---- */
-async function coreFetchEntity(entity) {
-  if (!CORE_SHEET_API_URL) return null;
+  if (!key) return "";
+  const sessionId = "s_" + Date.now() + "_" + Math.random().toString(36).slice(2, 10);
   try {
-    const res = await fetch(CORE_SHEET_API_URL + "?entity=" + entity, { method: "GET" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
-    return data;
+    await window.fbReady;
+    await window.fbDb.collection("adminSessions").doc(sessionId).set({ key: key });
+    setCachedAdminSessionId(sessionId);
+    return sessionId;
+  } catch (err) {
+    alert("관리자 키가 올바르지 않아요.");
+    return "";
+  }
+}
+
+/* entity별 Firestore 컬렉션 이름 매핑 */
+const CORE_ENTITY_COLLECTIONS = { vacations: "vacations", holidays: "holidays", teamEvents: "teamEvents" };
+
+/* ---- entity 기반 공통 GET 헬퍼 (읽기는 인증만 되면 누구나 가능, 관리자 키 필요 없음) ---- */
+async function coreFetchEntity(entity) {
+  try {
+    await window.fbReady;
+    if (entity === "banner") {
+      const doc = await window.fbDb.collection("settings").doc("banner").get();
+      const d = doc.exists ? doc.data() : {};
+      return { ok: true, enabled: d.enabled === true, text: d.text || "", updatedAt: d.updatedAt || "" };
+    }
+    const collName = CORE_ENTITY_COLLECTIONS[entity];
+    if (!collName) return null;
+    const snapshot = await window.fbDb.collection(collName).get();
+    const list = snapshot.docs
+      .filter((doc) => doc.data().isDeleted !== true) // 삭제 표시된 건 목록에서 제외
+      .map((doc) => Object.assign({ id: doc.id }, doc.data()));
+    return { ok: true, list: list };
   } catch (err) {
     console.error(entity + " 서버 불러오기 실패:", err);
     return null;
   }
 }
 
-/* 쓰기(추가/수정/삭제/저장)는 관리자 키가 필요해서, 틀리면 캐시를 지우고
-   한 번 더 물어봐서 재시도한다 (오타로 저장 못 하는 상황을 줄이기 위함) */
+/* ---- entity 기반 공통 쓰기 헬퍼 (관리자 세션이 있어야만 성공, Firestore 규칙이 최종 검증) ----
+   실제 삭제 대신 isDeleted:true로 표시만 해요 (Firestore 규칙 구조상 이렇게 하는 게
+   가장 간단하고 안전해요 - 나중에 실수로 지운 것도 복구하기 쉬운 부가 효과도 있어요). */
 async function corePostEntity(entity, payload) {
-  if (!CORE_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
-  const adminKey = ensureAdminKey();
-  if (!adminKey) return { ok: false, error: "관리자 키를 입력해야 저장할 수 있어요." };
-  try {
-    const res = await fetch(CORE_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ entity: entity, adminKey: adminKey }, payload)),
-    });
-    const data = await res.json();
-    if (data.authError) {
-      clearCachedAdminKey();
-      const retryKey = promptAdminKey();
-      if (!retryKey) return { ok: false, error: "관리자 키가 필요해요." };
-      const retryRes = await fetch(CORE_SHEET_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(Object.assign({ entity: entity, adminKey: retryKey }, payload)),
+  let sessionId = await ensureAdminSession(false);
+  if (!sessionId) return { ok: false, error: "관리자 키를 입력해야 저장할 수 있어요." };
+
+  const attempt = async (sid) => {
+    if (entity === "banner") {
+      if (payload.action !== "save") throw new Error("알 수 없는 action이에요.");
+      await window.fbDb.collection("settings").doc("banner").set({
+        enabled: payload.enabled === true, text: payload.text || "", updatedAt: payload.updatedAt || "",
+        sessionId: sid,
       });
-      return await retryRes.json();
+      return { ok: true };
     }
-    return data;
+    const collName = CORE_ENTITY_COLLECTIONS[entity];
+    if (!collName) throw new Error("알 수 없는 entity예요.");
+
+    if (payload.action === "add") {
+      const fields = Object.assign({}, payload);
+      delete fields.action;
+      const docRef = await window.fbDb.collection(collName).add(Object.assign({}, fields, { sessionId: sid, isDeleted: false }));
+      return { ok: true, id: docRef.id };
+    }
+    if (payload.action === "update") {
+      const fields = Object.assign({}, payload);
+      delete fields.action; delete fields.id;
+      await window.fbDb.collection(collName).doc(payload.id).update(Object.assign({}, fields, { sessionId: sid }));
+      return { ok: true };
+    }
+    if (payload.action === "delete") {
+      await window.fbDb.collection(collName).doc(payload.id).update({ isDeleted: true, sessionId: sid });
+      return { ok: true };
+    }
+    throw new Error("알 수 없는 action이에요.");
+  };
+
+  try {
+    return await attempt(sessionId);
   } catch (err) {
-    console.error(entity + " 서버 저장 실패:", err);
-    return { ok: false, error: String(err) };
+    // 세션이 무효(예: 다른 브라우저에서 캐시만 옮겨온 경우 등)면 한 번 더 키를 물어보고 재시도
+    console.error(entity + " 서버 저장 실패, 세션 재발급 후 재시도:", err);
+    clearCachedAdminSessionId();
+    sessionId = await ensureAdminSession(true);
+    if (!sessionId) return { ok: false, error: "관리자 키가 필요해요." };
+    try {
+      return await attempt(sessionId);
+    } catch (err2) {
+      return { ok: false, error: String(err2) };
+    }
   }
 }
 
