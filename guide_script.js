@@ -38,19 +38,24 @@ async function fetchPoaListFromServer() {
   }
 }
 
-/* Firestore에 새 업체 한 건을 등록한다 */
+/* Firestore에 위임장을 저장한다. entry.id가 있으면 수정, 없으면 새로 등록 */
 async function submitPoaToServer(entry) {
   try {
     await window.fbReady;
-    await window.fbDb.collection(POA_COLLECTION).add({
+    const payload = {
       applicant: entry.applicant || "",
       shipper: entry.shipper || "",
       submittedDate: entry.submittedDate || "",
-      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-    });
+    };
+    if (entry.id) {
+      await window.fbDb.collection(POA_COLLECTION).doc(entry.id).update(payload);
+    } else {
+      payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+      await window.fbDb.collection(POA_COLLECTION).add(payload);
+    }
     return { ok: true };
   } catch (err) {
-    console.error("위임장 서버 등록 실패:", err);
+    console.error("위임장 서버 등록/수정 실패:", err);
     return { ok: false, error: String(err) };
   }
 }
@@ -17111,6 +17116,55 @@ function togglePoaInlineForm() {
   }
 }
 
+let poaEditingId = null; // 지금 수정 중인 위임장 항목 id (없으면 새로 등록하는 중)
+
+function togglePoaInlineForm() {
+  const wrap = document.getElementById("poaInlineFormWrap");
+  if (!wrap) return;
+  const isOpen = wrap.style.display !== "none";
+  wrap.style.display = isOpen ? "none" : "block";
+  if (!isOpen) {
+    const first = document.getElementById("poaInlineApplicant");
+    if (first) first.focus();
+  } else {
+    poaEditingId = null; // 닫으면 수정 모드도 같이 해제
+    const btn = document.getElementById("poaInlineSubmitBtn");
+    if (btn) btn.textContent = "✅ 등록하기";
+  }
+}
+
+/* 위임장 탭에서 팀원 누구나(관리자 PIN 없이) 바로 수정할 수 있게 하는 함수 */
+function startPoaEdit(id) {
+  const item = POA_LIST.find((p) => p.id === id);
+  if (!item) return;
+  poaEditingId = id;
+  const wrap = document.getElementById("poaInlineFormWrap");
+  const applicantEl = document.getElementById("poaInlineApplicant");
+  const shipperEl = document.getElementById("poaInlineShipper");
+  const dateEl = document.getElementById("poaInlineDate");
+  const btn = document.getElementById("poaInlineSubmitBtn");
+  if (wrap) wrap.style.display = "block";
+  if (applicantEl) applicantEl.value = item.applicant || "";
+  if (shipperEl) shipperEl.value = item.shipper || "";
+  if (dateEl) dateEl.value = formatPoaDate(item.submittedDate) || "";
+  if (btn) btn.textContent = "✅ 수정 저장하기";
+  if (applicantEl) applicantEl.focus();
+  if (wrap) wrap.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+/* 위임장 탭에서 팀원 누구나(관리자 PIN 없이) 바로 삭제할 수 있게 하는 함수 */
+async function deletePoaFromTable(id) {
+  const item = POA_LIST.find((p) => p.id === id);
+  const label = item ? `"${item.applicant} → ${item.shipper}"` : "이 항목";
+  if (!confirm(label + " 을(를) 삭제할까요?")) return;
+  const result = await deletePoaFromServer(id);
+  if (!result.ok) {
+    alert("삭제에 실패했어요. 잠시 후 다시 시도해주세요.\n(" + result.error + ")");
+    return;
+  }
+  await loadPoaTab();
+}
+
 async function submitPoaInlineForm() {
   const applicantEl = document.getElementById("poaInlineApplicant");
   const shipperEl = document.getElementById("poaInlineShipper");
@@ -17127,23 +17181,29 @@ async function submitPoaInlineForm() {
     return;
   }
 
+  const isEdit = !!poaEditingId;
+  const entry = { applicant, shipper, submittedDate };
+  if (isEdit) entry.id = poaEditingId;
+
   btn.disabled = true;
-  btn.textContent = "등록 중...";
-  const result = await submitPoaToServer({ applicant, shipper, submittedDate });
+  btn.textContent = isEdit ? "수정 저장 중..." : "등록 중...";
+  const result = await submitPoaToServer(entry);
   btn.disabled = false;
-  btn.textContent = "✅ 등록하기";
+  btn.textContent = isEdit ? "✅ 수정 저장하기" : "✅ 등록하기";
 
   if (!result.ok) {
-    alert("등록에 실패했어요. 잠시 후 다시 시도해주세요.\n(" + result.error + ")");
+    alert((isEdit ? "수정에" : "등록에") + " 실패했어요. 잠시 후 다시 시도해주세요.\n(" + result.error + ")");
     return;
   }
 
   applicantEl.value = "";
   shipperEl.value = "";
   dateEl.value = "";
+  poaEditingId = null;
+  btn.textContent = "✅ 등록하기";
   togglePoaInlineForm();
-  await loadPoaTab(); // 등록 직후 최신 목록으로 다시 불러오기
-  alert("등록됐어요 ✅");
+  await loadPoaTab(); // 등록/수정 직후 최신 목록으로 다시 불러오기
+  alert((isEdit ? "수정됐어요" : "등록됐어요") + " ✅");
 }
 
 /* 위임장 제출일자가 1년 넘었는지, 아예 없는지 확인해서 안내 문구를 돌려줌.
@@ -17186,7 +17246,7 @@ function renderPoaTable() {
 
   const table = document.createElement("table");
   table.className = "contacts-table";
-  table.innerHTML = "<tr><th>신청업체 (포워더/관세사무소)</th><th>실화주</th><th>제출일자</th></tr>";
+  table.innerHTML = "<tr><th>신청업체 (포워더/관세사무소)</th><th>실화주</th><th>제출일자</th><th>관리</th></tr>";
   let warningCount = 0;
   matched.forEach((p) => {
     const tr = document.createElement("tr");
@@ -17195,7 +17255,11 @@ function renderPoaTable() {
     if (warning) warningCount++;
     tr.innerHTML = `<td>${q ? snippetHtml(p.applicant || "", q) : escapeHtml(p.applicant || "")}</td>`
       + `<td>${q ? snippetHtml(p.shipper || "", q) : escapeHtml(p.shipper || "")}</td>`
-      + `<td>${formatPoaDate(p.submittedDate) || "-"}${warning ? `<div class="poa-expiry-warning">${escapeHtml(warning)}</div>` : ""}</td>`;
+      + `<td>${formatPoaDate(p.submittedDate) || "-"}${warning ? `<div class="poa-expiry-warning">${escapeHtml(warning)}</div>` : ""}</td>`
+      + `<td class="poa-row-actions">`
+      + `<button type="button" class="poa-edit-btn" title="수정" onclick="startPoaEdit('${p.id}')">✏️</button>`
+      + `<button type="button" class="poa-delete-btn" title="삭제" onclick="deletePoaFromTable('${p.id}')">🗑️</button>`
+      + `</td>`;
     table.appendChild(tr);
   });
   wrap.innerHTML = "";
