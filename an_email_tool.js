@@ -468,30 +468,6 @@ function computeAnEmailFillResult() {
   return { rows, matchedCount, unmatchedList };
 }
 
-/* 매핑된 이메일을 원본 워크북에 실제로 채워넣고 다운로드 (서식은 원본 그대로, 값만 채움) */
-function downloadAnEmailFilledFile() {
-  const { targetWb, targetSheetName, targetParsed, result, targetFileName } = anEmailState;
-  if (!targetWb || !result) return;
-
-  const ws = targetWb.Sheets[targetSheetName];
-  const emailCol = targetParsed.emailCol;
-
-  result.rows.forEach(({ rowIdx, email, matched }) => {
-    if (!matched) return;
-    const addr = XLSX.utils.encode_cell({ r: rowIdx, c: emailCol });
-    ws[addr] = { t: "s", v: email };
-  });
-
-  const range = XLSX.utils.decode_range(ws["!ref"]);
-  if (emailCol > range.e.c) {
-    range.e.c = emailCol;
-    ws["!ref"] = XLSX.utils.encode_range(range);
-  }
-
-  const outName = (targetFileName || "비엘리스트").replace(/\.xlsx?$/i, "") + "_AN이메일채움.xlsx";
-  XLSX.writeFile(targetWb, outName);
-}
-
 /* ---------- 화면 렌더링 ---------- */
 
 function buildAnEmailHtml() {
@@ -559,12 +535,12 @@ function buildAnEmailHtml() {
   }
 
   html += `<div class="section-title" style="margin-top:24px;">② 새 비엘리스트에 AN EMAIL 채우기</div>
-  <div class="hint" style="margin-bottom:8px;">AN EMAIL 칸이 비어있는(또는 확인이 필요한) 비엘리스트를 올리면, 위 매핑표 기준으로 자동으로 채운 파일을 만들어줘요.</div>
+  <div class="hint" style="margin-bottom:8px;">AN EMAIL 칸이 비어있는(또는 확인이 필요한) 비엘리스트를 올리면, 위 매핑표 기준으로 자동으로 채워서 <b>원본 파일과 같은 이름</b>으로 다운로드해드려요 (다운로드 폴더에서 원본이 있던 자리에 옮기면 자연스럽게 덮어써져요).</div>
   <label class="excel-upload-box" id="anEmailTargetUploadBox" style="padding:22px 14px;">
     <input type="file" id="anEmailTargetFileInput" accept=".xlsx,.xls" onchange="handleAnEmailTargetFile(event)">
     <div class="excel-upload-icon">📄</div>
     <div class="excel-upload-label">AN EMAIL 채울 비엘리스트 올리기</div>
-    <div class="excel-upload-sub">NOTIFY 컬럼이 있는 파일</div>
+    <div class="excel-upload-sub">NOTIFY 컬럼과 AN EMAIL(또는 Address) 컬럼이 둘 다 있는 파일 (AN EMAIL 칸은 비어있어도 괜찮아요)</div>
   </label>
   ${anEmailState.targetFileName ? `<div class="excel-file-chip">📎 ${escapeHtml(anEmailState.targetFileName)} <button onclick="clearAnEmailTargetFile()">✕</button></div>` : ""}`;
 
@@ -587,10 +563,30 @@ function buildAnEmailHtml() {
       </div>`;
     }
 
-    html += `<button class="btn generate-btn full" style="margin-top:16px;" onclick="downloadAnEmailFilledFile()">⬇ AN EMAIL 채운 파일 다운로드</button>`;
+    html += `<div class="hint" style="margin-top:16px;">
+      아래 칸에 이메일이 원본 파일 행 순서 그대로 나열돼 있어요 (매칭된 건 새 이메일로, 매칭 안 된 건 원본에 있던 값 그대로 - 아예 없었으면 빈 줄로 - 남겨서 줄 순서가 안 밀리게 했어요).
+      전체 복사한 다음, 원본 파일의 AN EMAIL 칸 첫 번째 데이터 행에 붙여넣으시면 돼요 (엑셀에서 세로로 자동 채워져요).
+    </div>
+    <textarea id="anEmailCopyArea" readonly style="width:100%; min-height:160px; margin-top:8px; font-family:monospace; font-size:13px; padding:8px;">${escapeHtml(result.rows.map((r) => r.email || "").join("\n"))}</textarea>
+    <button class="btn generate-btn full" style="margin-top:10px;" onclick="copyAnEmailResultsToClipboard()">📋 전체 복사</button>`;
   }
 
   return html;
+}
+
+function copyAnEmailResultsToClipboard() {
+  const area = document.getElementById("anEmailCopyArea");
+  if (!area) return;
+  area.select();
+  area.setSelectionRange(0, area.value.length);
+  try {
+    document.execCommand("copy");
+    alert("복사됐어요 ✅ 원본 파일의 AN EMAIL 칸 첫 데이터 행에 붙여넣으세요.");
+  } catch (err) {
+    navigator.clipboard.writeText(area.value)
+      .then(() => alert("복사됐어요 ✅ 원본 파일의 AN EMAIL 칸 첫 데이터 행에 붙여넣으세요."))
+      .catch(() => alert("복사에 실패했어요. 텍스트 칸을 직접 선택해서 복사(Ctrl+C)해주세요."));
+  }
 }
 
 function attachAnEmailHandlers() {
