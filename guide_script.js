@@ -605,7 +605,6 @@ function formatNewsDateLabel(dateStr) {
   const weekday = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
   return `${Number(m[2])}/${Number(m[3])} (${weekday})`;
 }
-}
 
 /* =========================================================================
    🚢 서비스라인 T/T 탭
