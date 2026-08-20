@@ -26,6 +26,13 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 
+/* App Check: 이 가이드 페이지를 통해 들어온 요청인지 뒤에서 조용히 검증해요.
+   팀원 화면에는 아무것도 안 보이고, reCAPTCHA v3가 백그라운드에서만 동작해요. */
+firebase.appCheck().activate(
+  "6Ldw6I8tAAAAADkaPzll9wJT382Ns8ELeZs8oAop", // reCAPTCHA v3 사이트 키
+  true // 토큰 자동 갱신
+);
+
 window.fbDb = firebase.firestore();
 
 /* 다른 스크립트들이 "await window.fbReady" 하면, 익명 로그인이 끝난 뒤에 이어서 실행돼요. */
