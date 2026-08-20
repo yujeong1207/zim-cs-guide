@@ -9,8 +9,17 @@
      그 라인은 그 라인대로 구글시트 안에서 별도로 관리돼요 (한 시트, line 컬럼으로 구분).
    ========================================================================= */
 
-// ⚠️ Apps Script 배포 후 여기에 웹 앱 URL을 넣어주세요 (an_email_apps_script.gs 참고)
-const AN_EMAIL_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzfmlWLBJVi3vUJxsCk7s_vnwu7t5TJQbJUSXBZyZ0KWbqYjKqrzHWvmYKWtqD_lkgX/exec";
+// 🔥 Firebase로 이전 완료 (이 값은 이제 "AN 이메일 매핑 실시간 공유 켜짐" 표시 용도로만 쓰임)
+const AN_EMAIL_SHEET_API_URL = true;
+const AN_EMAIL_COLLECTION = "an_email_map";
+
+/* 라인+코드 조합으로 항상 같은 문서 ID를 만들어서, "이미 있으면 덮어쓰기 없으면 새로 추가"가
+   자동으로 되게 함 (구글시트 때 buildRowIndex_로 하던 걸 Firestore 문서 ID로 대신함) */
+function anEmailDocId(line, code) {
+  const safeLine = String(line || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "_") || "LINE";
+  const safeCode = String(code || "").trim().replace(/[\/\\\s#]/g, "_") || "CODE";
+  return safeLine + "__" + safeCode;
+}
 
 const AN_EMAIL_DEFAULT_LINE = "KCI";
 const AN_EMAIL_KNOWN_LINES = ["KCI", "ZAX", "ZCP", "ZNS", "ZSL", "ZNP"];
@@ -47,32 +56,23 @@ function resetAnEmailState() {
 /* ---------- 서버(구글시트) 통신 ---------- */
 
 function loadAnEmailMapFromServer(markSeen) {
-  if (!AN_EMAIL_SHEET_API_URL) {
-    anEmailState.mapLoadError = "AN_EMAIL_SHEET_API_URL이 아직 설정되지 않았어요.";
-    anEmailState.mapLoaded = true;
-    renderExcelTool();
-    return;
-  }
   anEmailState.mapLoading = true;
   anEmailState.mapLoadError = null;
   renderExcelTool();
 
-  fetch(AN_EMAIL_SHEET_API_URL + "?line=" + encodeURIComponent(anEmailState.line))
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.ok) {
-        anEmailState.mapLoadError = data.error || "알 수 없는 오류";
-        anEmailState.mapLoading = false;
-        anEmailState.mapLoaded = true;
-        renderExcelTool();
-        return;
-      }
+  (async () => {
+    try {
+      await window.fbReady;
+      const snapshot = await window.fbDb.collection(AN_EMAIL_COLLECTION)
+        .where("line", "==", anEmailState.line).get();
       const map = {};
       let maxUpdatedAt = null;
-      (data.list || []).forEach((row) => {
+      snapshot.forEach((doc) => {
+        const row = doc.data();
         map[row.code] = { email: row.email, date: [row.month, row.day], source: row.source };
-        if (row.updatedAt && (!maxUpdatedAt || new Date(row.updatedAt) > new Date(maxUpdatedAt))) {
-          maxUpdatedAt = row.updatedAt;
+        const updatedAtIso = row.updatedAt && row.updatedAt.toDate ? row.updatedAt.toDate().toISOString() : null;
+        if (updatedAtIso && (!maxUpdatedAt || new Date(updatedAtIso) > new Date(maxUpdatedAt))) {
+          maxUpdatedAt = updatedAtIso;
         }
       });
       anEmailState.map = map;
@@ -86,13 +86,13 @@ function loadAnEmailMapFromServer(markSeen) {
         checkAnEmailUpdatesForNotice(anEmailState.line, maxUpdatedAt);
       }
       renderExcelTool();
-    })
-    .catch((err) => {
-      anEmailState.mapLoadError = "불러오기 실패: " + err;
+    } catch (err) {
+      anEmailState.mapLoadError = String(err);
       anEmailState.mapLoading = false;
       anEmailState.mapLoaded = true;
       renderExcelTool();
-    });
+    }
+  })();
 }
 
 /* ===== 🔔 새 소식 알림 - 다른 팀원이 매핑을 새로 추가/갱신했으면 화면에 배너로 알려줌 =====
@@ -130,50 +130,83 @@ function markAnEmailSeenTimestamp(line, maxUpdatedAt) {
 }
 
 /* 페이지 로드 시 백그라운드로 한 번 조용히 확인 (탭을 안 열어봐도 새소식 배너가 뜨게) */
-function checkAnEmailUpdatesInBackground() {
-  if (!AN_EMAIL_SHEET_API_URL) return;
-  AN_EMAIL_KNOWN_LINES.forEach((line) => {
-    fetch(AN_EMAIL_SHEET_API_URL + "?line=" + encodeURIComponent(line))
-      .then((res) => res.json())
-      .then((data) => {
-        if (!data.ok) return;
+async function checkAnEmailUpdatesInBackground() {
+  try {
+    await window.fbReady;
+    for (const line of AN_EMAIL_KNOWN_LINES) {
+      try {
+        const snapshot = await window.fbDb.collection(AN_EMAIL_COLLECTION).where("line", "==", line).get();
         let maxUpdatedAt = null;
-        (data.list || []).forEach((row) => {
-          if (row.updatedAt && (!maxUpdatedAt || new Date(row.updatedAt) > new Date(maxUpdatedAt))) {
-            maxUpdatedAt = row.updatedAt;
+        snapshot.forEach((doc) => {
+          const row = doc.data();
+          const updatedAtIso = row.updatedAt && row.updatedAt.toDate ? row.updatedAt.toDate().toISOString() : null;
+          if (updatedAtIso && (!maxUpdatedAt || new Date(updatedAtIso) > new Date(maxUpdatedAt))) {
+            maxUpdatedAt = updatedAtIso;
           }
         });
         checkAnEmailUpdatesForNotice(line, maxUpdatedAt);
-      })
-      .catch(() => {}); // 조용히 실패 (백그라운드 체크라 사용자에게 에러 안 띄움)
-  });
+      } catch (e) { /* 조용히 실패 (백그라운드 체크라 사용자에게 에러 안 띄움) */ }
+    }
+  } catch (e) { /* fbReady 실패 시에도 조용히 무시 */ }
 }
 document.addEventListener("DOMContentLoaded", () => {
   setTimeout(checkAnEmailUpdatesInBackground, 1500);
 });
 
-function upsertAnEmailBatch(items) {
-  return fetch(AN_EMAIL_SHEET_API_URL, {
-    method: "POST",
-    body: JSON.stringify({ action: "upsert_batch", line: anEmailState.line, items })
-  }).then((res) => res.json());
+/* Firestore에 여러 건을 한 번에 저장 (문서 ID가 line+code로 고정돼있어서, 있으면 덮어쓰고 없으면 새로 생김) */
+async function upsertAnEmailBatch(items) {
+  try {
+    await window.fbReady;
+    let batch = window.fbDb.batch();
+    let count = 0;
+    for (const item of items) {
+      const docRef = window.fbDb.collection(AN_EMAIL_COLLECTION).doc(anEmailDocId(anEmailState.line, item.code));
+      batch.set(docRef, {
+        line: anEmailState.line,
+        code: item.code,
+        email: item.email,
+        month: item.month,
+        day: item.day,
+        source: item.source,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      count++;
+      if (count % 400 === 0) {
+        await batch.commit();
+        batch = window.fbDb.batch();
+      }
+    }
+    await batch.commit();
+    return { ok: true, added: count, updated: 0 };
+  } catch (err) {
+    return { ok: false, error: String(err) };
+  }
 }
 
 function clearAnEmailMap() {
-  if (!AN_EMAIL_SHEET_API_URL) { alert("AN_EMAIL_SHEET_API_URL이 아직 설정되지 않았어요."); return; }
   const count = Object.keys(anEmailState.map).length;
   if (!confirm(`"${anEmailState.line}" 라인 매핑표(${count}건)를 전부 지울까요? 팀 전체에 반영되고, 되돌릴 수 없어요.`)) return;
 
-  fetch(AN_EMAIL_SHEET_API_URL, {
-    method: "POST",
-    body: JSON.stringify({ action: "clear_line", line: anEmailState.line })
-  })
-    .then((res) => res.json())
-    .then((data) => {
-      if (!data.ok) { alert("삭제 실패: " + data.error); return; }
+  (async () => {
+    try {
+      await window.fbReady;
+      const snapshot = await window.fbDb.collection(AN_EMAIL_COLLECTION).where("line", "==", anEmailState.line).get();
+      let batch = window.fbDb.batch();
+      let n = 0;
+      for (const doc of snapshot.docs) {
+        batch.delete(doc.ref);
+        n++;
+        if (n % 400 === 0) {
+          await batch.commit();
+          batch = window.fbDb.batch();
+        }
+      }
+      await batch.commit();
       loadAnEmailMapFromServer(true);
-    })
-    .catch((err) => alert("삭제 실패: " + err));
+    } catch (err) {
+      alert("삭제 실패: " + err);
+    }
+  })();
 }
 
 function handleAnEmailLineSelectChange(value) {
@@ -275,16 +308,21 @@ function processAnEmailRefFiles(files) {
   }));
 
   // 다른 팀원이 방금 갱신했을 수도 있으니, 병합하기 직전에 최신 매핑을 한 번 다시 받아옴
-  const freshMapPromise = fetch(AN_EMAIL_SHEET_API_URL + "?line=" + encodeURIComponent(anEmailState.line))
-    .then((res) => res.json())
-    .then((data) => {
+  const freshMapPromise = (async () => {
+    try {
+      await window.fbReady;
+      const snapshot = await window.fbDb.collection(AN_EMAIL_COLLECTION)
+        .where("line", "==", anEmailState.line).get();
       const map = {};
-      (data.ok ? data.list : []).forEach((row) => {
+      snapshot.forEach((doc) => {
+        const row = doc.data();
         map[row.code] = { email: row.email, date: [row.month, row.day], source: row.source };
       });
       return map;
-    })
-    .catch(() => anEmailState.map);
+    } catch (e) {
+      return anEmailState.map;
+    }
+  })();
 
   Promise.all([Promise.all(readers), freshMapPromise]).then(([parsedFiles, baseMap]) => {
     const map = Object.assign({}, baseMap);
