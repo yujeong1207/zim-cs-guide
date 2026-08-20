@@ -576,6 +576,8 @@ async function fetchVesselListFromServer() {
         voyage: d.voyage || "",
         arrivalDate: d.arrivalDate || "",
         departureDate: d.departureDate || "",
+        arrivalTimeConfirmed: d.arrivalTimeConfirmed === true,
+        departureTimeConfirmed: d.departureTimeConfirmed === true,
       };
     });
   } catch (err) {
@@ -596,6 +598,8 @@ async function submitVesselToServer(entry) {
       voyage: entry.voyage || "",
       arrivalDate: entry.arrivalDate || "",
       departureDate: entry.departureDate || "",
+      arrivalTimeConfirmed: entry.arrivalTimeConfirmed === true,
+      departureTimeConfirmed: entry.departureTimeConfirmed === true,
     });
     return { ok: true, id: docRef.id };
   } catch (err) {
@@ -615,6 +619,8 @@ async function updateVesselOnServer(entry) {
       voyage: entry.voyage || "",
       arrivalDate: entry.arrivalDate || "",
       departureDate: entry.departureDate || "",
+      arrivalTimeConfirmed: entry.arrivalTimeConfirmed === true,
+      departureTimeConfirmed: entry.departureTimeConfirmed === true,
     });
     return { ok: true };
   } catch (err) {
@@ -16803,7 +16809,7 @@ function renderSearchResults(query) {
       results.push({
         kind: "vessel", label: "🚢 모선 일정",
         title: v.name + (v.code ? " (" + v.code + ")" : "") + (v.voyage ? " · " + v.voyage : ""),
-        snippet: [v.arrivalDate ? "입항 " + formatVesselDateTime(v.arrivalDate) : "", v.departureDate ? "출항 " + formatVesselDateTime(v.departureDate) : ""].filter(Boolean).join(" · "),
+        snippet: [v.arrivalDate ? "입항 " + formatVesselDateTime(v.arrivalDate, v.arrivalTimeConfirmed) : "", v.departureDate ? "출항 " + formatVesselDateTime(v.departureDate, v.departureTimeConfirmed) : ""].filter(Boolean).join(" · "),
         category: null, id: v.id
       });
     }
@@ -17956,11 +17962,11 @@ function buildVesselMonthSection(month) {
 
       const arrTd = document.createElement("td");
       arrTd.className = "vessel-td-arr";
-      arrTd.textContent = formatVesselDateTime(v.arrivalDate);
+      arrTd.textContent = formatVesselDateTime(v.arrivalDate, v.arrivalTimeConfirmed);
 
       const depTd = document.createElement("td");
       depTd.className = "vessel-td-dep";
-      depTd.textContent = formatVesselDateTime(v.departureDate);
+      depTd.textContent = formatVesselDateTime(v.departureDate, v.departureTimeConfirmed);
 
       const actTd = document.createElement("td");
       actTd.className = "vessel-actions";
@@ -18119,6 +18125,14 @@ function renderVesselEditorBody(month, existingId) {
   arrInput.type = "datetime-local";
   arrInput.value = existing ? toDatetimeLocalValue(existing.arrivalDate) : "";
   arrWrap.appendChild(arrInput);
+  const arrConfirmLabel = document.createElement("label");
+  arrConfirmLabel.className = "vessel-time-confirm-label";
+  const arrConfirmChk = document.createElement("input");
+  arrConfirmChk.type = "checkbox";
+  arrConfirmChk.checked = existing ? existing.arrivalTimeConfirmed === true : false;
+  arrConfirmLabel.appendChild(arrConfirmChk);
+  arrConfirmLabel.appendChild(document.createTextNode(" 시간까지 정확해요 (체크 안 하면 00:00은 자동으로 숨겨져요)"));
+  arrWrap.appendChild(arrConfirmLabel);
 
   const depWrap = document.createElement("div");
   depWrap.style.cssText = "flex:1;min-width:130px;";
@@ -18127,6 +18141,14 @@ function renderVesselEditorBody(month, existingId) {
   depInput.type = "datetime-local";
   depInput.value = existing ? toDatetimeLocalValue(existing.departureDate) : "";
   depWrap.appendChild(depInput);
+  const depConfirmLabel = document.createElement("label");
+  depConfirmLabel.className = "vessel-time-confirm-label";
+  const depConfirmChk = document.createElement("input");
+  depConfirmChk.type = "checkbox";
+  depConfirmChk.checked = existing ? existing.departureTimeConfirmed === true : false;
+  depConfirmLabel.appendChild(depConfirmChk);
+  depConfirmLabel.appendChild(document.createTextNode(" 시간까지 정확해요 (체크 안 하면 00:00은 자동으로 숨겨져요)"));
+  depWrap.appendChild(depConfirmLabel);
 
   dateRow.appendChild(arrWrap);
   dateRow.appendChild(depWrap);
@@ -18164,7 +18186,8 @@ function renderVesselEditorBody(month, existingId) {
     const entry = {
       month: targetMonth, name: name,
       code: codeInput.value.trim(), voyage: voyInput.value.trim(),
-      arrivalDate: arrInput.value, departureDate: depInput.value
+      arrivalDate: arrInput.value, departureDate: depInput.value,
+      arrivalTimeConfirmed: arrConfirmChk.checked, departureTimeConfirmed: depConfirmChk.checked
     };
 
     if (VESSEL_SHEET_API_URL) {
@@ -18392,11 +18415,11 @@ function toDatetimeLocalValue(s) {
 
 /* "2026-08-01T14:30" 형태를 "2026-08-01 14:30"처럼 보기 좋게 표시.
    시간이 00:00(입력 안 한 경우)이면 시간은 생략하고 날짜만 보여줌 */
-function formatVesselDateTime(s) {
+function formatVesselDateTime(s, confirmed) {
   if (!s) return "-";
   const m = s.match(/^(\d{4}-\d{2}-\d{2})[T\s](\d{2}:\d{2})/);
   if (!m) return s;
-  if (m[2] === "00:00") return m[1];
+  if (m[2] === "00:00" && !confirmed) return m[1]; // 시간을 명시적으로 확인한 게 아니면, 00:00은 "시간 미입력"으로 보고 숨김
   return m[1] + " " + m[2];
 }
 
