@@ -528,6 +528,8 @@ async function fetchNewsListFromServer() {
   }
 }
 
+let newsSelectedDate = null; // 지금 선택된 날짜 탭 (null이면 제일 최신 날짜)
+
 async function loadNewsTab() {
   const wrap = document.getElementById("newsListWrap");
   if (!wrap) return;
@@ -548,14 +550,36 @@ async function loadNewsTab() {
     return;
   }
 
-  wrap.innerHTML = items.map((item) => {
+  window.newsItemsCache = items; // 탭 전환할 때 다시 안 불러오고 여기서 바로 씀
+  renderNewsTabbed(items);
+}
+
+/* 날짜별로 묶어서 탭으로 보여줌 (선박 일정 탭이랑 같은 느낌) */
+function renderNewsTabbed(items) {
+  const wrap = document.getElementById("newsListWrap");
+  if (!wrap) return;
+
+  const dateSet = new Set(items.map((it) => it.date));
+  const dates = Array.from(dateSet).sort((a, b) => (a < b ? 1 : -1)); // 최신 날짜가 맨 앞
+
+  if (!newsSelectedDate || !dates.includes(newsSelectedDate)) {
+    newsSelectedDate = dates[0];
+  }
+
+  const tabsHtml = dates.map((d) => {
+    const count = items.filter((it) => it.date === d).length;
+    const active = d === newsSelectedDate ? " active" : "";
+    return `<button type="button" class="news-date-tab${active}" onclick="switchNewsDate('${d}')">${escapeHtml(formatNewsDateLabel(d))} <span class="news-date-tab-count">${count}</span></button>`;
+  }).join("");
+
+  const dayItems = items.filter((it) => it.date === newsSelectedDate);
+  const cardsHtml = dayItems.map((item) => {
     const meta = newsCategoryMeta(item.category);
     const bullets = splitNewsSummaryToBullets(item.summary);
     return `
       <div class="news-card ${meta.cls}">
         <div class="news-card-meta">
           <span class="news-card-badge ${meta.cls}">${meta.icon} ${escapeHtml((item.category || "").split(" (")[0])}</span>
-          <span class="news-card-date">📅 ${escapeHtml(item.date)}</span>
           <span class="news-card-source">🏷 ${escapeHtml(item.source)}</span>
         </div>
         <div class="news-card-title">${escapeHtml(item.title)}</div>
@@ -564,6 +588,23 @@ async function loadNewsTab() {
       </div>
     `;
   }).join("");
+
+  wrap.innerHTML = `<div class="news-date-tabs">${tabsHtml}</div><div class="news-date-panel">${cardsHtml}</div>`;
+}
+
+function switchNewsDate(date) {
+  newsSelectedDate = date;
+  if (window.newsItemsCache) renderNewsTabbed(window.newsItemsCache);
+}
+
+/* "2026-08-20" → "8/20 (목)" 처럼 짧고 읽기 쉬운 라벨로 */
+function formatNewsDateLabel(dateStr) {
+  const m = String(dateStr || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return dateStr;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const weekday = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
+  return `${Number(m[2])}/${Number(m[3])} (${weekday})`;
+}
 }
 
 /* =========================================================================

@@ -1637,3 +1637,43 @@ input, select, textarea {
   width: auto;
   margin: 0;
 }
+
+/* 오늘의 물류뉴스 - 날짜별 탭 */
+.news-date-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.news-date-tab {
+  padding: 7px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.news-date-tab:hover {
+  background: #f9fafb;
+}
+.news-date-tab.active {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
+.news-date-tab-count {
+  font-size: 11px;
+  opacity: 0.75;
+}
+.news-date-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
