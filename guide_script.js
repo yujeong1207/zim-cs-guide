@@ -20,7 +20,7 @@ let poaAdminQuery = "";     // 관리 패널 안에서 위임장 검색할 때 �
 async function fetchPoaListFromServer() {
   try {
     await window.fbReady; // 익명 인증이 끝날 때까지 대기 (팀원 눈에는 아무것도 안 보임)
-    const snapshot = await window.fbDb.collection(POA_COLLECTION).orderBy("createdAt", "desc").get();
+    const snapshot = await window.fbDb.collection(POA_COLLECTION).get();
     poaLoadFailed = false;
     return snapshot.docs.map((doc) => {
       const d = doc.data();
