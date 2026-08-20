@@ -9,26 +9,28 @@ const CATEGORY_ORDER = ["import", "export", "common"];
    팀원들이 각자 브라우저가 아니라 하나의 공유 목록을 보고 입력하게 돼요.
    비워두면(기본값) 예전처럼 각자 브라우저 저장 방식으로 동작해요.
    ========================================================================= */
-const POA_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbxgMl7cjsUwPPT5Xhi6CEW6UzDccD8fuKDdMutM2RIvfVrHcS5cLgB95qO0uBFmd03_3Q/exec";
+const POA_SHEET_API_URL = true; // 🔥 Firebase로 이전 완료 (이 값은 이제 "위임장 실시간 공유 켜짐" 표시 용도로만 쓰임)
+const POA_COLLECTION = "poa_list"; // Firestore 컬렉션 이름
 
 let poaServerList = null;   // 서버에서 불러온 최신 목록 (성공 시에만 채워짐)
 let poaLoadFailed = false;  // 서버 연동은 켜져 있는데 마지막 시도가 실패했는지
 let poaAdminQuery = "";     // 관리 패널 안에서 위임장 검색할 때 쓰는 검색어
 
-/* 서버(Apps Script)에서 위임장 전체 목록을 가져온다 */
+/* Firestore에서 위임장 전체 목록을 가져온다 (기존 Apps Script 버전을 Firebase로 교체) */
 async function fetchPoaListFromServer() {
-  if (!POA_SHEET_API_URL) return null;
   try {
-    const res = await fetch(POA_SHEET_API_URL, { method: "GET" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    await window.fbReady; // 익명 인증이 끝날 때까지 대기 (팀원 눈에는 아무것도 안 보임)
+    const snapshot = await window.fbDb.collection(POA_COLLECTION).orderBy("createdAt", "desc").get();
     poaLoadFailed = false;
-    return data.list.map((row) => ({
-      id: row.id,
-      applicant: row.applicant || "",
-      shipper: row.shipper || "",
-      submittedDate: row.submittedDate || "",
-    }));
+    return snapshot.docs.map((doc) => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        applicant: d.applicant || "",
+        shipper: d.shipper || "",
+        submittedDate: d.submittedDate || "",
+      };
+    });
   } catch (err) {
     console.error("위임장 서버 목록 불러오기 실패:", err);
     poaLoadFailed = true;
@@ -36,17 +38,16 @@ async function fetchPoaListFromServer() {
   }
 }
 
-/* 서버(Apps Script)에 새 업체 한 건을 등록한다 */
+/* Firestore에 새 업체 한 건을 등록한다 */
 async function submitPoaToServer(entry) {
-  if (!POA_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(POA_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // CORS 사전요청(preflight)을 피하려고 text/plain으로 보냄
-      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
+    await window.fbReady;
+    await window.fbDb.collection(POA_COLLECTION).add({
+      applicant: entry.applicant || "",
+      shipper: entry.shipper || "",
+      submittedDate: entry.submittedDate || "",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
     return { ok: true };
   } catch (err) {
     console.error("위임장 서버 등록 실패:", err);
@@ -54,17 +55,11 @@ async function submitPoaToServer(entry) {
   }
 }
 
-/* 서버(Apps Script)에서 위임장 한 건을 삭제한다 */
+/* Firestore에서 위임장 한 건을 삭제한다 */
 async function deletePoaFromServer(id) {
-  if (!POA_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(POA_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "delete", id: id }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
+    await window.fbReady;
+    await window.fbDb.collection(POA_COLLECTION).doc(id).delete();
     return { ok: true };
   } catch (err) {
     console.error("위임장 서버 삭제 실패:", err);
