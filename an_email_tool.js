@@ -37,7 +37,7 @@ function freshAnEmailState() {
     refLastResult: null, // { updatedCount, addedCount, fileCount, failedFiles }
 
     targetFileName: null,
-    targetWb: null,       // 원본 워크북(그대로 보존, 다운로드 때 재사용)
+    targetWb: null,       // 원본 워크북 (매칭 결과 계산에만 씀, 다운로드는 안 함)
     targetSheetName: null,
     targetAoa: null,
     targetParsed: null,   // { headerRowIdx, notifyCol, emailCol }
@@ -554,7 +554,7 @@ function buildAnEmailHtml() {
   }
 
   html += `<div class="section-title" style="margin-top:24px;">② 새 비엘리스트에 AN EMAIL 채우기</div>
-  <div class="hint" style="margin-bottom:8px;">AN EMAIL 칸이 비어있는(또는 확인이 필요한) 비엘리스트를 올리면, 위 매핑표 기준으로 자동으로 채워서 <b>원본 파일과 같은 이름</b>으로 다운로드해드려요 (다운로드 폴더에서 원본이 있던 자리에 옮기면 자연스럽게 덮어써져요).</div>
+  <div class="hint" style="margin-bottom:8px;">AN EMAIL 칸이 비어있는(또는 확인이 필요한) 비엘리스트를 올리면, 위 매핑표 기준으로 매칭된 이메일을 화면에 <b>순서대로 나열</b>해드려요. 그걸 복사해서 원본 파일의 AN EMAIL 칸에 그대로 붙여넣으시면 돼요 (파일을 다운로드하는 게 아니에요).</div>
   <label class="excel-upload-box" id="anEmailTargetUploadBox" style="padding:22px 14px;">
     <input type="file" id="anEmailTargetFileInput" accept=".xlsx,.xls" onchange="handleAnEmailTargetFile(event)">
     <div class="excel-upload-icon">📄</div>
