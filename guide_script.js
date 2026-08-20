@@ -429,7 +429,7 @@ async function loadOblTab() {
    따로 배포한 뒤, 그 주소를 아래에 붙여넣으면 활성화돼요. 팀원 한 명이 배를
    등록/수정/삭제하면 다른 팀원 화면에도 그대로 반영돼요.
    ========================================================================= */
-const VESSEL_SHEET_API_URL = "https://script.google.com/macros/s/AKfycbwpBFi27f35ybP3oARGAYU5JlJjvDZ1bzZSCsA6-716xgSDB2WwNwF95d61Kf-EU0B2LA/exec";
+const VESSEL_SHEET_API_URL = true; // 🔥 Firebase로 이전 완료 (이 값은 이제 "모선 일정 실시간 공유 켜짐" 표시 용도로만 쓰임)
 
 /* =========================================================================
    📰 오늘의 물류뉴스 - 실시간 연동 설정
@@ -559,23 +559,25 @@ function renderTTLinesTab() {
 }
 
 let vesselLoadFailed = false;
+const VESSEL_COLLECTION = "vessels"; // Firestore 컬렉션 이름
 
 async function fetchVesselListFromServer() {
-  if (!VESSEL_SHEET_API_URL) return null;
   try {
-    const res = await fetch(VESSEL_SHEET_API_URL, { method: "GET" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    await window.fbReady;
+    const snapshot = await window.fbDb.collection(VESSEL_COLLECTION).get();
     vesselLoadFailed = false;
-    return data.list.map((row) => ({
-      id: row.id,
-      month: row.month || "",
-      name: row.name || "",
-      code: row.code || "",
-      voyage: row.voyage || "",
-      arrivalDate: row.arrivalDate || "",
-      departureDate: row.departureDate || "",
-    }));
+    return snapshot.docs.map((doc) => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        month: d.month || "",
+        name: d.name || "",
+        code: d.code || "",
+        voyage: d.voyage || "",
+        arrivalDate: d.arrivalDate || "",
+        departureDate: d.departureDate || "",
+      };
+    });
   } catch (err) {
     console.error("모선 일정 서버 목록 불러오기 실패:", err);
     vesselLoadFailed = true;
@@ -583,18 +585,19 @@ async function fetchVesselListFromServer() {
   }
 }
 
-/* 새 배 한 척 등록. 서버가 새로 발급한 id를 돌려주면 그걸 그대로 씀 */
+/* 새 배 한 척 등록. Firestore가 새로 발급한 id를 돌려줌 */
 async function submitVesselToServer(entry) {
-  if (!VESSEL_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(VESSEL_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
+    await window.fbReady;
+    const docRef = await window.fbDb.collection(VESSEL_COLLECTION).add({
+      month: entry.month || "",
+      name: entry.name || "",
+      code: entry.code || "",
+      voyage: entry.voyage || "",
+      arrivalDate: entry.arrivalDate || "",
+      departureDate: entry.departureDate || "",
     });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
-    return { ok: true, id: data.id };
+    return { ok: true, id: docRef.id };
   } catch (err) {
     console.error("모선 일정 서버 등록 실패:", err);
     return { ok: false, error: String(err) };
@@ -603,15 +606,16 @@ async function submitVesselToServer(entry) {
 
 /* 기존 배 정보 수정 (id로 찾아서 덮어씀) */
 async function updateVesselOnServer(entry) {
-  if (!VESSEL_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(VESSEL_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "update" }, entry)),
+    await window.fbReady;
+    await window.fbDb.collection(VESSEL_COLLECTION).doc(entry.id).update({
+      month: entry.month || "",
+      name: entry.name || "",
+      code: entry.code || "",
+      voyage: entry.voyage || "",
+      arrivalDate: entry.arrivalDate || "",
+      departureDate: entry.departureDate || "",
     });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "수정에 실패했어요.");
     return { ok: true };
   } catch (err) {
     console.error("모선 일정 서버 수정 실패:", err);
@@ -620,15 +624,9 @@ async function updateVesselOnServer(entry) {
 }
 
 async function deleteVesselFromServer(id) {
-  if (!VESSEL_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(VESSEL_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "delete", id: id }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
+    await window.fbReady;
+    await window.fbDb.collection(VESSEL_COLLECTION).doc(id).delete();
     return { ok: true };
   } catch (err) {
     console.error("모선 일정 서버 삭제 실패:", err);
