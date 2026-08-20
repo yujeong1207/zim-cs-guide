@@ -171,7 +171,8 @@ async function loadPoaTab() {
    위임장과 완전히 같은 방식이에요. 새 구글 시트 + 새 Apps Script 웹앱을
    따로 배포한 뒤, 그 주소를 아래에 붙여넣으면 활성화돼요.
    ========================================================================= */
-const OBL_SHEET_API_URL = "https://script.google.com/macros/s/AKfycby8UkbxgzvJpCTDWnLjU0i-r2L2gXnm7lYKAPrU_bgeZoZNBzQ31ICLfTsq8dZb-MdYig/exec";
+const OBL_SHEET_API_URL = true; // 🔥 Firebase로 이전 완료 (이 값은 이제 "오비엘 실시간 공유 켜짐" 표시 용도로만 쓰임)
+const OBL_COLLECTION = "obl_list"; // Firestore 컬렉션 이름
 const OBL_TEAM_MEMBERS = ["유정", "민희", "선길", "소현", "성현", "유근"];
 
 let OBL_LIST = [];
@@ -184,20 +185,22 @@ function extractNotionCode(blNumber) {
   return clean.slice(-7);
 }
 
+/* Firestore에서 오비엘 접수 전체 목록을 가져온다 */
 async function fetchOblListFromServer() {
-  if (!OBL_SHEET_API_URL) return null;
   try {
-    const res = await fetch(OBL_SHEET_API_URL, { method: "GET" });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "목록을 불러오지 못했어요.");
+    await window.fbReady;
+    const snapshot = await window.fbDb.collection(OBL_COLLECTION).get();
     oblLoadFailed = false;
-    return data.list.map((row) => ({
-      id: row.id,
-      date: row.date || "",
-      name: row.name || "",
-      blNumber: row.blNumber || "",
-      createdAt: row.createdAt || "",
-    }));
+    return snapshot.docs.map((doc) => {
+      const d = doc.data();
+      return {
+        id: doc.id,
+        date: d.date || "",
+        name: d.name || "",
+        blNumber: d.blNumber || "",
+        createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : "",
+      };
+    });
   } catch (err) {
     console.error("오비엘 서버 목록 불러오기 실패:", err);
     oblLoadFailed = true;
@@ -205,16 +208,16 @@ async function fetchOblListFromServer() {
   }
 }
 
+/* Firestore에 새 오비엘 접수 한 건을 등록한다 */
 async function submitOblToServer(entry) {
-  if (!OBL_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(OBL_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(Object.assign({ action: "add" }, entry)),
+    await window.fbReady;
+    await window.fbDb.collection(OBL_COLLECTION).add({
+      date: entry.date || "",
+      name: entry.name || "",
+      blNumber: entry.blNumber || "",
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "등록에 실패했어요.");
     return { ok: true };
   } catch (err) {
     console.error("오비엘 서버 등록 실패:", err);
@@ -222,16 +225,11 @@ async function submitOblToServer(entry) {
   }
 }
 
+/* Firestore에서 오비엘 접수 한 건을 삭제한다 */
 async function deleteOblFromServer(id) {
-  if (!OBL_SHEET_API_URL) return { ok: false, error: "연동 주소가 설정되지 않았어요." };
   try {
-    const res = await fetch(OBL_SHEET_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "delete", id: id }),
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "삭제에 실패했어요.");
+    await window.fbReady;
+    await window.fbDb.collection(OBL_COLLECTION).doc(id).delete();
     return { ok: true };
   } catch (err) {
     console.error("오비엘 서버 삭제 실패:", err);
