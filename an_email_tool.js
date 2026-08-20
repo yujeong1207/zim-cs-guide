@@ -280,11 +280,12 @@ function handleAnEmailRefFiles(event) {
 }
 
 function processAnEmailRefFiles(files) {
-  if (!AN_EMAIL_SHEET_API_URL) { alert("AN_EMAIL_SHEET_API_URL이 아직 설정되지 않았어요."); return; }
   if (anEmailState.refBusy) {
     alert("아직 이전 파일들을 처리하고 있어요. 완료될 때까지 잠시만 기다렸다가 다시 올려주세요.");
     return;
   }
+
+  const forceOverride = !!(document.getElementById("anEmailForceOverride") && document.getElementById("anEmailForceOverride").checked);
 
   anEmailState.refBusy = true;
   anEmailState.refLastResult = null;
@@ -327,6 +328,7 @@ function processAnEmailRefFiles(files) {
   Promise.all([Promise.all(readers), freshMapPromise]).then(([parsedFiles, baseMap]) => {
     const map = Object.assign({}, baseMap);
     const changedItems = [];
+    const skippedOlder = []; // 이메일이 바뀌었는데 날짜가 안 최신이라 반영 안 된 항목 (참고용으로 화면에 알려줌)
     let addedCount = 0, updatedCount = 0, failedFiles = [];
 
     parsedFiles.forEach(({ fileName, aoa, error }) => {
@@ -360,10 +362,13 @@ function processAnEmailRefFiles(files) {
           map[code] = { email, date: dateKey, source: fileName };
           changedItems.push({ code, email, month: dateKey[0], day: dateKey[1], source: fileName });
           addedCount++;
-        } else if (isAnEmailDateNewer(dateKey, existing.date)) {
+        } else if (forceOverride || isAnEmailDateNewer(dateKey, existing.date)) {
           if (existing.email.toLowerCase() !== email.toLowerCase()) updatedCount++;
           map[code] = { email, date: dateKey, source: fileName };
           changedItems.push({ code, email, month: dateKey[0], day: dateKey[1], source: fileName });
+        } else if (existing.email.toLowerCase() !== email.toLowerCase()) {
+          // 이메일이 다른데 날짜가 최신이 아니라서 반영 안 된 경우 - 조용히 넘기지 않고 화면에 알려줌
+          skippedOlder.push({ code, oldEmail: existing.email, newEmail: email, fileName });
         }
       }
     });
@@ -373,7 +378,7 @@ function processAnEmailRefFiles(files) {
       anEmailState.refBusy = false;
       anEmailState.refLastResult = {
         fileCount: parsedFiles.length - failedFiles.length,
-        addedCount, updatedCount, failedFiles
+        addedCount, updatedCount, failedFiles, skippedOlder
       };
       if (anEmailState.targetParsed) anEmailState.result = computeAnEmailFillResult();
       renderExcelTool();
@@ -514,6 +519,10 @@ function buildAnEmailHtml() {
 
   html += `<div class="section-title">① 참고 파일로 매핑 갱신</div>
   <div class="hint" style="margin-bottom:8px;">NOTIFY·AN EMAIL 컬럼이 있는 예전 비엘리스트 파일들을 올리면, 제목에 있는 날짜(예: 08/18)를 기준으로 제일 최신 값으로 정리해서 매핑표에 반영해요 (팀 전체에 바로 공유돼요). 파일 선택 창에서 여러 개를 한 번에 골라서 올리는 걸 추천해요 (Ctrl 또는 Shift로 여러 개 선택). 따로따로 올리실 거면, 이전 파일 처리(⏳ 표시)가 끝난 다음에 올려주세요.</div>
+  <label class="vessel-time-confirm-label" style="margin-bottom:10px;">
+    <input type="checkbox" id="anEmailForceOverride">
+    이 파일이 제일 최신 정보예요 (제목 날짜와 상관없이 무조건 반영 - 이메일 주소만 고쳐서 다시 올릴 때 체크하세요)
+  </label>
   <label class="excel-upload-box" id="anEmailRefUploadBox" style="padding:22px 14px;">
     <input type="file" id="anEmailRefFileInput" accept=".xlsx,.xls" multiple onchange="handleAnEmailRefFiles(event)">
     <div class="excel-upload-icon">📄</div>
@@ -530,6 +539,16 @@ function buildAnEmailHtml() {
       html += `<div class="excel-warning-box" style="margin-top:8px;">
         <div class="excel-warning-title">⚠️ 처리 못한 파일 ${r.failedFiles.length}건</div>
         <ul style="margin:8px 0 0 18px;">${r.failedFiles.map((f) => `<li>${escapeHtml(f)}</li>`).join("")}</ul>
+      </div>`;
+    }
+    if (r.skippedOlder && r.skippedOlder.length) {
+      html += `<div class="excel-warning-box" style="margin-top:8px;">
+        <div class="excel-warning-title">⚠️ 이메일이 다른데 반영 안 된 항목 ${r.skippedOlder.length}건 (파일 제목 날짜가 기존 것보다 최신이 아니어서예요)</div>
+        이 값이 맞다면, 위 "이 파일이 제일 최신 정보예요" 체크박스를 켜고 다시 올려주세요.
+        <div class="excel-result-table-wrap" style="margin-top:10px;">
+          <table class="excel-result-table"><thead><tr><th>NOTIFY 코드</th><th>기존 이메일</th><th>파일 안 이메일</th></tr></thead>
+          <tbody>${r.skippedOlder.map((s) => `<tr><td>${escapeHtml(s.code)}</td><td>${escapeHtml(s.oldEmail)}</td><td>${escapeHtml(s.newEmail)}</td></tr>`).join("")}</tbody></table>
+        </div>
       </div>`;
     }
   }
