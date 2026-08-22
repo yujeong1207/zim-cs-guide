@@ -641,35 +641,28 @@ async function loadMoreNews() {
 }
 
 /* 평일(월~금)인지 확인 - 주말 뉴스는 탭 자체를 안 만듦 */
-function isWeekdayDateStr(dateStr) {
-  const m = String(dateStr || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!m) return false;
-  const day = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getDay();
-  return day >= 1 && day <= 5; // 0=일요일, 6=토요일
-}
-
-/* 오늘 기준 "이번 주" 월요일~금요일 날짜 범위 (문자열 YYYY-MM-DD로 비교) */
-function getThisWeekMonFriRange() {
+/* 오늘 기준 "이번 주" 월요일~일요일 날짜 범위 (문자열 YYYY-MM-DD로 비교) */
+function getThisWeekRange() {
   const today = new Date();
   const day = today.getDay();
   const diffToMonday = day === 0 ? -6 : 1 - day;
   const monday = new Date(today);
   monday.setDate(today.getDate() + diffToMonday);
-  const friday = new Date(monday);
-  friday.setDate(monday.getDate() + 4);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
   const fmt = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-  return { start: fmt(monday), end: fmt(friday) };
+  return { start: fmt(monday), end: fmt(sunday) };
 }
 
-/* 날짜별로 묶어서 탭으로 보여줌 (선박 일정 탭이랑 같은 느낌) - 평일만, 기본은 이번 주만 */
+/* 날짜별로 묶어서 탭으로 보여줌 (선박 일정 탭이랑 같은 느낌) - 기본은 이번 주(월~일) 전체 */
 function renderNewsTabbed(items) {
   const wrap = document.getElementById("newsListWrap");
   if (!wrap) return;
 
-  let visibleItems = items.filter((it) => isWeekdayDateStr(it.date));
+  let visibleItems = items;
 
   if (!newsExpanded) {
-    const range = getThisWeekMonFriRange();
+    const range = getThisWeekRange();
     visibleItems = visibleItems.filter((it) => it.date >= range.start && it.date <= range.end);
   }
 
