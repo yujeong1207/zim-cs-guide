@@ -153,22 +153,34 @@ async function loadTentativeVacations() {
   if (list) TENTATIVE_VACATIONS = list;
 }
 
-/* 위임장 탭을 열 때 호출 - 서버 연동이 켜져 있으면 최신 목록을 받아와서 화면을 그린다 */
+/* 위임장 탭을 열 때 호출 - 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면에 반영됨 */
+let poaUnsubscribe = null;
 async function loadPoaTab() {
   const wrap = document.getElementById("poaTableWrap");
   if (!POA_SHEET_API_URL) {
     renderPoaTable(); // 연동 꺼져있으면 예전 방식 그대로
     return;
   }
-  if (wrap) wrap.innerHTML = '<div class="empty-state">⏳ 최신 목록을 불러오는 중이에요...</div>';
-  const list = await fetchPoaListFromServer();
-  if (list) {
-    poaServerList = list;
-    POA_LIST = list;
-  } else if (wrap) {
-    wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요). 마지막으로 불러온 목록을 보여드릴게요.</div>';
-  }
-  renderPoaTable();
+  if (wrap && !poaServerList) wrap.innerHTML = '<div class="empty-state">⏳ 최신 목록을 불러오는 중이에요...</div>';
+  await window.fbReady;
+  poaUnsubscribe = window.fbDb.collection(POA_COLLECTION).onSnapshot(
+    (snapshot) => {
+      poaLoadFailed = false;
+      const list = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        return { id: doc.id, applicant: d.applicant || "", shipper: d.shipper || "", submittedDate: d.submittedDate || "" };
+      });
+      poaServerList = list;
+      POA_LIST = list;
+      renderPoaTable();
+    },
+    (err) => {
+      console.error("위임장 실시간 구독 실패:", err);
+      poaLoadFailed = true;
+      if (wrap && !poaServerList) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
+    }
+  );
+  liveTabUnsubscribers.poa = () => { if (poaUnsubscribe) { poaUnsubscribe(); poaUnsubscribe = null; } };
 }
 
 /* =========================================================================
@@ -497,20 +509,35 @@ async function syncNoticeBannerFromServer() {
 }
 
 
+let oblUnsubscribe = null;
 async function loadOblTab() {
   const wrap = document.getElementById("oblTableWrap");
   if (!OBL_SHEET_API_URL) {
     if (wrap) wrap.innerHTML = '<div class="empty-state">⚠️ 아직 오비엘 접수 연동 주소가 설정되지 않았어요.</div>';
     return;
   }
-  if (wrap) wrap.innerHTML = '<div class="empty-state">⏳ 최신 목록을 불러오는 중이에요...</div>';
-  const list = await fetchOblListFromServer();
-  if (list) {
-    OBL_LIST = list;
-  } else if (wrap) {
-    wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
-  }
-  renderOblTable();
+  if (wrap && !OBL_LIST.length) wrap.innerHTML = '<div class="empty-state">⏳ 최신 목록을 불러오는 중이에요...</div>';
+  await window.fbReady;
+  oblUnsubscribe = window.fbDb.collection(OBL_COLLECTION).onSnapshot(
+    (snapshot) => {
+      OBL_LIST = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          date: d.date || "",
+          name: d.name || "",
+          blNumber: d.blNumber || "",
+          createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : "",
+        };
+      });
+      renderOblTable();
+    },
+    (err) => {
+      console.error("오비엘 실시간 구독 실패:", err);
+      if (wrap && !OBL_LIST.length) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
+    }
+  );
+  liveTabUnsubscribers.obl = () => { if (oblUnsubscribe) { oblUnsubscribe(); oblUnsubscribe = null; } };
 }
 
 /* =========================================================================
@@ -827,21 +854,40 @@ async function deleteVesselFromServer(id) {
   }
 }
 
-/* 모선 일정 탭을 열 때 호출 - 서버 연동이 켜져 있으면 최신 목록을 받아와서 화면을 그린다 */
+/* 모선 일정 탭을 열 때 호출 - 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면에 반영됨 */
+let vesselsUnsubscribe = null;
 async function loadVesselTab() {
   const wrap = document.getElementById("vesselMonthsWrap");
   if (!VESSEL_SHEET_API_URL) {
     renderVesselTab(); // 연동 꺼져있으면 예전 방식(브라우저 저장) 그대로
     return;
   }
-  if (wrap) wrap.innerHTML = '<div class="empty-state">⏳ 최신 모선 일정을 불러오는 중이에요...</div>';
-  const list = await fetchVesselListFromServer();
-  if (list) {
-    VESSELS = list;
-  } else if (wrap) {
-    wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요). 마지막으로 불러온 목록을 보여드릴게요.</div>';
-  }
-  renderVesselTab();
+  if (wrap && !VESSELS.length) wrap.innerHTML = '<div class="empty-state">⏳ 최신 모선 일정을 불러오는 중이에요...</div>';
+  await window.fbReady;
+  vesselsUnsubscribe = window.fbDb.collection(VESSEL_COLLECTION).onSnapshot(
+    (snapshot) => {
+      VESSELS = snapshot.docs.map((doc) => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          month: d.month || "",
+          name: d.name || "",
+          code: d.code || "",
+          voyage: d.voyage || "",
+          arrivalDate: d.arrivalDate || "",
+          departureDate: d.departureDate || "",
+          arrivalTimeConfirmed: d.arrivalTimeConfirmed === true,
+          departureTimeConfirmed: d.departureTimeConfirmed === true,
+        };
+      });
+      renderVesselTab();
+    },
+    (err) => {
+      console.error("모선 일정 실시간 구독 실패:", err);
+      if (wrap && !VESSELS.length) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
+    }
+  );
+  liveTabUnsubscribers.vessels = () => { if (vesselsUnsubscribe) { vesselsUnsubscribe(); vesselsUnsubscribe = null; } };
 }
 
 let oblStatsOpen = false;
@@ -16848,27 +16894,39 @@ let expandedVesselMonths = new Set();
    다시 받아와요. 화면을 안 보고 있을 때(다른 탭/창으로 이동)는 건너뛰어서
    불필요한 요청을 줄여요. 주기를 바꾸고 싶으면 아래 숫자만 고치면 돼요.
    ========================================================================= */
-const LIVE_TAB_REFRESH_MINUTES = 15;
-const LIVE_TAB_LOADERS = { poa: loadPoaTab, obl: loadOblTab, vessels: loadVesselTab, vacations: loadVacationTab };
-let liveTabRefreshTimer = null;
+
+/* =========================================================================
+   실시간 리스너 (onSnapshot) - 예전엔 15분마다 전체를 통째로 다시 읽어왔는데,
+   이제는 Firestore의 실시간 구독 기능을 써서 "진짜 바뀐 부분"만 자동으로
+   받아와요. 팀원이 등록/수정하면 다른 사람 화면에 몇 초 안에 반영되면서도,
+   불필요하게 반복해서 전체를 다시 읽지 않아서 읽기 비용도 훨씬 적게 들어요.
+   ========================================================================= */
+let liveTabUnsubscribers = {}; // { poa: fn, obl: fn, vessels: fn, vacations: fn } - 탭을 벗어나면 구독 해제
 
 function stopLiveTabRefresh() {
-  if (liveTabRefreshTimer) { clearInterval(liveTabRefreshTimer); liveTabRefreshTimer = null; }
+  Object.keys(liveTabUnsubscribers).forEach((key) => {
+    if (liveTabUnsubscribers[key]) liveTabUnsubscribers[key]();
+    delete liveTabUnsubscribers[key];
+  });
 }
 
-function startLiveTabRefresh(tab) {
-  stopLiveTabRefresh();
-  const loader = LIVE_TAB_LOADERS[tab];
-  if (!loader) return;
-  liveTabRefreshTimer = setInterval(() => {
-    if (document.hidden) return; // 다른 탭/창 보고 있으면 이번 주기는 건너뜀
-    loader();
-  }, LIVE_TAB_REFRESH_MINUTES * 60 * 1000);
-}
-
+let vacationsUnsubscribe = null;
 async function loadVacationTab() {
-  await syncVacationsFromServer();
-  renderVacationTab();
+  if (!CORE_SHEET_API_URL) { renderVacationTab(); return; }
+  await window.fbReady;
+  vacationsUnsubscribe = window.fbDb.collection("vacations").onSnapshot(
+    (snapshot) => {
+      VACATIONS = snapshot.docs
+        .filter((doc) => doc.data().isDeleted !== true)
+        .map((doc) => {
+          const d = doc.data();
+          return { id: doc.id, name: d.name || "", startDate: d.startDate || "", endDate: d.endDate || "", note: d.note || "", unit: d.unit || "full" };
+        });
+      renderVacationTab();
+    },
+    (err) => console.error("확정휴가 실시간 구독 실패:", err)
+  );
+  liveTabUnsubscribers.vacations = () => { if (vacationsUnsubscribe) { vacationsUnsubscribe(); vacationsUnsubscribe = null; } };
 }
 
 async function loadTeamCalendarTab() {
@@ -16893,7 +16951,6 @@ function switchMainTab(tab) {
   if (tab === "obl") loadOblTab();
   if (tab === "doDesk") loadDoDeskTab();
   if (tab === "blDesk") loadBlDeskTab();
-  if (LIVE_TAB_LOADERS[tab]) startLiveTabRefresh(tab);
   if (tab === "vacations") loadVacationTab();
   if (tab === "teamEvents") { loadTeamCalendarTab(); renderTeamCalendar(); }
   if (tab === "calc") renderCalcTool();

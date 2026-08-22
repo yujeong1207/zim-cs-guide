@@ -67,12 +67,14 @@ function loadAnEmailMapFromServer(markSeen) {
         .where("line", "==", anEmailState.line).get();
       const map = {};
       let maxUpdatedAt = null;
+      let mostRecentRow = null; // 알림에 "어떤 코드/이메일이 갱신됐는지" 보여주기 위함
       snapshot.forEach((doc) => {
         const row = doc.data();
         map[row.code] = { email: row.email, date: [row.month, row.day], source: row.source };
         const updatedAtIso = row.updatedAt && row.updatedAt.toDate ? row.updatedAt.toDate().toISOString() : null;
         if (updatedAtIso && (!maxUpdatedAt || new Date(updatedAtIso) > new Date(maxUpdatedAt))) {
           maxUpdatedAt = updatedAtIso;
+          mostRecentRow = { code: row.code, email: row.email };
         }
       });
       anEmailState.map = map;
@@ -83,7 +85,7 @@ function loadAnEmailMapFromServer(markSeen) {
       if (markSeen) {
         markAnEmailSeenTimestamp(anEmailState.line, maxUpdatedAt);
       } else {
-        checkAnEmailUpdatesForNotice(anEmailState.line, maxUpdatedAt);
+        checkAnEmailUpdatesForNotice(anEmailState.line, maxUpdatedAt, mostRecentRow);
       }
       renderExcelTool();
     } catch (err) {
@@ -103,7 +105,7 @@ function anEmailSeenKey(line) {
   return "an_email_seen_ts_v1_" + String(line || "").toUpperCase();
 }
 
-function checkAnEmailUpdatesForNotice(line, maxUpdatedAt) {
+function checkAnEmailUpdatesForNotice(line, maxUpdatedAt, recentInfo) {
   if (!maxUpdatedAt) return;
   const seenRaw = localStorage.getItem(anEmailSeenKey(line));
   if (seenRaw === null) {
@@ -112,9 +114,10 @@ function checkAnEmailUpdatesForNotice(line, maxUpdatedAt) {
     return;
   }
   if (new Date(maxUpdatedAt) > new Date(seenRaw) && typeof pushSharedUpdateNotice === "function") {
+    const detail = recentInfo ? ` - ${escapeHtml(recentInfo.code || "")} → ${escapeHtml(recentInfo.email || "")}` : "";
     pushSharedUpdateNotice(
       "an_email_" + line,
-      `🔔 AN 주소채우기(${escapeHtml(line)}) 매핑이 갱신됐어요 - 눌러서 확인`,
+      `🔔 AN 주소채우기(${escapeHtml(line)}) 매핑이 갱신됐어요${detail}`,
       () => {
         if (typeof switchMainTab === "function") switchMainTab("excelTool");
         if (typeof switchExcelMode === "function") switchExcelMode("an_email");
@@ -137,14 +140,16 @@ async function checkAnEmailUpdatesInBackground() {
       try {
         const snapshot = await window.fbDb.collection(AN_EMAIL_COLLECTION).where("line", "==", line).get();
         let maxUpdatedAt = null;
+        let mostRecentRow = null;
         snapshot.forEach((doc) => {
           const row = doc.data();
           const updatedAtIso = row.updatedAt && row.updatedAt.toDate ? row.updatedAt.toDate().toISOString() : null;
           if (updatedAtIso && (!maxUpdatedAt || new Date(updatedAtIso) > new Date(maxUpdatedAt))) {
             maxUpdatedAt = updatedAtIso;
+            mostRecentRow = { code: row.code, email: row.email };
           }
         });
-        checkAnEmailUpdatesForNotice(line, maxUpdatedAt);
+        checkAnEmailUpdatesForNotice(line, maxUpdatedAt, mostRecentRow);
       } catch (e) { /* 조용히 실패 (백그라운드 체크라 사용자에게 에러 안 띄움) */ }
     }
   } catch (e) { /* fbReady 실패 시에도 조용히 무시 */ }

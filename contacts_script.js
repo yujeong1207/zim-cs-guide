@@ -59,6 +59,9 @@ function initContactsTab() {
 }
 
 /* 전체 데이터를 한 번에 불러와 캐시에 저장 (forceReload면 캐시 무시하고 새로 받아옴) */
+const CONTACTS_CACHE_STORAGE_KEY = "cs_guide_contacts_cache_v1";
+const CONTACTS_CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4시간 - 며칠에 한 번 정도 추가되는 빈도라, 완전 실시간보단 이 정도면 충분
+
 function loadAllContacts(forceReload) {
   const listEl = document.getElementById("anemail-list");
   const inputEl = document.getElementById("anemail-search-input");
@@ -66,6 +69,25 @@ function loadAllContacts(forceReload) {
   if (contactsAllItems && !forceReload) {
     applyContactsFilter(inputEl.value);
     return;
+  }
+
+  // "새로고침" 버튼을 직접 누른 게 아니면, 브라우저에 저장해둔 캐시부터 먼저 확인
+  // (있고 아직 안 오래됐으면 Firestore를 아예 안 읽어요 - 비용/한도 절약)
+  if (!forceReload) {
+    try {
+      const cachedRaw = localStorage.getItem(CONTACTS_CACHE_STORAGE_KEY);
+      if (cachedRaw) {
+        const cached = JSON.parse(cachedRaw);
+        const age = Date.now() - (cached.savedAt || 0);
+        if (age < CONTACTS_CACHE_MAX_AGE_MS && Array.isArray(cached.items)) {
+          contactsAllItems = cached.items;
+          inputEl.disabled = false;
+          applyContactsFilter(inputEl.value);
+          checkContactsUpdatesForNotice();
+          return; // Firestore 읽기 없이 여기서 끝
+        }
+      }
+    } catch (e) { /* 캐시 읽기 실패하면 그냥 아래로 내려가서 새로 불러옴 */ }
   }
 
   listEl.innerHTML = `<div class="anemail-loading">전체 연락처 불러오는 중... (처음 한 번만 시간이 좀 걸려요)</div>`;
@@ -87,6 +109,11 @@ function loadAllContacts(forceReload) {
           updatedAt: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toISOString() : "",
         };
       });
+
+      try {
+        localStorage.setItem(CONTACTS_CACHE_STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), items: contactsAllItems }));
+      } catch (e) { /* 저장 실패해도(용량 초과 등) 무시 - 이번 세션에서 메모리로는 잘 쓰고 있으니 괜찮음 */ }
+
       inputEl.disabled = false;
       applyContactsFilter(inputEl.value);
       checkContactsUpdatesForNotice();
@@ -261,18 +288,20 @@ function escapeHtml(str) {
      탭을 안 열어봐도 알림이 뜸. */
 const CONTACTS_SEEN_TS_KEY = "contacts_seen_ts_v2";
 
-function getContactsMaxUpdatedAt_() {
+/* 최신 수정시각을 가진 "항목 하나"를 통째로 돌려줌 (알림에 어떤 업체인지 보여주기 위함) */
+function getContactsMostRecentItem_() {
   if (!contactsAllItems || !contactsAllItems.length) return null;
-  let max = null;
+  let best = null;
   contactsAllItems.forEach((item) => {
-    if (item.updatedAt && (!max || new Date(item.updatedAt) > new Date(max))) max = item.updatedAt;
+    if (item.updatedAt && (!best || new Date(item.updatedAt) > new Date(best.updatedAt))) best = item;
   });
-  return max;
+  return best;
 }
 
 function checkContactsUpdatesForNotice() {
-  const maxUpdatedAt = getContactsMaxUpdatedAt_();
-  if (!maxUpdatedAt) return; // updatedAt이 아직 없는 옛날 데이터만 있으면(초기화 전) 알림 안 띄움
+  const recent = getContactsMostRecentItem_();
+  if (!recent) return; // updatedAt이 아직 없는 옛날 데이터만 있으면(초기화 전) 알림 안 띄움
+  const maxUpdatedAt = recent.updatedAt;
 
   const seenRaw = localStorage.getItem(CONTACTS_SEEN_TS_KEY);
   if (seenRaw === null) {
@@ -281,9 +310,11 @@ function checkContactsUpdatesForNotice() {
     return;
   }
   if (new Date(maxUpdatedAt) > new Date(seenRaw) && typeof pushSharedUpdateNotice === "function") {
+    const label = recent.eng || recent.kor || "업체 정보";
+    const emailPart = recent.email ? ` (${recent.email})` : "";
     pushSharedUpdateNotice(
       "contacts",
-      `🔔 AN 연락처가 새로 추가/수정됐어요 - 눌러서 확인`,
+      `🔔 AN 연락처 갱신 - ${escapeHtml(label)}${escapeHtml(emailPart)} 확인해보세요`,
       () => { if (typeof switchMainTab === "function") switchMainTab("anemail"); }
     );
   }
@@ -292,8 +323,8 @@ function checkContactsUpdatesForNotice() {
 
 /* AN 연락처 탭에 실제로 들어왔을 때 호출 - 지금까지의 최신 수정시각을 "확인함"으로 처리 */
 function markContactsUpdatesSeen() {
-  const maxUpdatedAt = getContactsMaxUpdatedAt_();
-  if (maxUpdatedAt) localStorage.setItem(CONTACTS_SEEN_TS_KEY, maxUpdatedAt);
+  const recent = getContactsMostRecentItem_();
+  if (recent) localStorage.setItem(CONTACTS_SEEN_TS_KEY, recent.updatedAt);
   if (typeof dismissSharedUpdateNotice === "function") dismissSharedUpdateNotice("contacts");
 }
 
