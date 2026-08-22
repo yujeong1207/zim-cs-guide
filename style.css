@@ -1677,3 +1677,53 @@ input, select, textarea {
   flex-direction: column;
   gap: 14px;
 }
+
+/* D/O 데스크 · B/L 데스크 - 검색 두 칸 + 결과 */
+.desk-search-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+@media (max-width: 720px) {
+  .desk-search-row { grid-template-columns: 1fr; }
+}
+.desk-search-col {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px;
+}
+.desk-search-col input[type="text"],
+.desk-search-col textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.desk-result-box {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.desk-result-row {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+.desk-result-row div { margin-top: 3px; color: #4b5563; }
+.desk-result-row.ok { border-left: 3px solid #16a34a; }
+.desk-result-row.warn { border-left: 3px solid #d97706; }
+
+.payment-row {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.payment-row.ready { border-left: 3px solid #16a34a; color: #15803d; }
+.payment-row.not-ready { border-left: 3px solid #dc2626; color: #b91c1c; }
+.payment-row.not-found { border-left: 3px solid #9ca3af; color: #6b7280; }
