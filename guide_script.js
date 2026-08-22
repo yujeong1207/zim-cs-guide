@@ -223,11 +223,52 @@ async function submitOblToServer(entry) {
       blNumber: entry.blNumber || "",
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    return { ok: true };
+
+    // 노션 전송은 "되면 좋고, 안 돼도 오비엘 등록 자체는 성공"으로 처리 (조용히 시도만)
+    let notionOk = false;
+    let notionError = "";
+    try {
+      await syncOblToNotion(entry.date, entry.blNumber);
+      notionOk = true;
+    } catch (err) {
+      notionError = String(err);
+      console.error("노션 동기화 실패(오비엘 등록 자체는 성공):", notionError);
+    }
+
+    return { ok: true, notionOk: notionOk, notionError: notionError };
   } catch (err) {
     console.error("오비엘 서버 등록 실패:", err);
     return { ok: false, error: String(err) };
   }
+}
+
+/* 오비엘 → 노션 자동 전송. URL은 Firestore(secrets/notionSync)에서 조용히 자동으로 가져옴 */
+let notionSyncUrlCache = null;
+async function getNotionSyncUrl() {
+  if (notionSyncUrlCache) return notionSyncUrlCache;
+  try {
+    await window.fbReady;
+    const doc = await window.fbDb.collection("secrets").doc("notionSync").get();
+    if (!doc.exists) return null;
+    const url = doc.data().url;
+    if (!url) return null;
+    notionSyncUrlCache = url;
+    return url;
+  } catch (err) {
+    console.error("노션 연동 주소 불러오기 실패:", err);
+    return null;
+  }
+}
+
+async function syncOblToNotion(date, blNumber) {
+  const url = await getNotionSyncUrl();
+  if (!url) throw new Error("노션 연동 주소가 아직 설정 안 됐어요.");
+  const res = await fetch(url, {
+    method: "POST",
+    body: JSON.stringify({ date: date, blNumber: blNumber }),
+  });
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || "노션 전송 실패");
 }
 
 /* Firestore에서 오비엘 접수 한 건을 삭제한다 */
@@ -16393,8 +16434,8 @@ async function fetchCitiFxRate() {
   return { rate, date };
 }
 
-function renderDoCalculator() {
-  const body = document.getElementById("calcToolBody");
+function renderDoCalculator(containerId) {
+  const body = document.getElementById(containerId || "calcToolBody");
   body.innerHTML = "";
 
   if (!window.__doSelectedDate) window.__doSelectedDate = todayStr();
@@ -16850,6 +16891,8 @@ function switchMainTab(tab) {
   if (tab === "contacts") renderContactsTable();
   if (tab === "poa") loadPoaTab();
   if (tab === "obl") loadOblTab();
+  if (tab === "doDesk") loadDoDeskTab();
+  if (tab === "blDesk") loadBlDeskTab();
   if (LIVE_TAB_LOADERS[tab]) startLiveTabRefresh(tab);
   if (tab === "vacations") loadVacationTab();
   if (tab === "teamEvents") { loadTeamCalendarTab(); renderTeamCalendar(); }
@@ -16863,6 +16906,159 @@ function switchMainTab(tab) {
 
   const MAIN_TAB_RECENT_LABELS = { calc: "🧮 계산기", memo: "📝 메모", excelTool: "📦 엑셀 정리" };
   if (MAIN_TAB_RECENT_LABELS[tab]) recordRecentItem("mainTab", tab, MAIN_TAB_RECENT_LABELS[tab]);
+}
+
+/* =========================================================================
+   📦 D/O 데스크 - 선박 입항일 + 위임장 확인 + DO 계산기를 한 화면에서
+   ========================================================================= */
+function searchVesselsByName(query) {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) return [];
+  return VESSELS.filter((v) =>
+    (v.name || "").toLowerCase().includes(q) ||
+    (v.code || "").toLowerCase().includes(q) ||
+    (v.voyage || "").toLowerCase().includes(q)
+  ).sort((a, b) => (b.arrivalDate || "").localeCompare(a.arrivalDate || ""));
+}
+
+function searchPoaByCompany(query) {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) return [];
+  return POA_LIST.filter((p) =>
+    (p.applicant || "").toLowerCase().includes(q) ||
+    (p.shipper || "").toLowerCase().includes(q)
+  );
+}
+
+function loadDoDeskTab() {
+  const wrap = document.getElementById("doDeskWrap");
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="desk-search-row">
+      <div class="desk-search-col">
+        <label class="label">⚓ 선박명 검색 (입항일 확인)</label>
+        <input type="text" id="doDeskVesselInput" placeholder="예: AS CASPRIA" oninput="renderDoDeskVesselResult()">
+        <div id="doDeskVesselResult" class="desk-result-box"></div>
+      </div>
+      <div class="desk-search-col">
+        <label class="label">🖋️ 업체명 검색 (위임장 확인)</label>
+        <input type="text" id="doDeskPoaInput" placeholder="예: 대흥기업" oninput="renderDoDeskPoaResult()">
+        <div id="doDeskPoaResult" class="desk-result-box"></div>
+      </div>
+    </div>
+    <div class="label" style="margin:20px 0 8px;">🧮 DO 비용 계산기</div>
+    <div id="doDeskCalcBody"></div>
+  `;
+  renderDoCalculator("doDeskCalcBody");
+}
+
+function renderDoDeskVesselResult() {
+  const inputEl = document.getElementById("doDeskVesselInput");
+  const box = document.getElementById("doDeskVesselResult");
+  if (!inputEl || !box) return;
+  if (!inputEl.value.trim()) { box.innerHTML = ""; return; }
+  const matches = searchVesselsByName(inputEl.value).slice(0, 8);
+  if (matches.length === 0) { box.innerHTML = '<div class="hint">검색 결과가 없어요.</div>'; return; }
+  box.innerHTML = matches.map((v) => `
+    <div class="desk-result-row">
+      <b>${escapeHtml(v.name || "-")}</b>${v.code ? " (" + escapeHtml(v.code) + ")" : ""}
+      <div>⚓ 입항 ${formatVesselDateTime(v.arrivalDate, v.arrivalTimeConfirmed)}</div>
+    </div>
+  `).join("");
+}
+
+function renderDoDeskPoaResult() {
+  const inputEl = document.getElementById("doDeskPoaInput");
+  const box = document.getElementById("doDeskPoaResult");
+  if (!inputEl || !box) return;
+  if (!inputEl.value.trim()) { box.innerHTML = ""; return; }
+  const matches = searchPoaByCompany(inputEl.value).slice(0, 8);
+  if (matches.length === 0) { box.innerHTML = '<div class="hint">검색 결과가 없어요 - 위임장 미제출일 수 있어요.</div>'; return; }
+  box.innerHTML = matches.map((p) => {
+    const warning = getPoaExpiryWarning(p.submittedDate);
+    return `
+      <div class="desk-result-row ${warning ? "warn" : "ok"}">
+        <b>${escapeHtml(p.applicant || "-")}</b> → ${escapeHtml(p.shipper || "-")}
+        <div>제출일 ${formatPoaDate(p.submittedDate) || "-"} · ${warning ? "⚠️ " + escapeHtml(warning) : "✅ 정상"}</div>
+      </div>
+    `;
+  }).join("");
+}
+
+/* =========================================================================
+   🚢 B/L 데스크 - 선박 출항일 + 입금현황(BL번호 조회)을 한 화면에서
+   ========================================================================= */
+function loadBlDeskTab() {
+  const wrap = document.getElementById("blDeskWrap");
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="desk-search-row">
+      <div class="desk-search-col">
+        <label class="label">🚩 선박명 검색 (출항일 확인)</label>
+        <input type="text" id="blDeskVesselInput" placeholder="예: ZIM SCORPIO" oninput="renderBlDeskVesselResult()">
+        <div id="blDeskVesselResult" class="desk-result-box"></div>
+      </div>
+      <div class="desk-search-col">
+        <label class="label">💰 BL번호 조회 (입금현황)</label>
+        <textarea id="blDeskBlInput" rows="2" placeholder="예시&#10;MSCU1234567&#10;ZIMU7654321, ABCD9999999"></textarea>
+        <div style="display:flex; gap:8px; margin-top:6px;">
+          <button type="button" class="btn generate-btn" onclick="checkPaymentStatusForBlDesk()">🔍 조회</button>
+          <button type="button" class="btn secondary-btn" onclick="refreshPaymentData()">🔄 데이터 갱신</button>
+        </div>
+        <div id="blDeskPaymentResult" class="desk-result-box"></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBlDeskVesselResult() {
+  const inputEl = document.getElementById("blDeskVesselInput");
+  const box = document.getElementById("blDeskVesselResult");
+  if (!inputEl || !box) return;
+  if (!inputEl.value.trim()) { box.innerHTML = ""; return; }
+  const matches = searchVesselsByName(inputEl.value).slice(0, 8);
+  if (matches.length === 0) { box.innerHTML = '<div class="hint">검색 결과가 없어요.</div>'; return; }
+  box.innerHTML = matches.map((v) => `
+    <div class="desk-result-row">
+      <b>${escapeHtml(v.name || "-")}</b>${v.code ? " (" + escapeHtml(v.code) + ")" : ""}
+      <div>🚩 출항 ${formatVesselDateTime(v.departureDate, v.departureTimeConfirmed)}</div>
+    </div>
+  `).join("");
+}
+
+/* 입금현황 탭이랑 같은 캐시(paymentDataCache)를 그대로 읽어서 조회만 따로 함 (데이터는 공유) */
+function checkPaymentStatusForBlDesk() {
+  const inputEl = document.getElementById("blDeskBlInput");
+  const resultEl = document.getElementById("blDeskPaymentResult");
+  if (!inputEl || !resultEl) return;
+
+  if (!paymentDataCache) {
+    resultEl.innerHTML = `<div class="hint">⚠️ 먼저 "🔄 데이터 갱신" 버튼을 눌러 최신 데이터를 가져와주세요.</div>`;
+    return;
+  }
+
+  const blNumbers = inputEl.value
+    .split(/[\n,]+/)
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+
+  if (blNumbers.length === 0) {
+    resultEl.innerHTML = `<div class="hint">비엘번호를 입력해주세요.</div>`;
+    return;
+  }
+
+  resultEl.innerHTML = blNumbers
+    .map((bl) => {
+      const data = paymentDataCache[bl];
+      if (!data) {
+        return `<div class="payment-row not-found">⚠️ ${bl} — 목록에 없음 (번호 확인 필요)</div>`;
+      }
+      const ready = data.issued.toUpperCase() === "O";
+      const statusText = ready ? "✅ BL 발행 가능" : "❌ BL 발행 불가";
+      const statusClass = ready ? "ready" : "not-ready";
+      return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
+    })
+    .join("");
 }
 
 const TAB_GROUPS = {
@@ -25867,23 +26063,46 @@ function populateOblNameSelect() {
    💰 입금현황 - 비엘번호 발행가능 여부 조회
    ========================================================================= */
 
-// ⚠️ 이 URL은 재무 데이터에 접근하는 열쇠와 같아요. 외부에 공유하거나
-//    공개 채널에 붙여넣지 마세요.
-const PAYMENT_FLOW_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/229ec6df86cd40bcbd87f4b82ab3f334/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=CLDN_iRbJXWAVyjjpTfukXm5GQgzkqnuEXyk4aCg970";
-const PAYMENT_FLOW_SECRET = "zimcsguide05012026";
+/* ⚠️ 연동 주소/비밀키는 Firestore의 secrets/paymentFlow 문서에 저장돼있어요
+   (팀장님이 Firebase 콘솔에서 딱 한 번만 넣어두면 돼요). 팀원들은 아무 입력
+   없이, 페이지 열면 조용히 자동으로 가져다 써요 - 코드에는 값이 안 남아요. */
+let paymentFlowCredsCache = null;
+
+async function getPaymentFlowCreds() {
+  if (paymentFlowCredsCache) return paymentFlowCredsCache;
+  try {
+    await window.fbReady;
+    const doc = await window.fbDb.collection("secrets").doc("paymentFlow").get();
+    if (!doc.exists) return null;
+    const d = doc.data();
+    if (!d.url || !d.secret) return null;
+    paymentFlowCredsCache = { url: d.url, secret: d.secret };
+    return paymentFlowCredsCache;
+  } catch (err) {
+    console.error("입금현황 연동 정보 불러오기 실패:", err);
+    return null;
+  }
+}
 
 let paymentDataCache = null;       // { "비엘번호": {amount, paid, issued} }
 let paymentDataUpdatedAt = null;
 
 async function refreshPaymentData() {
   const statusEl = document.getElementById("paymentRefreshStatus");
+
+  const creds = await getPaymentFlowCreds();
+  if (!creds) {
+    if (statusEl) statusEl.textContent = "⚠️ 연동 정보가 아직 설정 안 됐어요. 팀장님께 문의해주세요.";
+    return;
+  }
+
   if (statusEl) statusEl.textContent = "⏳ 재무팀 파일에서 최신 데이터 가져오는 중...";
 
   try {
-    const res = await fetch(PAYMENT_FLOW_URL, {
+    const res = await fetch(creds.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ secret: PAYMENT_FLOW_SECRET }),
+      body: JSON.stringify({ secret: creds.secret }),
     });
     if (!res.ok) throw new Error("서버 응답 오류 (" + res.status + ")");
 
@@ -25913,8 +26132,8 @@ async function refreshPaymentData() {
       statusEl.textContent = `✅ 갱신 완료 (${paymentDataUpdatedAt.toLocaleString("ko-KR")}) · 총 ${Object.keys(paymentDataCache).length}건`;
     }
   } catch (err) {
-    if (statusEl) statusEl.textContent = "❌ 갱신 실패: " + err.message;
     console.error("입금현황 갱신 오류:", err);
+    if (statusEl) statusEl.textContent = "❌ 갱신 실패: " + err.message;
   }
 }
 
