@@ -106,11 +106,10 @@
   </div>
 
   <button class="main-tab-btn" data-tab="ttlines" onclick="switchMainTab('ttlines')">🚢 서비스라인 T/T</button>
-  <button class="main-tab-btn" data-tab="doDesk" onclick="switchMainTab('doDesk')">📦 D/O 데스크</button>
-  <button class="main-tab-btn" data-tab="blDesk" onclick="switchMainTab('blDesk')">🚢 B/L 데스크</button>
+  <button class="main-tab-btn" data-tab="doDesk" onclick="switchMainTab('doDesk')">🗝️ D/O 데스크</button>
+  <button class="main-tab-btn" data-tab="blDesk" onclick="switchMainTab('blDesk')">📤 B/L 데스크</button>
   <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
   <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
-  <button class="main-tab-btn" data-tab="payment" onclick="switchMainTab('payment')">💰 입금현황</button>
   <button class="main-tab-btn" data-tab="anemail" onclick="switchMainTab('anemail')">📧 AN 연락처</button>
 
   <div class="tab-group" data-group="schedule">
@@ -255,34 +254,6 @@
 
   <input id="poaFilter" class="contacts-filter-input" placeholder="🔍 신청업체 또는 실화주로 검색" oninput="renderPoaTable()" style="margin-top:18px;">
   <div id="poaTableWrap"></div>
-</div>
-
-<!-- ===== 💰 입금현황 탭 (비엘번호 조회 + 재무팀 원드라이브 엑셀 임베드) ===== -->
-<div class="tab-page" id="page-payment">
-
-  <!-- 🔍 비엘번호 발행가능 여부 조회 -->
-  <div class="payment-check-box">
-    <div class="hint" style="margin-bottom:8px;">비엘번호를 입력하면 입금확인·발행가능 여부를 알려드려요. 여러 개는 줄바꿈(엔터) 또는 콤마(,)로 구분해서 한 번에 입력하세요.</div>
-    <textarea id="paymentBlInput" class="payment-bl-textarea" rows="3" placeholder="예시&#10;MSCU1234567&#10;ZIMU7654321, ABCD9999999"></textarea>
-    <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; align-items:center;">
-      <button class="btn generate-btn" onclick="checkPaymentStatus()">🔍 발행가능 여부 조회</button>
-      <button class="btn secondary-btn" onclick="refreshPaymentData()">🔄 데이터 갱신</button>
-      <span id="paymentRefreshStatus" class="hint" style="margin-top:0;"></span>
-    </div>
-    <div id="paymentResultList" class="payment-result-list"></div>
-  </div>
-
-  <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
-
-  <div class="hint" style="margin-bottom:10px;">위 조회로 안 되거나 직접 원본을 보고 싶을 땐 아래 화면에서 확인하세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요. 원본 파일이 바뀌면 이 화면도 그대로 반영돼요.</div>
-  <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
-  <div class="payment-embed-wrap">
-    <iframe
-      src="https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True"
-      width="100%" height="800" frameborder="0" scrolling="yes"
-      title="입금현황 (BLCONFIRM.xlsx)">
-    </iframe>
-  </div>
 </div>
 
 <!-- ===== 📧 AN 연락처 탭 ===== -->
@@ -520,7 +491,7 @@
   <div class="howto-item">
     <div class="howto-icon">💰</div>
     <div class="howto-body">
-      <div class="howto-title">입금현황 <span class="howto-badge">재무팀 원드라이브 파일 보기</span></div>
+      <div class="howto-title">B/L 데스크 <span class="howto-badge">모선 출항일 + 입금현황 + 재무팀 원드라이브 파일 보기</span></div>
       <div class="howto-desc">재무팀에서 관리하는 입금증파일을 그대로 볼 수 있어요. 비엘번호로 찾을 땐 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색하세요. 원본이 재무팀에서 바뀌면 여기도 그대로 반영돼요. 여기서 직접 입력·수정은 안 되고, 보기 전용이에요.</div>
     </div>
   </div>

@@ -17001,12 +17001,25 @@ function loadBlDeskTab() {
       <div class="desk-search-col">
         <label class="label">💰 BL번호 조회 (입금현황)</label>
         <textarea id="blDeskBlInput" rows="2" placeholder="예시&#10;MSCU1234567&#10;ZIMU7654321, ABCD9999999"></textarea>
-        <div style="display:flex; gap:8px; margin-top:6px;">
+        <div style="display:flex; gap:8px; margin-top:6px; align-items:center; flex-wrap:wrap;">
           <button type="button" class="btn generate-btn" onclick="checkPaymentStatusForBlDesk()">🔍 조회</button>
           <button type="button" class="btn secondary-btn" onclick="refreshPaymentData()">🔄 데이터 갱신</button>
+          <span id="paymentRefreshStatus" class="hint" style="margin-top:0;"></span>
         </div>
         <div id="blDeskPaymentResult" class="desk-result-box"></div>
       </div>
+    </div>
+
+    <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
+
+    <div class="hint" style="margin-bottom:10px;">위 조회로 안 되거나 직접 원본을 보고 싶을 땐 아래 화면에서 확인하세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요. 원본 파일이 바뀌면 이 화면도 그대로 반영돼요.</div>
+    <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
+    <div class="payment-embed-wrap">
+      <iframe
+        src="https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True"
+        width="100%" height="800" frameborder="0" scrolling="yes"
+        title="입금현황 (BLCONFIRM.xlsx)">
+      </iframe>
     </div>
   `;
 }
@@ -26150,45 +26163,6 @@ function loadCachedPaymentData() {
       }
     }
   } catch (e) { /* 무시 */ }
-}
-
-function checkPaymentStatus() {
-  const inputEl = document.getElementById("paymentBlInput");
-  const resultEl = document.getElementById("paymentResultList");
-  if (!inputEl || !resultEl) return;
-
-  if (!paymentDataCache) {
-    resultEl.innerHTML = `<div class="hint">⚠️ 먼저 "데이터 갱신" 버튼을 눌러 최신 데이터를 가져와주세요.</div>`;
-    return;
-  }
-
-  const blNumbers = inputEl.value
-    .split(/[\n,]+/)
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
-
-  if (blNumbers.length === 0) {
-    resultEl.innerHTML = `<div class="hint">비엘번호를 입력해주세요.</div>`;
-    return;
-  }
-
-  resultEl.innerHTML = blNumbers
-    .map((bl) => {
-      const data = paymentDataCache[bl];
-      if (!data) {
-        return `<div class="payment-row not-found">⚠️ ${bl} — 목록에 없음 (번호 확인 필요)</div>`;
-      }
-      // "BL발행" 컬럼(issued)에 O가 표시되어 있으면 = 입금확인 완료, 발행 가능
-      const ready = data.issued.toUpperCase() === "O";
-
-      const statusText = ready
-        ? "✅ BL 발행 가능"
-        : "❌ BL 발행 불가";
-      const statusClass = ready ? "ready" : "not-ready";
-
-      return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
-    })
-    .join("");
 }
 
 switchMainTab("procedures");
