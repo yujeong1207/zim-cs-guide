@@ -21,11 +21,15 @@ let contactsAllItems = null; // 전체 데이터 캐시 (한 번 로드되면 �
 let contactsFilteredItems = []; // 현재 검색어로 걸러진 결과
 let contactsRenderCount = CONTACTS_RENDER_PAGE_SIZE; // 지금까지 화면에 그린 개수
 let contactsCurrentQuery = "";
+let contactsPendingMarkSeen = false; // "확인함" 처리를 데이터 로딩 완료 후로 미뤄야 할 때 씀 (타이밍 버그 방지)
 
-function initContactsTab() {
+function initContactsTab(markSeen) {
   const root = document.getElementById("an-anemail-tab");
   if (!root) return;
-  if (root.dataset.anemailInited === "1") return; // 이미 초기화됐으면 다시 안 그림 (검색창 값 유지)
+  if (root.dataset.anemailInited === "1") {
+    if (markSeen) markContactsSeenWhenReady(); // 이미 초기화된 상태로 다시 들어온 것도 "확인함" 처리
+    return;
+  }
   root.dataset.anemailInited = "1";
 
   root.innerHTML = `
@@ -52,22 +56,37 @@ function initContactsTab() {
   });
 
   document.getElementById("anemail-refresh-btn").addEventListener("click", () => {
-    loadAllContacts(true);
+    loadAllContacts(true, true); // 직접 새로고침 누른 거니까 "확인함" 처리도 같이
   });
 
-  loadAllContacts(false);
+  loadAllContacts(false, markSeen);
 }
 
-/* 전체 데이터를 한 번에 불러와 캐시에 저장 (forceReload면 캐시 무시하고 새로 받아옴) */
+/* markContactsSeenWhenReady를 호출했을 때 데이터가 아직 없으면, loadAllContacts가
+   데이터를 다 채운 다음에 알아서 "확인함" 처리를 해주도록 예약해두는 함수 */
+function markContactsSeenWhenReady() {
+  if (contactsAllItems) {
+    markContactsUpdatesSeen();
+  } else {
+    contactsPendingMarkSeen = true;
+  }
+}
+
 const CONTACTS_CACHE_STORAGE_KEY = "cs_guide_contacts_cache_v1";
 const CONTACTS_CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4시간 - 며칠에 한 번 정도 추가되는 빈도라, 완전 실시간보단 이 정도면 충분
 
-function loadAllContacts(forceReload) {
+/* 전체 데이터를 한 번에 불러와 캐시에 저장 (forceReload면 캐시 무시하고 새로 받아옴).
+   markSeen이 true면, 데이터가 실제로 다 준비된 "다음"에 확인함 처리를 함 (타이밍 버그 방지 - 데이터가
+   로딩되기도 전에 먼저 확인함 처리가 되던 예전 버그를 이렇게 막았어요) */
+function loadAllContacts(forceReload, markSeen) {
   const listEl = document.getElementById("anemail-list");
   const inputEl = document.getElementById("anemail-search-input");
 
+  if (markSeen) contactsPendingMarkSeen = true;
+
   if (contactsAllItems && !forceReload) {
     applyContactsFilter(inputEl.value);
+    if (contactsPendingMarkSeen) { markContactsUpdatesSeen(); contactsPendingMarkSeen = false; }
     return;
   }
 
@@ -83,7 +102,8 @@ function loadAllContacts(forceReload) {
           contactsAllItems = cached.items;
           inputEl.disabled = false;
           applyContactsFilter(inputEl.value);
-          checkContactsUpdatesForNotice();
+          if (contactsPendingMarkSeen) { markContactsUpdatesSeen(); contactsPendingMarkSeen = false; }
+          else { checkContactsUpdatesForNotice(); }
           return; // Firestore 읽기 없이 여기서 끝
         }
       }
@@ -116,7 +136,8 @@ function loadAllContacts(forceReload) {
 
       inputEl.disabled = false;
       applyContactsFilter(inputEl.value);
-      checkContactsUpdatesForNotice();
+      if (contactsPendingMarkSeen) { markContactsUpdatesSeen(); contactsPendingMarkSeen = false; }
+      else { checkContactsUpdatesForNotice(); }
     } catch (err) {
       listEl.innerHTML = `<div class="anemail-empty">불러오기 실패: ${escapeHtml(String(err))}</div>`;
     }
@@ -263,7 +284,7 @@ function renderContactForm(item) {
         formEl.style.display = "none";
         formEl.innerHTML = "";
         // 방금 등록/수정한 게 바로 보이도록 캐시를 새로 불러옴 (여기선 한 번 더 기다리는 게 맞음)
-        loadAllContacts(true);
+        loadAllContacts(true, true);
       } catch (err) {
         document.getElementById("af-status").textContent = "저장 실패: " + err;
         document.getElementById("af-save").disabled = false;
@@ -331,6 +352,6 @@ function markContactsUpdatesSeen() {
 // 연락처 탭이 클릭되어 화면에 나타날 때 초기화 (기존 탭 전환 로직에 맞춰 호출 위치 조정 필요)
 document.addEventListener("DOMContentLoaded", () => {
   if (document.getElementById("an-anemail-tab")) {
-    initContactsTab();
+    initContactsTab(false); // 페이지 여는 것만으로는 "확인함" 처리 안 함 (실제로 탭에 들어와야 확인함)
   }
 });
