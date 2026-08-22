@@ -1727,3 +1727,28 @@ input, select, textarea {
 .payment-row.ready { border-left: 3px solid #16a34a; color: #15803d; }
 .payment-row.not-ready { border-left: 3px solid #dc2626; color: #b91c1c; }
 .payment-row.not-found { border-left: 3px solid #9ca3af; color: #6b7280; }
+
+/* D/O·B/L 데스크 검색결과 - 선박 코드 배지 (같은 배 이름이 여러 개 있어도 구분되게) */
+.desk-vessel-code {
+  display: inline-block;
+  background: #eef2ff;
+  color: #4338ca;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.desk-vessel-voyage {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #4b5563;
+  font-weight: 700;
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  margin-left: 4px;
+  vertical-align: middle;
+}

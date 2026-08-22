@@ -17006,6 +17006,10 @@ function loadDoDeskTab() {
     <div id="doDeskCalcBody"></div>
   `;
   renderDoCalculator("doDeskCalcBody");
+
+  // 모선 일정/위임장 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
+  loadVesselTab();
+  loadPoaTab();
 }
 
 function renderDoDeskVesselResult() {
@@ -17017,7 +17021,7 @@ function renderDoDeskVesselResult() {
   if (matches.length === 0) { box.innerHTML = '<div class="hint">검색 결과가 없어요.</div>'; return; }
   box.innerHTML = matches.map((v) => `
     <div class="desk-result-row">
-      <b>${escapeHtml(v.name || "-")}</b>${v.code ? " (" + escapeHtml(v.code) + ")" : ""}
+      <b>${escapeHtml(v.name || "-")}</b>${v.code ? ` <span class="desk-vessel-code">${escapeHtml(v.code)}</span>` : ""}${v.voyage ? ` <span class="desk-vessel-voyage">${escapeHtml(v.voyage)}</span>` : ""}
       <div>⚓ 입항 ${formatVesselDateTime(v.arrivalDate, v.arrivalTimeConfirmed)}</div>
     </div>
   `).join("");
@@ -17078,6 +17082,9 @@ function loadBlDeskTab() {
       </iframe>
     </div>
   `;
+
+  // 모선 일정 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
+  loadVesselTab();
 }
 
 function renderBlDeskVesselResult() {
@@ -17089,7 +17096,7 @@ function renderBlDeskVesselResult() {
   if (matches.length === 0) { box.innerHTML = '<div class="hint">검색 결과가 없어요.</div>'; return; }
   box.innerHTML = matches.map((v) => `
     <div class="desk-result-row">
-      <b>${escapeHtml(v.name || "-")}</b>${v.code ? " (" + escapeHtml(v.code) + ")" : ""}
+      <b>${escapeHtml(v.name || "-")}</b>${v.code ? ` <span class="desk-vessel-code">${escapeHtml(v.code)}</span>` : ""}${v.voyage ? ` <span class="desk-vessel-voyage">${escapeHtml(v.voyage)}</span>` : ""}
       <div>🚩 출항 ${formatVesselDateTime(v.departureDate, v.departureTimeConfirmed)}</div>
     </div>
   `).join("");
@@ -18302,6 +18309,7 @@ function nextMonthAfter(m) {
 
 function renderVesselTab() {
   const wrap = document.getElementById("vesselMonthsWrap");
+  if (!wrap) return;
   wrap.innerHTML = "";
   // 로컬에 추가해둔 달(VESSEL_MONTHS) + 서버에서 받아온 배들이 실제로 속한 달을 합쳐서 보여줌
   // (팀원이 새 달에 배를 하나 등록하면, 내가 그 달을 따로 추가한 적 없어도 자동으로 보이게 하기 위함)
