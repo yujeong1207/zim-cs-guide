@@ -17511,7 +17511,7 @@ function parseTerminalFileToAOA(arrayBuffer) {
     }
     return parseHtmlTableToAOA(fullText);
   }
-  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
+  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: "array" });
   const ws = wb.Sheets[wb.SheetNames[0]];
   return XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
 }
@@ -17701,7 +17701,7 @@ function processPortScheduleFile(file) {
   reader.onload = async (e) => {
     try {
       const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: "array", cellDates: true });
+      const wb = XLSX.read(data, { type: "array" });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
 

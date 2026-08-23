@@ -1780,7 +1780,7 @@ input, select, textarea {
   padding: 8px;
   width: 14.28%;
   min-width: 160px;
-  height: 190px;
+  min-height: 190px; /* 배가 많아지면 짤리지 않고 셀이 알아서 늘어나게 (고정 height 아님) */
   background: #fff;
 }
 .port-cal-date {
@@ -1790,6 +1790,7 @@ input, select, textarea {
   margin-bottom: 8px;
   font-size: 13px;
   color: #000;
+  text-align: center;
 }
 .port-cal-body {
   font-size: 12px;
