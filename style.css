@@ -1763,7 +1763,7 @@ input, select, textarea {
   color: #000;
 }
 .port-schedule-calendar th {
-  background: #f2f2f2;
+  background: #dce6f1; /* 회색 대신 하늘색 계열로 */
   color: #000;
   padding: 7px 4px;
   border: 1px solid #999;
