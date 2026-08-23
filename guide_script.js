@@ -17406,7 +17406,7 @@ function openPortScheduleEditForm(id) {
         <input id="psf-vesselName" type="text" placeholder="선명" value="${v("vesselName")}" />
         <input id="psf-vesselCode" type="text" placeholder="선박코드" value="${v("vesselCode")}" />
         <input id="psf-voyage" type="text" placeholder="항차" value="${v("voyage")}" />
-        <input id="psf-arrivalDate" type="date" value="${v("arrivalDate")}" />
+        <input id="psf-arrivalDate" type="date" value="${v("arrivalDate")}" onchange="syncPortScheduleAnSendDate()" />
         <input id="psf-departureDate" type="date" value="${v("departureDate")}" />
         <input id="psf-terminal" type="text" placeholder="터미널" value="${v("terminal")}" />
         <input id="psf-line" type="text" placeholder="LINE" value="${v("line")}" />
@@ -17415,6 +17415,7 @@ function openPortScheduleEditForm(id) {
         <input id="psf-cargoDeadlineTime" type="text" placeholder="적하목록 제출 시간 (예: 오후 3:00)" value="${v("cargoDeadlineTime")}" />
         <input id="psf-anSendDate" type="date" value="${v("anSendDate")}" />
       </div>
+      <div class="hint" style="margin:6px 0 0;">💡 입항일을 바꾸면 AN발송예정일(입항일 -2일)이 자동으로 같이 바뀌어요. 직접 다른 날짜로 고치고 싶으면 그 칸을 따로 수정하시면 돼요.</div>
       <div class="anemail-form-actions">
         <button id="psf-save" type="button" onclick="savePortScheduleForm('${item ? item.id : ""}')">${item ? "수정 저장" : "등록"}</button>
         <button type="button" onclick="document.getElementById('portScheduleEditFormWrap').innerHTML=''">취소</button>
@@ -17422,6 +17423,17 @@ function openPortScheduleEditForm(id) {
       <div id="psf-status"></div>
     </div>
   `;
+
+  // 수정 버튼을 눌렀을 때, 스크롤이 아무리 내려가 있어도 폼이 있는 위치로 자동으로 올라가게
+  formWrap.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+/* 입항일이 바뀌면 AN발송예정일(입항일 - 2일)도 자동으로 같이 채워줌 */
+function syncPortScheduleAnSendDate() {
+  const arrivalInput = document.getElementById("psf-arrivalDate");
+  const anSendInput = document.getElementById("psf-anSendDate");
+  if (!arrivalInput || !anSendInput || !arrivalInput.value) return;
+  anSendInput.value = subtractDaysFromDateStr(arrivalInput.value, 2);
 }
 
 async function savePortScheduleForm(id) {
