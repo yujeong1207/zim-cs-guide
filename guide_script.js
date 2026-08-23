@@ -17249,19 +17249,20 @@ function formatMMDD(dateStr) {
 
 /* 배 한 척당 하나의 블록으로 만듦 - 첫 줄(선명)은 볼드, 블록 사이엔 간격을 둬서 한눈에 잘 들어오게 함 */
 function buildPortScheduleCellHtml(items) {
-  return items.map((p) => {
+  return items.map((p, i) => {
     const linePrefix = p.line ? escapeHtml(p.line) + ") " : "";
     const vesselPart = escapeHtml([p.vesselName, p.vesselCode, p.voyage].filter(Boolean).join(" "));
     const terminalPart = p.terminal ? ` (${escapeHtml(p.terminal)})` : "";
     let extra = "";
+    if (p.anSendDate) {
+      extra += `<div class="port-cal-line">AN 발송 예정: ${formatMMDD(p.anSendDate)}</div>`;
+    }
     if (p.cargoDeadlineDate) {
       const timePart = p.cargoDeadlineTime ? " " + escapeHtml(p.cargoDeadlineTime) : " (시간 미정)";
-      extra += `<div>**적하목록 제출: ${formatMMDD(p.cargoDeadlineDate)}${timePart}</div>`;
+      extra += `<div class="port-cal-line">적하목록 제출: ${formatMMDD(p.cargoDeadlineDate)}${timePart}</div>`;
     }
-    if (p.anSendDate) {
-      extra += `<div>***AN 발송 예정: ${formatMMDD(p.anSendDate)}</div>`;
-    }
-    return `<div class="port-cal-vessel"><div class="port-cal-vessel-name">${linePrefix}${vesselPart}${terminalPart}</div>${extra}</div>`;
+    const divider = i > 0 ? '<div class="port-cal-divider"></div>' : "";
+    return `${divider}<div class="port-cal-vessel"><div class="port-cal-vessel-name">${linePrefix}${vesselPart}${terminalPart}</div>${extra}</div>`;
   }).join("");
 }
 

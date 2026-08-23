@@ -1799,10 +1799,18 @@ input, select, textarea {
   color: #000;
 }
 .port-cal-vessel {
-  margin-bottom: 10px; /* 배가 여러 척이면 서로 헷갈리지 않게 간격을 확실히 둠 */
+  margin-bottom: 8px;
+  text-align: center; /* 배 이름·부가정보 다 가운데 정렬 */
 }
 .port-cal-vessel-name {
   font-weight: bold; /* 어떤 배인지 한눈에 들어오게 볼드 처리 */
+}
+.port-cal-line {
+  color: #000; /* 고객들이 자주 물어보는 정보라 회색 대신 검은 글씨로 유지 */
+}
+.port-cal-divider {
+  border-top: 1px dashed #ccc;
+  margin: 8px 0;
 }
 .port-cal-footnote {
   margin-top: 10px;
