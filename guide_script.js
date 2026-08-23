@@ -17114,8 +17114,31 @@ function loadPortScheduleTab() {
     <div id="portScheduleUploadResult"></div>
     <button class="btn generate-btn" style="margin:12px 0;" onclick="openPortScheduleEditForm(null)">＋ 직접 한 건 등록</button>
     <div id="portScheduleEditFormWrap"></div>
+
+    <hr style="margin:24px 0; border:none; border-top:1px solid #e5e7eb;">
+
+    <div class="label" style="margin-bottom:8px;">📅 노션용 캘린더 보기 (2주치, 캡처해서 노션에 올리는 용도)</div>
+    <div class="hint" style="margin-bottom:10px;">시작일(보통 일요일)을 고르면 그날부터 2주치를 달력 형태로 보여줘요. 매주 월요일에 그 주 일요일 날짜로 바꿔주세요.</div>
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
+      <input type="date" id="portScheduleCalStartInput" onchange="renderPortScheduleCalendar()">
+      <span class="hint" style="margin:0;">※ 되도록 일요일로 골라주세요</span>
+    </div>
+    <div id="portScheduleCalendarWrap"></div>
+
+    <hr style="margin:24px 0; border:none; border-top:1px solid #e5e7eb;">
+
     <div id="portScheduleTableWrap"></div>
   `;
+
+  // 캘린더 시작일 기본값: 오늘이 속한 주의 일요일
+  const calInput = document.getElementById("portScheduleCalStartInput");
+  if (calInput && !calInput.value) {
+    const today = new Date();
+    const sunday = new Date(today);
+    sunday.setDate(today.getDate() - today.getDay());
+    calInput.value = sunday.getFullYear() + "-" + String(sunday.getMonth() + 1).padStart(2, "0") + "-" + String(sunday.getDate()).padStart(2, "0");
+  }
+  renderPortScheduleCalendar();
 
   window.fbReady.then(() => {
     portScheduleUnsubscribe = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).onSnapshot(
@@ -17138,11 +17161,73 @@ function loadPortScheduleTab() {
           };
         });
         renderPortScheduleTable();
+        renderPortScheduleCalendar();
       },
       (err) => console.error("노션 입항 스케줄 실시간 구독 실패:", err)
     );
   });
   liveTabUnsubscribers.portSchedule = () => { if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; } };
+}
+
+/* 노션용 캘린더 - 예전 엑셀 파일의 수식(IFERROR+TEXTJOIN+FILTER)이랑 똑같은 로직이에요:
+   그날 입항하는 배들을 "LINE) 선명 코드 항차 (터미널)" 형태로 나열하고,
+   적하목록 제출일/시간이 있으면 그 아래 한 줄, AN발송예정일 있으면 또 한 줄 추가함 */
+function formatMMDD(dateStr) {
+  const m = String(dateStr || "").match(/^\d{4}-(\d{2})-(\d{2})/);
+  return m ? m[1] + "/" + m[2] : "";
+}
+
+function buildPortScheduleCellText(items) {
+  return items.map((p) => {
+    const linePrefix = p.line ? p.line + ") " : "";
+    const vesselPart = [p.vesselName, p.vesselCode, p.voyage].filter(Boolean).join(" ");
+    const terminalPart = p.terminal ? ` (${p.terminal})` : "";
+    let block = linePrefix + vesselPart + terminalPart;
+    if (p.cargoDeadlineDate) {
+      const timePart = p.cargoDeadlineTime ? " " + p.cargoDeadlineTime : " (시간 미정)";
+      block += "\n **적하목록 제출: " + formatMMDD(p.cargoDeadlineDate) + timePart;
+    }
+    if (p.anSendDate) {
+      block += "\n***AN 발송 예정: " + formatMMDD(p.anSendDate);
+    }
+    return block;
+  }).join("\n\n");
+}
+
+function renderPortScheduleCalendar() {
+  const wrap = document.getElementById("portScheduleCalendarWrap");
+  const startInput = document.getElementById("portScheduleCalStartInput");
+  if (!wrap || !startInput || !startInput.value) return;
+
+  const startDate = new Date(startInput.value + "T00:00:00");
+  const weekdayLabels = ["일", "월", "화", "수", "목", "금", "토"];
+
+  // 데이 date별로 미리 묶어둠 (같은 날짜에 여러 배가 있을 수 있어서)
+  const byDate = {};
+  PORT_SCHEDULE_LIST.forEach((p) => {
+    if (!p.arrivalDate) return;
+    if (!byDate[p.arrivalDate]) byDate[p.arrivalDate] = [];
+    byDate[p.arrivalDate].push(p);
+  });
+
+  let html = `<div style="font-weight:700; margin-bottom:10px; color:#1155cc; font-size:14px;">${startDate.getMonth() + 1}월 수입 입항 캘린더 (2주)</div>`;
+  html += `<div style="overflow-x:auto;"><table class="port-schedule-calendar">`;
+  html += `<tr>${weekdayLabels.map((w) => `<th>${w}</th>`).join("")}</tr>`;
+
+  for (let week = 0; week < 2; week++) {
+    html += "<tr>";
+    for (let day = 0; day < 7; day++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + week * 7 + day);
+      const dateStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const items = byDate[dateStr] || [];
+      const cellText = buildPortScheduleCellText(items);
+      html += `<td><div class="port-cal-date">${d.getMonth() + 1}월 ${d.getDate()}일</div><div class="port-cal-body">${escapeHtml(cellText).replace(/\n/g, "<br>")}</div></td>`;
+    }
+    html += "</tr>";
+  }
+  html += "</table></div>";
+  wrap.innerHTML = html;
 }
 
 function renderPortScheduleTable() {

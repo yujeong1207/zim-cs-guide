@@ -1752,3 +1752,45 @@ input, select, textarea {
   margin-left: 4px;
   vertical-align: middle;
 }
+
+/* 노션 입항 스케줄 - 캘린더 보기 (고객이 보는 화면이라, 팀용 화면이랑 다르게
+   장식 없이 깔끔한 엑셀/표 스타일로 만들었어요) */
+.port-schedule-calendar {
+  border-collapse: collapse;
+  width: 100%;
+  background: #fff;
+  font-family: "맑은 고딕", "Malgun Gothic", Arial, sans-serif;
+  color: #000;
+}
+.port-schedule-calendar th {
+  background: #f2f2f2;
+  color: #000;
+  padding: 6px 4px;
+  border: 1px solid #999;
+  font-size: 13px;
+  font-weight: bold;
+  text-align: center;
+}
+.port-schedule-calendar td {
+  border: 1px solid #999;
+  vertical-align: top;
+  padding: 6px;
+  width: 14.28%;
+  min-width: 150px;
+  height: 170px;
+  background: #fff;
+}
+.port-cal-date {
+  font-weight: bold;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 3px;
+  margin-bottom: 5px;
+  font-size: 13px;
+  color: #000;
+}
+.port-cal-body {
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: normal;
+  color: #000;
+}
