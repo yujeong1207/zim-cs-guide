@@ -17060,18 +17060,37 @@ function portScheduleDocId(vesselCode, voyage) {
 
 /* 엑셀 셀 값(Date 객체든 문자열이든)을 항상 "YYYY-MM-DD"로 통일 */
 function parsePortScheduleDate(cell) {
-  if (!cell) return "";
+  if (cell === null || cell === undefined || cell === "") return "";
+
   if (cell instanceof Date) {
+    if (isNaN(cell.getTime())) return "";
     return cell.getFullYear() + "-" + String(cell.getMonth() + 1).padStart(2, "0") + "-" + String(cell.getDate()).padStart(2, "0");
   }
+
+  // 엑셀에서 "날짜 서식"이 아니라 그냥 숫자로 저장된 날짜 칸(엑셀 내부 날짜 일련번호)인 경우
+  if (typeof cell === "number") {
+    if (cell <= 0) return ""; // 0 이하는 진짜 날짜가 아니라 빈 칸으로 취급 (여기서 1899-12-XX 같은 쓰레기 값이 나오던 걸 막음)
+    const utcMs = Math.round((cell - 25569) * 86400 * 1000); // 25569 = 1970-01-01에 해당하는 엑셀 일련번호
+    const d = new Date(utcMs);
+    if (isNaN(d.getTime())) return "";
+    return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0") + "-" + String(d.getUTCDate()).padStart(2, "0");
+  }
+
   const str = String(cell).trim();
+  if (!str) return "";
+
+  // 구분자 없는 순수 숫자 문자열(예: "46056")은 날짜로 취급하지 않음
+  // (new Date("46056")가 "46056년"으로 잘못 해석되는 걸 막기 위함 - 이게 원래 버그의 원인이었어요)
+  if (/^\d+$/.test(str)) return "";
+
   const m = str.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
   if (m) return m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+
   const parsed = new Date(str);
   if (!isNaN(parsed.getTime())) {
     return parsed.getFullYear() + "-" + String(parsed.getMonth() + 1).padStart(2, "0") + "-" + String(parsed.getDate()).padStart(2, "0");
   }
-  return str;
+  return ""; // 못 알아보는 형식이면 이상한 값 남기지 않고 그냥 빈 값으로
 }
 
 /* 날짜에서 이틀 전 날짜 계산 (AN 발송 예정일 자동 계산용) */
@@ -17083,52 +17102,73 @@ function subtractDaysFromDateStr(dateStr, days) {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
+let portScheduleSubTab = "raw"; // "raw" | "calendar"
+
+function switchPortScheduleSubTab(tab) {
+  portScheduleSubTab = tab;
+  renderPortScheduleSubTabButtons();
+  document.getElementById("portScheduleRawSection").style.display = tab === "raw" ? "block" : "none";
+  document.getElementById("portScheduleCalendarSection").style.display = tab === "calendar" ? "block" : "none";
+  if (tab === "calendar") renderPortScheduleCalendar();
+}
+
+function renderPortScheduleSubTabButtons() {
+  const wrap = document.getElementById("portScheduleSubTabButtons");
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <button type="button" class="sub-tab-btn ${portScheduleSubTab === "raw" ? "active" : ""}" onclick="switchPortScheduleSubTab('raw')">📄 raw 데이터</button>
+    <button type="button" class="sub-tab-btn ${portScheduleSubTab === "calendar" ? "active" : ""}" onclick="switchPortScheduleSubTab('calendar')">📅 입항 캘린더 (노션용)</button>
+  `;
+}
+
 function loadPortScheduleTab() {
   const wrap = document.getElementById("portScheduleWrap");
   if (!wrap) return;
   wrap.innerHTML = `
-    <div class="desk-search-row">
-      <label class="excel-upload-box" id="portScheduleUploadBox" style="padding:18px 14px;">
-        <input type="file" id="portScheduleFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleFile(event)">
-        <div class="excel-upload-icon">📄</div>
-        <div class="excel-upload-label">raw 전체 파일 올리기</div>
-        <div class="excel-upload-sub">Vessel Name·Code·Voyage·Arrival·Terminal 등 raw 탭 그대로인 파일</div>
-      </label>
-      <div style="flex:1; min-width:260px;">
-        <select id="portScheduleTerminalSelect" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #e5e7eb; border-radius:8px;">
-          <option value="">↓ 먼저 어느 터미널 파일인지 선택하세요</option>
-          <option value="BCT">BCT</option>
-          <option value="PNIT">PNIT</option>
-          <option value="HPNT">HPNT</option>
-          <option value="BPT">BPT (신선대/감만)</option>
-          <option value="한진인천">한진인천</option>
-        </select>
-        <label class="excel-upload-box" id="portScheduleTerminalUploadBox" style="padding:18px 14px; display:block;">
-          <input type="file" id="portScheduleTerminalFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleTerminalFile(event)">
-          <div class="excel-upload-icon">🚢</div>
-          <div class="excel-upload-label">터미널 갱신용 엑셀 올리기</div>
-          <div class="excel-upload-sub">선명으로 매칭해서 입항일·출항일·터미널만 갱신해요 (마감자 등은 안 건드림)</div>
+    <div id="portScheduleSubTabButtons" class="sub-tab-buttons"></div>
+
+    <div id="portScheduleRawSection">
+      <div class="desk-search-row">
+        <label class="excel-upload-box" id="portScheduleUploadBox" style="padding:18px 14px;">
+          <input type="file" id="portScheduleFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleFile(event)">
+          <div class="excel-upload-icon">📄</div>
+          <div class="excel-upload-label">raw 전체 파일 올리기</div>
+          <div class="excel-upload-sub">Vessel Name·Code·Voyage·Arrival·Terminal 등 raw 탭 그대로인 파일</div>
         </label>
+        <div style="flex:1; min-width:260px;">
+          <select id="portScheduleTerminalSelect" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #e5e7eb; border-radius:8px;">
+            <option value="">↓ 먼저 어느 터미널 파일인지 선택하세요</option>
+            <option value="BCT">BCT</option>
+            <option value="PNIT">PNIT</option>
+            <option value="HPNT">HPNT</option>
+            <option value="BPT">BPT (신선대/감만)</option>
+            <option value="한진인천">한진인천</option>
+          </select>
+          <label class="excel-upload-box" id="portScheduleTerminalUploadBox" style="padding:18px 14px; display:block;">
+            <input type="file" id="portScheduleTerminalFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleTerminalFile(event)">
+            <div class="excel-upload-icon">🚢</div>
+            <div class="excel-upload-label">터미널 갱신용 엑셀 올리기</div>
+            <div class="excel-upload-sub">선명으로 매칭해서 입항일·출항일·터미널만 갱신해요 (마감자 등은 안 건드림)</div>
+          </label>
+        </div>
       </div>
+      <div id="portScheduleUploadResult"></div>
+      <button class="btn generate-btn" style="margin:12px 0;" onclick="openPortScheduleEditForm(null)">＋ 직접 한 건 등록</button>
+      <div id="portScheduleEditFormWrap"></div>
+      <div id="portScheduleTableWrap"></div>
     </div>
-    <div id="portScheduleUploadResult"></div>
-    <button class="btn generate-btn" style="margin:12px 0;" onclick="openPortScheduleEditForm(null)">＋ 직접 한 건 등록</button>
-    <div id="portScheduleEditFormWrap"></div>
 
-    <hr style="margin:24px 0; border:none; border-top:1px solid #e5e7eb;">
-
-    <div class="label" style="margin-bottom:8px;">📅 노션용 캘린더 보기 (2주치, 캡처해서 노션에 올리는 용도)</div>
-    <div class="hint" style="margin-bottom:10px;">시작일(보통 일요일)을 고르면 그날부터 2주치를 달력 형태로 보여줘요. 매주 월요일에 그 주 일요일 날짜로 바꿔주세요.</div>
-    <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
-      <input type="date" id="portScheduleCalStartInput" onchange="renderPortScheduleCalendar()">
-      <span class="hint" style="margin:0;">※ 되도록 일요일로 골라주세요</span>
+    <div id="portScheduleCalendarSection" style="display:none;">
+      <div class="hint" style="margin-bottom:10px;">시작일(보통 일요일)을 고르면 그날부터 2주치를 달력 형태로 보여줘요. 매주 월요일에 그 주 일요일 날짜로 바꿔주세요.</div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
+        <input type="date" id="portScheduleCalStartInput" onchange="renderPortScheduleCalendar()">
+        <span class="hint" style="margin:0;">※ 되도록 일요일로 골라주세요</span>
+      </div>
+      <div id="portScheduleCalendarWrap"></div>
     </div>
-    <div id="portScheduleCalendarWrap"></div>
-
-    <hr style="margin:24px 0; border:none; border-top:1px solid #e5e7eb;">
-
-    <div id="portScheduleTableWrap"></div>
   `;
+
+  renderPortScheduleSubTabButtons();
 
   // 캘린더 시작일 기본값: 오늘이 속한 주의 일요일
   const calInput = document.getElementById("portScheduleCalStartInput");
@@ -17230,6 +17270,10 @@ function renderPortScheduleCalendar() {
   wrap.innerHTML = html;
 }
 
+let portScheduleQuery = "";
+let portScheduleHideEmpty = false;
+let portScheduleMonthFilter = ""; // "" = 전체, "2026-08" 같은 형식이면 그 달만
+
 function renderPortScheduleTable() {
   const wrap = document.getElementById("portScheduleTableWrap");
   if (!wrap) return;
@@ -17239,7 +17283,21 @@ function renderPortScheduleTable() {
     return;
   }
 
-  const sorted = PORT_SCHEDULE_LIST.slice().sort((a, b) => (a.arrivalDate || "").localeCompare(b.arrivalDate || ""));
+  // 실제 데이터에 있는 입항월들만 골라서 드롭다운 목록 만듦 (최신순)
+  const months = Array.from(new Set(
+    PORT_SCHEDULE_LIST.map((r) => (r.arrivalDate || "").slice(0, 7)).filter(Boolean)
+  )).sort((a, b) => b.localeCompare(a));
+
+  const q = portScheduleQuery.trim().toUpperCase();
+  let filtered = PORT_SCHEDULE_LIST.filter((r) => {
+    if (portScheduleHideEmpty && !r.arrivalDate) return false;
+    if (portScheduleMonthFilter && (r.arrivalDate || "").slice(0, 7) !== portScheduleMonthFilter) return false;
+    if (!q) return true;
+    return [r.vesselName, r.vesselCode, r.voyage, r.terminal, r.line, r.manager]
+      .some((v) => String(v || "").toUpperCase().includes(q));
+  });
+
+  const sorted = filtered.slice().sort((a, b) => (a.arrivalDate || "").localeCompare(b.arrivalDate || ""));
 
   const rows = sorted.map((r) => `
     <tr data-id="${escapeHtml(r.id)}">
@@ -17261,14 +17319,28 @@ function renderPortScheduleTable() {
   `).join("");
 
   wrap.innerHTML = `
-    <div class="hint" style="margin:10px 0;">총 ${sorted.length}건</div>
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
+      <input type="text" id="portScheduleSearchInput" placeholder="선명·코드·항차·터미널·LINE·마감자로 검색..."
+        value="${escapeHtml(portScheduleQuery)}" style="flex:1; min-width:220px; padding:8px;"
+        oninput="portScheduleQuery=this.value; renderPortScheduleTable();" />
+      <select style="padding:8px;" onchange="portScheduleMonthFilter=this.value; renderPortScheduleTable();">
+        <option value="">입항월: 전체</option>
+        ${months.map((m) => `<option value="${m}" ${portScheduleMonthFilter === m ? "selected" : ""}>${m.replace("-", "년 ")}월</option>`).join("")}
+      </select>
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap;">
+        <input type="checkbox" ${portScheduleHideEmpty ? "checked" : ""}
+          onchange="portScheduleHideEmpty=this.checked; renderPortScheduleTable();" />
+        입항일 없는 항목 숨기기
+      </label>
+      <span class="hint" style="margin:0;">${sorted.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건</span>
+    </div>
     <div style="overflow-x:auto;">
       <table class="contacts-table">
         <tr>
           <th>선명</th><th>코드</th><th>항차</th><th>입항일</th><th>출항일</th>
           <th>터미널</th><th>LINE</th><th>마감자</th><th>적하목록 제출</th><th>AN발송예정</th><th>관리</th>
         </tr>
-        ${rows}
+        ${rows || '<tr><td colspan="11" style="text-align:center; padding:20px;">검색 결과가 없어요.</td></tr>'}
       </table>
     </div>
   `;

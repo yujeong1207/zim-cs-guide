@@ -1794,3 +1794,30 @@ input, select, textarea {
   white-space: normal;
   color: #000;
 }
+
+/* 노션 입항 스케줄 - raw/캘린더 서브탭 버튼 */
+.sub-tab-buttons {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 10px;
+}
+.sub-tab-btn {
+  padding: 8px 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #4b5563;
+}
+.sub-tab-btn:hover {
+  background: #f9fafb;
+}
+.sub-tab-btn.active {
+  background: #111827;
+  border-color: #111827;
+  color: #fff;
+}
