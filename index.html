@@ -95,6 +95,15 @@
     </div>
   </div>
 
+  <div class="tab-group" data-group="csboard">
+    <button class="tab-group-btn" onclick="toggleTabGroup('csboard')">📌 수출 CS 공유 <span class="tab-group-caret">▾</span></button>
+    <div class="tab-group-dropdown" id="tabGroupDropdown-csboard">
+      <button class="main-tab-btn" data-tab="followup" onclick="switchMainTab('followup')">📌 팔로우업 보드</button>
+      <button class="main-tab-btn" data-tab="cod" onclick="switchMainTab('cod')">💱 COD 현황</button>
+      <button class="main-tab-btn" data-tab="triangle" onclick="switchMainTab('triangle')">🌏 삼국간</button>
+    </div>
+  </div>
+
   <div class="tab-group" data-group="reference">
     <button class="tab-group-btn" onclick="toggleTabGroup('reference')">📚 참고자료 <span class="tab-group-caret">▾</span></button>
     <div class="tab-group-dropdown" id="tabGroupDropdown-reference">
@@ -167,7 +176,7 @@
 
 <!-- ===== 모선 입출항 일정 탭 ===== -->
 <div class="tab-page" id="page-vessels">
-  <div class="hint" style="margin-bottom:14px;">💡 D/O 발행은 <b>모선 입항일</b>, B/L 발행은 <b>모선 출항일</b> 기준이에요. 7월부터 월별로 정리해서 볼 수 있어요.<br>🔴 <b>실시간 공유돼요</b> — 한 명이 배를 등록·수정·삭제하면 팀원 전체 화면에 바로 반영되니, 같은 배를 여러 명이 각자 입력할 필요 없어요. (15분마다 자동으로 최신화되지만, 방금 등록된 걸 바로 보고 싶으면 새로고침을 눌러주세요.)</div>
+  <div class="hint" style="margin-bottom:14px;">💡 D/O 발행은 <b>모선 입항일</b>, B/L 발행은 <b>모선 출항일</b> 기준이에요. 7월부터 월별로 정리해서 볼 수 있어요.<br>🔴 <b>실시간 공유돼요</b> — 한 명이 배를 등록·수정·삭제하면 팀원 전체 화면에 바로 반영되니, 같은 배를 여러 명이 각자 입력할 필요 없어요. (진짜 실시간이라 새로고침 안 누르셔도 자동으로 반영돼요. 화면이 이상할 때만 새로고침을 눌러주세요.)</div>
   <div id="vesselMonthsWrap"></div>
   <div class="vessel-bottom-actions">
     <button class="btn secondary-btn" onclick="openAddVesselMonth()">＋ 새 달 추가</button>
@@ -241,7 +250,7 @@
 
 <!-- ===== 🖋️ 위임장 현황 탭 ===== -->
 <div class="tab-page" id="page-poa">
-  <div class="hint" style="margin-bottom:10px;">신청업체(포워더/관세사무소)나 실화주 이름으로 검색해서 위임장 제출 여부를 바로 확인해요. 목록에 없으면 아직 제출 안 된 거예요. (15분마다 자동으로 최신화되지만, 방금 등록된 걸 바로 보고 싶으면 새로고침을 눌러주세요.)<br><span style="color:#b91c1c;font-weight:bold;font-size:13px;">⚠️ 위임 권한은 최대 1년이에요. 1년이 지난 건은 검색 결과에 자동으로 경고가 뜨니, 그 업체는 새로 위임장을 받아주세요.</span></div>
+  <div class="hint" style="margin-bottom:10px;">신청업체(포워더/관세사무소)나 실화주 이름으로 검색해서 위임장 제출 여부를 바로 확인해요. 목록에 없으면 아직 제출 안 된 거예요. (진짜 실시간이라 새로고침 안 누르셔도 자동으로 반영돼요. 화면이 이상할 때만 새로고침을 눌러주세요.)<br><span style="color:#b91c1c;font-weight:bold;font-size:13px;">⚠️ 위임 권한은 최대 1년이에요. 1년이 지난 건은 검색 결과에 자동으로 경고가 뜨니, 그 업체는 새로 위임장을 받아주세요.</span></div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button class="btn generate-btn" onclick="openPoaForm()">➕ 새 업체 등록하기 (팀원 누구나)</button>
@@ -270,7 +279,7 @@
 
 <!-- ===== 📦 오비엘 접수 탭 ===== -->
 <div class="tab-page" id="page-obl">
-  <div class="hint" style="margin-bottom:10px;">오비엘 접수하면 여기서 바로 등록하세요. 등록하면 팀원 전체 화면에 바로 반영되고, 노션에 올릴 코드(BL번호 뒷 7자리)도 자동으로 같이 보여줘요. (15분마다 자동으로 최신화되지만, 방금 등록된 걸 바로 보고 싶으면 새로고침을 눌러주세요.)</div>
+  <div class="hint" style="margin-bottom:10px;">오비엘 접수하면 여기서 바로 등록하세요. 등록하면 팀원 전체 화면에 바로 반영되고, 노션에 올릴 코드(BL번호 뒷 7자리)도 자동으로 같이 보여줘요. (진짜 실시간이라 새로고침 안 누르셔도 자동으로 반영돼요. 화면이 이상할 때만 새로고침을 눌러주세요.)</div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button class="btn generate-btn" onclick="toggleOblInlineForm()">➕ 오비엘 접수 등록하기</button>
@@ -300,6 +309,54 @@
 
   <input id="oblFilter" class="contacts-filter-input" placeholder="🔍 이름 또는 BL번호로 검색" oninput="renderOblTable()" style="margin-top:18px;">
   <div id="oblTableWrap"></div>
+</div>
+
+<!-- ===== 📌 팔로우업 보드 탭 ===== -->
+<div class="tab-page" id="page-followup">
+  <div class="hint" style="margin-bottom:10px;">수출 CS 미완료 건 포함해서 계속 기록하는 보드예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있고, 상태를 "완료"로 바꾸면 미완료 건수에서 자동으로 빠져요.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn generate-btn" onclick="openFollowupEditor(null)">➕ 새 건 등록하기</button>
+    <button class="btn secondary-btn" onclick="loadFollowupTab()">🔄 새로고침</button>
+    <select id="followupMonthSelect" class="poa-date-input" style="max-width:180px;" onchange="onFollowupMonthChange()"></select>
+    <select id="followupStatusFilter" class="poa-date-input" style="max-width:130px;" onchange="renderFollowupList()">
+      <option value="__all">상태 전체</option>
+      <option value="대기">대기</option>
+      <option value="진행중">진행중</option>
+      <option value="완료">완료</option>
+    </select>
+  </div>
+
+  <div id="followupSummaryRow" class="followup-summary-row"></div>
+
+  <input id="followupFilter" class="contacts-filter-input" placeholder="🔍 고객·건명·메모·담당으로 검색" oninput="renderFollowupList()" style="margin-top:14px;">
+  <div id="followupListWrap"></div>
+</div>
+
+<!-- ===== 💱 COD 현황 탭 ===== -->
+<div class="tab-page" id="page-cod">
+  <div class="hint" style="margin-bottom:10px;">COD(목적항 변경) 건만 따로 모아보는 표예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있어요.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn generate-btn" onclick="openCodEditor(null)">➕ COD 건 등록하기</button>
+    <button class="btn secondary-btn" onclick="loadCodTab()">🔄 새로고침</button>
+  </div>
+
+  <input id="codFilter" class="contacts-filter-input" placeholder="🔍 SHPR·BL#·VSL·POD로 검색" oninput="renderCodList()" style="margin-top:14px;">
+  <div id="codListWrap"></div>
+</div>
+
+<!-- ===== 🌏 삼국간 탭 ===== -->
+<div class="tab-page" id="page-triangle">
+  <div class="hint" style="margin-bottom:10px;">BL번호별로 POP CHARGE / MFST CLOSE / 인보이스 발송요청 / 송금완료 / POL·POD 인폼 진행 상황을 체크하는 표예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있어요.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn generate-btn" onclick="openTriangleEditor(null)">➕ 삼국간 건 등록하기</button>
+    <button class="btn secondary-btn" onclick="loadTriangleTab()">🔄 새로고침</button>
+  </div>
+
+  <input id="triangleFilter" class="contacts-filter-input" placeholder="🔍 BL번호·REMARK로 검색" oninput="renderTriangleList()" style="margin-top:14px;">
+  <div id="triangleListWrap"></div>
 </div>
 
 <!-- ===== 휴가 일정 탭 ===== -->
@@ -648,6 +705,36 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="followupEditOverlay" style="display:none;" onclick="if(event.target===this) closeFollowupEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="followupEditTitle">📌 팔로우업 건</div>
+      <button class="close-btn" onclick="closeFollowupEditor()">✕ 닫기</button>
+    </div>
+    <div id="followupEditBody"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="codEditOverlay" style="display:none;" onclick="if(event.target===this) closeCodEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="codEditTitle">💱 COD 건</div>
+      <button class="close-btn" onclick="closeCodEditor()">✕ 닫기</button>
+    </div>
+    <div id="codEditBody"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="triangleEditOverlay" style="display:none;" onclick="if(event.target===this) closeTriangleEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="triangleEditTitle">🌏 삼국간 건</div>
+      <button class="close-btn" onclick="closeTriangleEditor()">✕ 닫기</button>
+    </div>
+    <div id="triangleEditBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="personVacationOverlay" style="display:none;" onclick="if(event.target===this) closePersonVacationEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -662,6 +749,9 @@
 <script src="an_email_tool.js"></script>
 <script src="contacts_script.js"></script>
 <script src="guide_script.js"></script>
+<script src="guide_followup.js"></script>
+<script src="guide_cod.js"></script>
+<script src="guide_triangle.js"></script>
 
 </body>
 </html>

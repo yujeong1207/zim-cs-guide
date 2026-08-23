@@ -153,14 +153,17 @@ async function loadTentativeVacations() {
   if (list) TENTATIVE_VACATIONS = list;
 }
 
-/* 위임장 탭을 열 때 호출 - 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면에 반영됨 */
+/* 위임장 탭을 열 때 호출 - 처음 한 번만 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면에 반영됨.
+   forceRefresh=true(새로고침 버튼)일 때만 구독을 끊고 다시 읽어옴 - 탭을 그냥 오갈 땐 재구독 안 해서 읽기 비용이 안 쌓여요. */
 let poaUnsubscribe = null;
-async function loadPoaTab() {
+async function loadPoaTab(forceRefresh) {
   const wrap = document.getElementById("poaTableWrap");
   if (!POA_SHEET_API_URL) {
     renderPoaTable(); // 연동 꺼져있으면 예전 방식 그대로
     return;
   }
+  if (liveSubscribed.poa && !forceRefresh) { renderPoaTable(); return; }
+  if (forceRefresh && poaUnsubscribe) { poaUnsubscribe(); poaUnsubscribe = null; liveSubscribed.poa = false; }
   if (wrap && !poaServerList) wrap.innerHTML = '<div class="empty-state">⏳ 최신 목록을 불러오는 중이에요...</div>';
   await window.fbReady;
   poaUnsubscribe = window.fbDb.collection(POA_COLLECTION).onSnapshot(
@@ -177,10 +180,11 @@ async function loadPoaTab() {
     (err) => {
       console.error("위임장 실시간 구독 실패:", err);
       poaLoadFailed = true;
-      if (wrap && !poaServerList) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
+      if (wrap && !poaServerList) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요). <button class=\"btn secondary-btn\" style=\"padding:2px 10px;font-size:12px;margin-left:6px;\" onclick=\"loadPoaTab(true)\">다시 시도</button></div>';
     }
   );
-  liveTabUnsubscribers.poa = () => { if (poaUnsubscribe) { poaUnsubscribe(); poaUnsubscribe = null; } };
+  liveSubscribed.poa = true;
+  liveTabUnsubscribers.poa = () => { if (poaUnsubscribe) { poaUnsubscribe(); poaUnsubscribe = null; liveSubscribed.poa = false; } };
 }
 
 /* =========================================================================
@@ -510,12 +514,14 @@ async function syncNoticeBannerFromServer() {
 
 
 let oblUnsubscribe = null;
-async function loadOblTab() {
+async function loadOblTab(forceRefresh) {
   const wrap = document.getElementById("oblTableWrap");
   if (!OBL_SHEET_API_URL) {
     if (wrap) wrap.innerHTML = '<div class="empty-state">⚠️ 아직 오비엘 접수 연동 주소가 설정되지 않았어요.</div>';
     return;
   }
+  if (liveSubscribed.obl && !forceRefresh) { renderOblTable(); return; }
+  if (forceRefresh && oblUnsubscribe) { oblUnsubscribe(); oblUnsubscribe = null; liveSubscribed.obl = false; }
   if (wrap && !OBL_LIST.length) wrap.innerHTML = '<div class="empty-state">⏳ 최신 목록을 불러오는 중이에요...</div>';
   await window.fbReady;
   oblUnsubscribe = window.fbDb.collection(OBL_COLLECTION).onSnapshot(
@@ -534,10 +540,11 @@ async function loadOblTab() {
     },
     (err) => {
       console.error("오비엘 실시간 구독 실패:", err);
-      if (wrap && !OBL_LIST.length) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
+      if (wrap && !OBL_LIST.length) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요). <button class=\"btn secondary-btn\" style=\"padding:2px 10px;font-size:12px;margin-left:6px;\" onclick=\"loadOblTab(true)\">다시 시도</button></div>';
     }
   );
-  liveTabUnsubscribers.obl = () => { if (oblUnsubscribe) { oblUnsubscribe(); oblUnsubscribe = null; } };
+  liveSubscribed.obl = true;
+  liveTabUnsubscribers.obl = () => { if (oblUnsubscribe) { oblUnsubscribe(); oblUnsubscribe = null; liveSubscribed.obl = false; } };
 }
 
 /* =========================================================================
@@ -849,12 +856,14 @@ async function deleteVesselFromServer(id) {
 
 /* 모선 일정 탭을 열 때 호출 - 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면에 반영됨 */
 let vesselsUnsubscribe = null;
-async function loadVesselTab() {
+async function loadVesselTab(forceRefresh) {
   const wrap = document.getElementById("vesselMonthsWrap");
   if (!VESSEL_SHEET_API_URL) {
     renderVesselTab(); // 연동 꺼져있으면 예전 방식(브라우저 저장) 그대로
     return;
   }
+  if (liveSubscribed.vessels && !forceRefresh) { renderVesselTab(); return; }
+  if (forceRefresh && vesselsUnsubscribe) { vesselsUnsubscribe(); vesselsUnsubscribe = null; liveSubscribed.vessels = false; }
   if (wrap && !VESSELS.length) wrap.innerHTML = '<div class="empty-state">⏳ 최신 모선 일정을 불러오는 중이에요...</div>';
   await window.fbReady;
   vesselsUnsubscribe = window.fbDb.collection(VESSEL_COLLECTION).onSnapshot(
@@ -877,10 +886,11 @@ async function loadVesselTab() {
     },
     (err) => {
       console.error("모선 일정 실시간 구독 실패:", err);
-      if (wrap && !VESSELS.length) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요).</div>';
+      if (wrap && !VESSELS.length) wrap.innerHTML = '<div class="empty-state">⚠️ 최신 목록을 불러오지 못했어요 (네트워크 문제일 수 있어요). <button class=\"btn secondary-btn\" style=\"padding:2px 10px;font-size:12px;margin-left:6px;\" onclick=\"loadVesselTab(true)\">다시 시도</button></div>';
     }
   );
-  liveTabUnsubscribers.vessels = () => { if (vesselsUnsubscribe) { vesselsUnsubscribe(); vesselsUnsubscribe = null; } };
+  liveSubscribed.vessels = true;
+  liveTabUnsubscribers.vessels = () => { if (vesselsUnsubscribe) { vesselsUnsubscribe(); vesselsUnsubscribe = null; liveSubscribed.vessels = false; } };
 }
 
 let oblStatsOpen = false;
@@ -16894,18 +16904,21 @@ let expandedVesselMonths = new Set();
    받아와요. 팀원이 등록/수정하면 다른 사람 화면에 몇 초 안에 반영되면서도,
    불필요하게 반복해서 전체를 다시 읽지 않아서 읽기 비용도 훨씬 적게 들어요.
    ========================================================================= */
-let liveTabUnsubscribers = {}; // { poa: fn, obl: fn, vessels: fn, vacations: fn } - 탭을 벗어나면 구독 해제
+let liveTabUnsubscribers = {}; // { poa: fn, obl: fn, vessels: fn, vacations: fn } - 각 컬렉션 구독 해제 함수 보관용 (수동 새로고침에만 씀)
+let liveSubscribed = {}; // { poa: true, obl: true, ... } - 이미 한 번 구독한 컬렉션은 탭을 오가도 다시 안 읽음 (Firestore 읽기 비용 절약)
 
 function stopLiveTabRefresh() {
-  Object.keys(liveTabUnsubscribers).forEach((key) => {
-    if (liveTabUnsubscribers[key]) liveTabUnsubscribers[key]();
-    delete liveTabUnsubscribers[key];
-  });
+  // ⚠️ 예전엔 탭을 벗어날 때마다 모든 구독을 끊고, 탭에 다시 들어갈 때마다 통째로 다시 읽어왔는데,
+  //    이러면 탭을 자주 오갈수록 Firestore 읽기 건수가 계속 쌓여서 하루 무료 한도를 금방 넘겨요.
+  //    이제는 한 번 구독한 컬렉션은 페이지를 새로고침하기 전까지 계속 살려두고,
+  //    탭 전환은 그냥 메모리에 있는 최신 데이터를 다시 그리기만 해요 (읽기 비용 0).
 }
 
 let vacationsUnsubscribe = null;
-async function loadVacationTab() {
+async function loadVacationTab(forceRefresh) {
   if (!CORE_SHEET_API_URL) { renderVacationTab(); return; }
+  if (liveSubscribed.vacations && !forceRefresh) { renderVacationTab(); return; }
+  if (forceRefresh && vacationsUnsubscribe) { vacationsUnsubscribe(); vacationsUnsubscribe = null; liveSubscribed.vacations = false; }
   await window.fbReady;
   vacationsUnsubscribe = window.fbDb.collection("vacations").onSnapshot(
     (snapshot) => {
@@ -16919,7 +16932,8 @@ async function loadVacationTab() {
     },
     (err) => console.error("확정휴가 실시간 구독 실패:", err)
   );
-  liveTabUnsubscribers.vacations = () => { if (vacationsUnsubscribe) { vacationsUnsubscribe(); vacationsUnsubscribe = null; } };
+  liveSubscribed.vacations = true;
+  liveTabUnsubscribers.vacations = () => { if (vacationsUnsubscribe) { vacationsUnsubscribe(); vacationsUnsubscribe = null; liveSubscribed.vacations = false; } };
 }
 
 async function loadTeamCalendarTab() {
@@ -16947,6 +16961,9 @@ function switchMainTab(tab) {
   if (tab === "contacts") renderContactsTable();
   if (tab === "poa") loadPoaTab();
   if (tab === "obl") loadOblTab();
+  if (tab === "followup") loadFollowupTab();
+  if (tab === "cod") loadCodTab();
+  if (tab === "triangle") loadTriangleTab();
   if (tab === "doDesk") loadDoDeskTab();
   if (tab === "blDesk") loadBlDeskTab();
   if (tab === "portSchedule") loadPortScheduleTab();
@@ -17216,33 +17233,43 @@ function loadPortScheduleTab() {
   }
   renderPortScheduleCalendar();
 
-  window.fbReady.then(() => {
-    portScheduleUnsubscribe = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).onSnapshot(
-      (snapshot) => {
-        PORT_SCHEDULE_LIST = snapshot.docs.map((doc) => {
-          const d = doc.data();
-          return {
-            id: doc.id,
-            vesselName: d.vesselName || "",
-            vesselCode: d.vesselCode || "",
-            voyage: d.voyage || "",
-            arrivalDate: d.arrivalDate || "",
-            departureDate: d.departureDate || "",
-            terminal: d.terminal || "",
-            line: d.line || "",
-            manager: d.manager || "",
-            cargoDeadlineDate: d.cargoDeadlineDate || "",
-            cargoDeadlineTime: d.cargoDeadlineTime || "",
-            anSendDate: d.anSendDate || "",
-          };
-        });
-        renderPortScheduleTable();
-        renderPortScheduleCalendar();
-      },
-      (err) => console.error("노션 입항 스케줄 실시간 구독 실패:", err)
-    );
-  });
-  liveTabUnsubscribers.portSchedule = () => { if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; } };
+  if (!liveSubscribed.portSchedule) {
+    window.fbReady.then(() => {
+      portScheduleUnsubscribe = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).onSnapshot(
+        (snapshot) => {
+          PORT_SCHEDULE_LIST = snapshot.docs.map((doc) => {
+            const d = doc.data();
+            return {
+              id: doc.id,
+              vesselName: d.vesselName || "",
+              vesselCode: d.vesselCode || "",
+              voyage: d.voyage || "",
+              arrivalDate: d.arrivalDate || "",
+              departureDate: d.departureDate || "",
+              terminal: d.terminal || "",
+              line: d.line || "",
+              manager: d.manager || "",
+              cargoDeadlineDate: d.cargoDeadlineDate || "",
+              cargoDeadlineTime: d.cargoDeadlineTime || "",
+              anSendDate: d.anSendDate || "",
+            };
+          });
+          renderPortScheduleTable();
+          renderPortScheduleCalendar();
+        },
+        (err) => console.error("노션 입항 스케줄 실시간 구독 실패:", err)
+      );
+    });
+    liveSubscribed.portSchedule = true;
+    liveTabUnsubscribers.portSchedule = () => { if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; liveSubscribed.portSchedule = false; } };
+  }
+}
+
+/* 새로고침 버튼용 - 기존 구독을 끊고 강제로 다시 읽어옴 */
+function forceRefreshPortScheduleTab() {
+  if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; }
+  liveSubscribed.portSchedule = false;
+  loadPortScheduleTab();
 }
 
 /* 노션용 캘린더 - 예전 엑셀 파일의 수식(IFERROR+TEXTJOIN+FILTER)이랑 똑같은 로직이에요:
@@ -17893,6 +17920,7 @@ function checkPaymentStatusForBlDesk() {
 
 const TAB_GROUPS = {
   work: ["procedures", "faqs", "templates", "ntf"],
+  csboard: ["followup", "cod", "triangle"],
   reference: ["resources", "vessels", "contacts", "news"],
   schedule: ["vacations", "teamEvents"],
   tools: ["calc", "memo", "excelTool"],
