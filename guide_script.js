@@ -17094,12 +17094,22 @@ function loadPortScheduleTab() {
         <div class="excel-upload-label">raw 전체 파일 올리기</div>
         <div class="excel-upload-sub">Vessel Name·Code·Voyage·Arrival·Terminal 등 raw 탭 그대로인 파일</div>
       </label>
-      <label class="excel-upload-box" id="portScheduleTerminalUploadBox" style="padding:18px 14px;">
-        <input type="file" id="portScheduleTerminalFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleTerminalFile(event)">
-        <div class="excel-upload-icon">🚢</div>
-        <div class="excel-upload-label">BCT·PNIT·HPNT 갱신용 엑셀 올리기</div>
-        <div class="excel-upload-sub">선명으로 매칭해서 입항일·출항일만 갱신해요 (마감자 등은 안 건드림)</div>
-      </label>
+      <div style="flex:1; min-width:260px;">
+        <select id="portScheduleTerminalSelect" style="width:100%; padding:8px; margin-bottom:8px; border:1px solid #e5e7eb; border-radius:8px;">
+          <option value="">↓ 먼저 어느 터미널 파일인지 선택하세요</option>
+          <option value="BCT">BCT</option>
+          <option value="PNIT">PNIT</option>
+          <option value="HPNT">HPNT</option>
+          <option value="BPT">BPT (신선대/감만)</option>
+          <option value="한진인천">한진인천</option>
+        </select>
+        <label class="excel-upload-box" id="portScheduleTerminalUploadBox" style="padding:18px 14px; display:block;">
+          <input type="file" id="portScheduleTerminalFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleTerminalFile(event)">
+          <div class="excel-upload-icon">🚢</div>
+          <div class="excel-upload-label">터미널 갱신용 엑셀 올리기</div>
+          <div class="excel-upload-sub">선명으로 매칭해서 입항일·출항일·터미널만 갱신해요 (마감자 등은 안 건드림)</div>
+        </label>
+      </div>
     </div>
     <div id="portScheduleUploadResult"></div>
     <button class="btn generate-btn" style="margin:12px 0;" onclick="openPortScheduleEditForm(null)">＋ 직접 한 건 등록</button>
@@ -17259,38 +17269,104 @@ async function savePortScheduleForm(id) {
 }
 
 /* ---------- BCT·PNIT·HPNT 갱신용 엑셀 (선명으로 매칭해서 입항일/출항일/터미널만 갱신) ---------- */
+/* 별칭은 "더 구체적인 것부터" 순서대로 적어두고, 그 순서대로 찾아서 씀.
+   (BCT 파일은 "입항"·"출항" 컬럼에 날짜가 아니라 항차번호가 들어있고, 진짜 날짜는
+   "접안예정시간(ETB)"·"출항예정시간(ETD)"에 있어서, 이 순서가 중요해요) */
 const TERMINAL_UPDATE_HEADER_ALIASES = {
-  vesselName: ["모선명", "선명"],
-  arrival: ["입항", "접안예정시간(etb)", "접안(예정)일시", "etb"],
-  departure: ["출항", "출항예정시간(etd)", "출항(예정)일시", "etd"],
-  terminal: ["terminal", "터미널"],
+  vesselName: ["모선명", "선박명", "선명"],
+  arrival: ["접안예정시간(etb)", "접안(예정)일시", "etb", "입항예정일시", "입항일시", "입항"],
+  departure: ["출항예정시간(etd)", "출항(예정)일시", "etd", "출항예정일시", "출항일시", "출항"],
 };
+
+/* 별칭 목록을 "순서대로" 검사해서, 제일 먼저 매칭되는 컬럼을 씀 (우선순위 보장) */
+function findFirstMatchingColumn(cellsLower, aliases) {
+  for (const alias of aliases) {
+    const idx = cellsLower.indexOf(alias);
+    if (idx >= 0) return idx;
+  }
+  return -1;
+}
 
 function findTerminalUpdateHeaderRow(aoa) {
   for (let r = 0; r < Math.min(aoa.length, 5); r++) {
     const row = aoa[r] || [];
     const cellsLower = row.map((c) => String(c || "").trim().toLowerCase());
-    const vesselCol = cellsLower.findIndex((c) => TERMINAL_UPDATE_HEADER_ALIASES.vesselName.includes(c));
-    const arrivalCol = cellsLower.findIndex((c) => TERMINAL_UPDATE_HEADER_ALIASES.arrival.includes(c));
+    const vesselCol = findFirstMatchingColumn(cellsLower, TERMINAL_UPDATE_HEADER_ALIASES.vesselName);
+    const arrivalCol = findFirstMatchingColumn(cellsLower, TERMINAL_UPDATE_HEADER_ALIASES.arrival);
     if (vesselCol >= 0 && arrivalCol >= 0) {
-      const colMap = {};
-      Object.keys(TERMINAL_UPDATE_HEADER_ALIASES).forEach((key) => {
-        const idx = cellsLower.findIndex((c) => TERMINAL_UPDATE_HEADER_ALIASES[key].includes(c));
-        colMap[key] = idx;
-      });
+      const colMap = {
+        vesselName: vesselCol,
+        arrival: arrivalCol,
+        departure: findFirstMatchingColumn(cellsLower, TERMINAL_UPDATE_HEADER_ALIASES.departure),
+      };
       return { headerRowIdx: r, colMap };
     }
   }
   return null;
 }
 
+/* BCT는 진짜 .xlsx 바이너리지만, PNIT·HPNT·BPT·한진인천은 "HTML 표를 xls로
+   이름만 바꾼 파일"이에요. 그래서 파일 내용을 먼저 살짝 들여다봐서 HTML인지
+   진짜 엑셀인지 구분한 다음, 각각 다른 방식으로 읽어요. */
+function parseTerminalFileToAOA(arrayBuffer) {
+  const peekText = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer.slice(0, 4000)).toLowerCase();
+  if (peekText.includes("<table") || peekText.includes("<html")) {
+    let fullText = new TextDecoder("utf-8", { fatal: false }).decode(arrayBuffer);
+    if (/\ufffd/.test(fullText.slice(0, 3000))) {
+      // UTF-8로 읽었더니 한글이 다 깨져 보이면(BPT처럼 EUC-KR로 저장된 경우), EUC-KR로 다시 읽음
+      fullText = new TextDecoder("euc-kr", { fatal: false }).decode(arrayBuffer);
+    }
+    return parseHtmlTableToAOA(fullText);
+  }
+  const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: "array", cellDates: true });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  return XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+}
+
+/* HTML 안에서 "행이 제일 많은(=진짜 데이터인) 표"를 찾아서 2차원 배열로 변환 */
+function parseHtmlTableToAOA(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const tables = Array.from(doc.querySelectorAll("table"));
+  let bestTable = null, bestRowCount = 0;
+  tables.forEach((t) => {
+    const rc = t.querySelectorAll("tr").length;
+    if (rc > bestRowCount) { bestRowCount = rc; bestTable = t; }
+  });
+  if (!bestTable) return [];
+  return Array.from(bestTable.querySelectorAll("tr")).map((tr) =>
+    Array.from(tr.querySelectorAll("th,td")).map((c) => c.textContent.replace(/\s+/g, " ").trim())
+  );
+}
+
 function handlePortScheduleTerminalFile(event) {
   const files = Array.from(event.target.files || []);
   event.target.value = "";
-  if (files.length) processPortScheduleTerminalFile(files[0]);
+  if (!files.length) return;
+
+  const terminalSelect = document.getElementById("portScheduleTerminalSelect");
+  const terminalName = terminalSelect ? terminalSelect.value : "";
+  if (!terminalName) {
+    alert("먼저 어느 터미널 파일인지 위에서 선택해주세요.");
+    return;
+  }
+  processPortScheduleTerminalFile(files[0], terminalName);
 }
 
-function processPortScheduleTerminalFile(file) {
+function findHanjinIncheonHeaderRow(aoa) {
+  // 한진인천은 헤더가 2줄로 나뉘어 있어서(rowspan/colspan), 일반적인 방식으론 컬럼 위치가 안 맞아요.
+  // "모선명"이 들어있는 그 줄을 찾아서, 데이터 행의 실제 컬럼 순서(직접 확인함)를 고정으로 씀:
+  // 0:항차 1:모선명 2:선사 3:입항(항차번호, 날짜 아님!) 4:출항(항차번호, 날짜 아님!)
+  // 5:CCT 6:ETB/ATB(진짜 입항일시) 7:ETD/ATD(진짜 출항일시) 8:양하 9:적하 10:이적 11:선석 12:노선명
+  for (let r = 0; r < Math.min(aoa.length, 6); r++) {
+    const row = aoa[r] || [];
+    if (row.some((c) => String(c || "").trim() === "모선명")) {
+      return { headerRowIdx: r, colMap: { vesselName: 1, arrival: 6, departure: 7 } };
+    }
+  }
+  return null;
+}
+
+function processPortScheduleTerminalFile(file, terminalName) {
   if (portScheduleUploadBusy) {
     alert("아직 이전 파일을 처리하고 있어요. 잠시만 기다려주세요.");
     return;
@@ -17302,14 +17378,12 @@ function processPortScheduleTerminalFile(file) {
   const reader = new FileReader();
   reader.onload = async (e) => {
     try {
-      const data = new Uint8Array(e.target.result);
-      const wb = XLSX.read(data, { type: "array", cellDates: true });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+      const aoa = parseTerminalFileToAOA(e.target.result);
 
-      const headerInfo = findTerminalUpdateHeaderRow(aoa);
+      // 한진인천만 헤더가 2줄로 꼬여있어서 전용 로직을 씀, 나머지는 일반 방식
+      const headerInfo = terminalName === "한진인천" ? findHanjinIncheonHeaderRow(aoa) : findTerminalUpdateHeaderRow(aoa);
       if (!headerInfo) {
-        throw new Error('선명("모선명"/"선명")과 입항 컬럼을 못 찾았어요. 파일 형식을 확인해주세요.');
+        throw new Error('선명("모선명"/"선박명"/"선명")과 입항 관련 컬럼을 못 찾았어요. 파일 형식을 확인해주세요.');
       }
       const { headerRowIdx, colMap } = headerInfo;
 
@@ -17326,7 +17400,6 @@ function processPortScheduleTerminalFile(file) {
 
         const arrivalDate = parsePortScheduleDate(get("arrival"));
         const departureDate = parsePortScheduleDate(get("departure"));
-        const terminal = String(get("terminal") || "").trim();
 
         const matches = PORT_SCHEDULE_LIST.filter(
           (p) => p.vesselName.trim().toUpperCase() === vesselName.toUpperCase()
@@ -17337,25 +17410,24 @@ function processPortScheduleTerminalFile(file) {
         } else if (matches.length > 1) {
           ambiguous.push(vesselName);
         } else {
-          updated.push({ id: matches[0].id, vesselName, arrivalDate, departureDate, terminal });
+          updated.push({ id: matches[0].id, vesselName, arrivalDate, departureDate });
         }
       }
 
       if (updated.length > 0) {
         await window.fbReady;
         let batch = window.fbDb.batch();
-        updated.forEach((u, i) => {
+        updated.forEach((u) => {
           const docRef = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(u.id);
-          const fields = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+          const fields = { terminal: terminalName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
           if (u.arrivalDate) fields.arrivalDate = u.arrivalDate;
           if (u.departureDate) fields.departureDate = u.departureDate;
-          if (u.terminal) fields.terminal = u.terminal;
           batch.update(docRef, fields);
         });
         await batch.commit();
       }
 
-      let html = `<div class="excel-question-box">✅ ${updated.length}건 갱신 완료</div>`;
+      let html = `<div class="excel-question-box">✅ [${escapeHtml(terminalName)}] ${updated.length}건 갱신 완료</div>`;
       if (ambiguous.length) {
         html += `<div class="excel-warning-box" style="margin-top:8px;">
           <div class="excel-warning-title">⚠️ 이름이 같은 배가 여러 건이라 자동 갱신 안 한 것 ${ambiguous.length}건 (직접 확인해서 수정 버튼으로 고쳐주세요)</div>
