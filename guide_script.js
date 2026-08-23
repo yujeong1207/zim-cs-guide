@@ -16930,6 +16930,11 @@ async function loadTeamCalendarTab() {
 function switchMainTab(tab) {
   const searchInput = document.getElementById("globalSearch");
   if (searchInput.value.trim()) searchInput.value = "";
+  // 캘린더 캡처용으로 "의견 남기기" 버튼을 숨겨둔 채로 다른 탭에 갔으면, 깜빡한 걸 수 있으니 자동으로 복구
+  if (mainTab === "portSchedule" && tab !== "portSchedule") {
+    const fab = document.querySelector(".feedback-fab");
+    if (fab) fab.style.display = "";
+  }
   mainTab = tab;
   showPage(tab);
   stopLiveTabRefresh();
@@ -17193,6 +17198,7 @@ function loadPortScheduleTab() {
       <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
         <input type="date" id="portScheduleCalStartInput" onchange="renderPortScheduleCalendar()">
         <span class="hint" style="margin:0;">※ 되도록 일요일로 골라주세요</span>
+        <button type="button" id="portScheduleHideFeedbackBtn" class="btn secondary-btn" onclick="togglePortScheduleFeedbackFab()" style="margin-left:auto;">📷 캡처할 때 "의견 남기기" 버튼 숨기기</button>
       </div>
       <div id="portScheduleCalendarWrap"></div>
     </div>
@@ -17264,6 +17270,16 @@ function buildPortScheduleCellHtml(items) {
     const divider = i > 0 ? '<div class="port-cal-divider"></div>' : "";
     return `${divider}<div class="port-cal-vessel"><div class="port-cal-vessel-name">${linePrefix}${vesselPart}${terminalPart}</div>${extra}</div>`;
   }).join("");
+}
+
+/* 캘린더 캡처할 때 화면 오른쪽 아래 "의견 남기기" 버튼이 같이 찍히지 않게, 잠깐 숨겼다가 다시 보이게 함 */
+function togglePortScheduleFeedbackFab() {
+  const fab = document.querySelector(".feedback-fab");
+  const btn = document.getElementById("portScheduleHideFeedbackBtn");
+  if (!fab || !btn) return;
+  const hidden = fab.style.display === "none";
+  fab.style.display = hidden ? "" : "none";
+  btn.textContent = hidden ? '📷 캡처할 때 "의견 남기기" 버튼 숨기기' : '👁️ "의견 남기기" 버튼 다시 보이기';
 }
 
 function renderPortScheduleCalendar() {
