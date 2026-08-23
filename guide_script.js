@@ -17064,7 +17064,9 @@ function parsePortScheduleDate(cell) {
 
   if (cell instanceof Date) {
     if (isNaN(cell.getTime())) return "";
-    return cell.getFullYear() + "-" + String(cell.getMonth() + 1).padStart(2, "0") + "-" + String(cell.getDate()).padStart(2, "0");
+    // SheetJS가 날짜를 UTC 기준으로 만들어주기 때문에, 한국 시간(UTC+9)으로 읽으면
+    // 날짜가 하루 밀릴 수 있어요. 그래서 반드시 UTC 기준으로 읽어야 정확해요.
+    return cell.getUTCFullYear() + "-" + String(cell.getUTCMonth() + 1).padStart(2, "0") + "-" + String(cell.getUTCDate()).padStart(2, "0");
   }
 
   // 엑셀에서 "날짜 서식"이 아니라 그냥 숫자로 저장된 날짜 칸(엑셀 내부 날짜 일련번호)인 경우
@@ -17091,6 +17093,34 @@ function parsePortScheduleDate(cell) {
     return parsed.getFullYear() + "-" + String(parsed.getMonth() + 1).padStart(2, "0") + "-" + String(parsed.getDate()).padStart(2, "0");
   }
   return ""; // 못 알아보는 형식이면 이상한 값 남기지 않고 그냥 빈 값으로
+}
+
+/* "오후 3:00" 형태로 시간을 뽑아냄. 엑셀에서 시간 전용 칸은 SheetJS가
+   1899-12-30 같은 가짜 날짜 + 시간이 합쳐진 Date 객체로 넘겨주기 때문에,
+   그 객체를 그냥 String()으로 바꾸면 "Sat Dec 30 1899 17:00:00 GMT+..." 같은
+   쓰레기 값이 나와요 (이게 원래 버그였어요) - 그래서 시간(시:분)만 정확히 뽑아냄 */
+function parsePortScheduleTime(cell) {
+  if (cell === null || cell === undefined || cell === "") return "";
+
+  const toKoreanTime = (hours, minutes) => {
+    const period = hours < 12 ? "오전" : "오후";
+    let h12 = hours % 12;
+    if (h12 === 0) h12 = 12;
+    return period + " " + h12 + ":" + String(minutes).padStart(2, "0");
+  };
+
+  if (cell instanceof Date) {
+    if (isNaN(cell.getTime())) return "";
+    return toKoreanTime(cell.getUTCHours(), cell.getUTCMinutes());
+  }
+
+  if (typeof cell === "number") {
+    // 엑셀 시간 값은 "하루를 1로 보는 소수"예요 (예: 0.5 = 낮 12시)
+    const totalMinutes = Math.round((cell % 1) * 24 * 60);
+    return toKoreanTime(Math.floor(totalMinutes / 60), totalMinutes % 60);
+  }
+
+  return String(cell).trim(); // 이미 "오후 3:00" 같은 문자열이면 그대로 씀
 }
 
 /* 날짜에서 이틀 전 날짜 계산 (AN 발송 예정일 자동 계산용) */
@@ -17217,21 +17247,22 @@ function formatMMDD(dateStr) {
   return m ? m[1] + "/" + m[2] : "";
 }
 
-function buildPortScheduleCellText(items) {
+/* 배 한 척당 하나의 블록으로 만듦 - 첫 줄(선명)은 볼드, 블록 사이엔 간격을 둬서 한눈에 잘 들어오게 함 */
+function buildPortScheduleCellHtml(items) {
   return items.map((p) => {
-    const linePrefix = p.line ? p.line + ") " : "";
-    const vesselPart = [p.vesselName, p.vesselCode, p.voyage].filter(Boolean).join(" ");
-    const terminalPart = p.terminal ? ` (${p.terminal})` : "";
-    let block = linePrefix + vesselPart + terminalPart;
+    const linePrefix = p.line ? escapeHtml(p.line) + ") " : "";
+    const vesselPart = escapeHtml([p.vesselName, p.vesselCode, p.voyage].filter(Boolean).join(" "));
+    const terminalPart = p.terminal ? ` (${escapeHtml(p.terminal)})` : "";
+    let extra = "";
     if (p.cargoDeadlineDate) {
-      const timePart = p.cargoDeadlineTime ? " " + p.cargoDeadlineTime : " (시간 미정)";
-      block += "\n **적하목록 제출: " + formatMMDD(p.cargoDeadlineDate) + timePart;
+      const timePart = p.cargoDeadlineTime ? " " + escapeHtml(p.cargoDeadlineTime) : " (시간 미정)";
+      extra += `<div>**적하목록 제출: ${formatMMDD(p.cargoDeadlineDate)}${timePart}</div>`;
     }
     if (p.anSendDate) {
-      block += "\n***AN 발송 예정: " + formatMMDD(p.anSendDate);
+      extra += `<div>***AN 발송 예정: ${formatMMDD(p.anSendDate)}</div>`;
     }
-    return block;
-  }).join("\n\n");
+    return `<div class="port-cal-vessel"><div class="port-cal-vessel-name">${linePrefix}${vesselPart}${terminalPart}</div>${extra}</div>`;
+  }).join("");
 }
 
 function renderPortScheduleCalendar() {
@@ -17252,7 +17283,8 @@ function renderPortScheduleCalendar() {
 
   let html = `<div style="font-weight:700; margin-bottom:10px; color:#1155cc; font-size:14px;">${startDate.getMonth() + 1}월 수입 입항 캘린더 (2주)</div>`;
   html += `<div style="overflow-x:auto;"><table class="port-schedule-calendar">`;
-  html += `<tr>${weekdayLabels.map((w) => `<th>${w}</th>`).join("")}</tr>`;
+  // 일요일·토요일은 주말이라 배경색을 다르게 줌 (원본 엑셀 색감이랑 맞춤)
+  html += `<tr>${weekdayLabels.map((w, i) => `<th class="${i === 0 || i === 6 ? "port-cal-weekend-th" : ""}">${w}</th>`).join("")}</tr>`;
 
   for (let week = 0; week < 2; week++) {
     html += "<tr>";
@@ -17261,12 +17293,16 @@ function renderPortScheduleCalendar() {
       d.setDate(startDate.getDate() + week * 7 + day);
       const dateStr = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
       const items = byDate[dateStr] || [];
-      const cellText = buildPortScheduleCellText(items);
-      html += `<td><div class="port-cal-date">${d.getMonth() + 1}월 ${d.getDate()}일</div><div class="port-cal-body">${escapeHtml(cellText).replace(/\n/g, "<br>")}</div></td>`;
+      const cellHtml = buildPortScheduleCellHtml(items);
+      html += `<td><div class="port-cal-date">${d.getMonth() + 1}월 ${d.getDate()}일</div><div class="port-cal-body">${cellHtml}</div></td>`;
     }
     html += "</tr>";
   }
   html += "</table></div>";
+  html += `<div class="port-cal-footnote">
+    입항 스케줄은 운항사정에 따라 변동될 수 있습니다.<br>
+    자세한 입항 일정 및 시간은 각 터미널 사이트에서 확인 부탁드립니다.
+  </div>`;
   wrap.innerHTML = html;
 }
 
@@ -17335,7 +17371,7 @@ function renderPortScheduleTable() {
       <span class="hint" style="margin:0;">${sorted.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건</span>
     </div>
     <div style="overflow-x:auto;">
-      <table class="contacts-table">
+      <table class="port-schedule-table">
         <tr>
           <th>선명</th><th>코드</th><th>항차</th><th>입항일</th><th>출항일</th>
           <th>터미널</th><th>LINE</th><th>마감자</th><th>적하목록 제출</th><th>AN발송예정</th><th>관리</th>
@@ -17698,7 +17734,7 @@ function processPortScheduleFile(file) {
           line: String(get("line") || "").trim(),
           manager: String(get("manager") || "").trim(),
           cargoDeadlineDate: parsePortScheduleDate(get("cargoDeadlineDate")),
-          cargoDeadlineTime: String(get("cargoDeadlineTime") || "").trim(),
+          cargoDeadlineTime: parsePortScheduleTime(get("cargoDeadlineTime")),
           anSendDate,
         });
       }

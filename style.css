@@ -1765,34 +1765,49 @@ input, select, textarea {
 .port-schedule-calendar th {
   background: #f2f2f2;
   color: #000;
-  padding: 6px 4px;
+  padding: 7px 4px;
   border: 1px solid #999;
   font-size: 13px;
   font-weight: bold;
   text-align: center;
 }
+.port-schedule-calendar th.port-cal-weekend-th {
+  background: #fce4d6; /* 원본 엑셀이랑 맞춘 주말(일/토) 색 */
+}
 .port-schedule-calendar td {
   border: 1px solid #999;
   vertical-align: top;
-  padding: 6px;
+  padding: 8px;
   width: 14.28%;
-  min-width: 150px;
-  height: 170px;
+  min-width: 160px;
+  height: 190px;
   background: #fff;
 }
 .port-cal-date {
   font-weight: bold;
   border-bottom: 1px solid #ccc;
-  padding-bottom: 3px;
-  margin-bottom: 5px;
+  padding-bottom: 4px;
+  margin-bottom: 8px;
   font-size: 13px;
   color: #000;
 }
 .port-cal-body {
-  font-size: 11px;
-  line-height: 1.5;
+  font-size: 12px;
+  line-height: 1.7;
   white-space: normal;
   color: #000;
+}
+.port-cal-vessel {
+  margin-bottom: 10px; /* 배가 여러 척이면 서로 헷갈리지 않게 간격을 확실히 둠 */
+}
+.port-cal-vessel-name {
+  font-weight: bold; /* 어떤 배인지 한눈에 들어오게 볼드 처리 */
+}
+.port-cal-footnote {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #333;
+  font-family: "맑은 고딕", "Malgun Gothic", Arial, sans-serif;
 }
 
 /* 노션 입항 스케줄 - raw/캘린더 서브탭 버튼 */
@@ -1820,4 +1835,30 @@ input, select, textarea {
   background: #111827;
   border-color: #111827;
   color: #fff;
+}
+
+/* 노션 입항 스케줄 - raw 표 (헤더 고정 + 색상) */
+.port-schedule-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.port-schedule-table th {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #1f2937;
+  color: #fff;
+  padding: 8px 10px;
+  text-align: left;
+  white-space: nowrap;
+  border: 1px solid #374151;
+}
+.port-schedule-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+.port-schedule-table tr:hover td {
+  background: #f9fafb;
 }
