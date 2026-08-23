@@ -1863,3 +1863,17 @@ input, select, textarea {
 .port-schedule-table tr:hover td {
   background: #f9fafb;
 }
+
+/* 노션 입항 스케줄 - 업로드 결과 패널 닫기 버튼 */
+.port-result-close-btn {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.port-result-close-btn:hover {
+  color: #111827;
+  text-decoration: underline;
+}

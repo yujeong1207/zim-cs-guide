@@ -17638,7 +17638,8 @@ function processPortScheduleTerminalFile(file, terminalName) {
         await batch.commit();
       }
 
-      let html = `<div class="excel-question-box">✅ [${escapeHtml(terminalName)}] ${updated.length}건 갱신 완료</div>`;
+      let html = `<div style="display:flex; justify-content:flex-end;"><button type="button" class="port-result-close-btn" onclick="document.getElementById('portScheduleUploadResult').innerHTML=''">✕ 닫기</button></div>`;
+      html += `<div class="excel-question-box">✅ [${escapeHtml(terminalName)}] ${updated.length}건 갱신 완료</div>`;
       if (ambiguous.length) {
         html += `<div class="excel-warning-box" style="margin-top:8px;">
           <div class="excel-warning-title">⚠️ 이름이 같은 배가 여러 건이라 자동 갱신 안 한 것 ${ambiguous.length}건 (직접 확인해서 수정 버튼으로 고쳐주세요)</div>
@@ -17770,7 +17771,7 @@ function processPortScheduleFile(file) {
       }
       await batch.commit();
 
-      if (resultEl) resultEl.innerHTML = `<div class="excel-question-box">✅ ${count}건 반영 완료 (같은 선박+항차는 최신 정보로 덮어써졌어요)</div>`;
+      if (resultEl) resultEl.innerHTML = `<div style="display:flex; justify-content:flex-end;"><button type="button" class="port-result-close-btn" onclick="document.getElementById('portScheduleUploadResult').innerHTML=''">✕ 닫기</button></div><div class="excel-question-box">✅ ${count}건 반영 완료 (같은 선박+항차는 최신 정보로 덮어써졌어요)</div>`;
     } catch (err) {
       if (resultEl) resultEl.innerHTML = `<div class="anemail-empty">❌ 처리 실패: ${escapeHtml(String(err.message || err))}</div>`;
     } finally {
