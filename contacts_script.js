@@ -73,7 +73,7 @@ function markContactsSeenWhenReady() {
 }
 
 const CONTACTS_CACHE_STORAGE_KEY = "cs_guide_contacts_cache_v1";
-const CONTACTS_CACHE_MAX_AGE_MS = 4 * 60 * 60 * 1000; // 4시간 - 며칠에 한 번 정도 추가되는 빈도라, 완전 실시간보단 이 정도면 충분
+const CONTACTS_CACHE_MAX_AGE_MS = 12 * 60 * 60 * 1000; // 12시간 - 팀원 여러 명이 각자 캐시 만료를 트리거해도 하루 최대 2번 정도로 여유있게
 
 /* 전체 데이터를 한 번에 불러와 캐시에 저장 (forceReload면 캐시 무시하고 새로 받아옴).
    markSeen이 true면, 데이터가 실제로 다 준비된 "다음"에 확인함 처리를 함 (타이밍 버그 방지 - 데이터가
