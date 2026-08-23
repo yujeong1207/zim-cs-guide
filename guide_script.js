@@ -17594,9 +17594,15 @@ function processPortScheduleTerminalFile(file, terminalName) {
         const arrivalDate = parsePortScheduleDate(get("arrival"));
         const departureDate = parsePortScheduleDate(get("departure"));
 
-        const matches = PORT_SCHEDULE_LIST.filter(
-          (p) => p.vesselName.trim().toUpperCase() === vesselName.toUpperCase()
-        );
+        // 같은 배 이름이어도, "같은 배가 매달 반복 입항"하는 경우가 많아서
+        // 이름만으로 좁히면 1년치 데이터 중에 계속 여러 건이 걸려요.
+        // 그래서 터미널 파일의 입항월과 같은 달인 것만 후보로 좁혀요.
+        const targetMonth = arrivalDate ? arrivalDate.slice(0, 7) : "";
+        const matches = PORT_SCHEDULE_LIST.filter((p) => {
+          if (p.vesselName.trim().toUpperCase() !== vesselName.toUpperCase()) return false;
+          if (!targetMonth) return true; // 터미널 파일에 입항일 자체가 없으면 달로 못 좁히니 이름만으로 판단
+          return (p.arrivalDate || "").slice(0, 7) === targetMonth;
+        });
 
         if (matches.length === 0) {
           notFound.push(vesselName);
