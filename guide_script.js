@@ -16944,6 +16944,7 @@ function switchMainTab(tab) {
   if (tab === "obl") loadOblTab();
   if (tab === "doDesk") loadDoDeskTab();
   if (tab === "blDesk") loadBlDeskTab();
+  if (tab === "portSchedule") loadPortScheduleTab();
   if (tab === "vacations") loadVacationTab();
   if (tab === "teamEvents") { loadTeamCalendarTab(); renderTeamCalendar(); }
   if (tab === "calc") renderCalcTool();
@@ -17041,6 +17042,465 @@ function renderDoDeskPoaResult() {
 /* =========================================================================
    🚢 B/L 데스크 - 선박 출항일 + 입금현황(BL번호 조회)을 한 화면에서
    ========================================================================= */
+/* =========================================================================
+   🗓️ 노션 입항 스케줄 - BCT·PNIT·HPNT·ZIM 등에서 뽑은 raw 데이터를 한곳에 모음
+   ========================================================================= */
+const PORT_SCHEDULE_COLLECTION = "port_schedule";
+let PORT_SCHEDULE_LIST = [];
+let portScheduleUnsubscribe = null;
+let portScheduleUploadBusy = false;
+
+/* 선박코드+항차로 고정된 문서 ID를 만들어서, 같은 배/항차를 다시 올리면
+   자동으로 "새로 추가"가 아니라 "기존 걸 최신 정보로 덮어쓰기"가 되게 함 */
+function portScheduleDocId(vesselCode, voyage) {
+  const safeCode = String(vesselCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "_") || "CODE";
+  const safeVoyage = String(voyage || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "_") || "VOY";
+  return safeCode + "__" + safeVoyage;
+}
+
+/* 엑셀 셀 값(Date 객체든 문자열이든)을 항상 "YYYY-MM-DD"로 통일 */
+function parsePortScheduleDate(cell) {
+  if (!cell) return "";
+  if (cell instanceof Date) {
+    return cell.getFullYear() + "-" + String(cell.getMonth() + 1).padStart(2, "0") + "-" + String(cell.getDate()).padStart(2, "0");
+  }
+  const str = String(cell).trim();
+  const m = str.match(/^(\d{4})[-./](\d{1,2})[-./](\d{1,2})/);
+  if (m) return m[1] + "-" + m[2].padStart(2, "0") + "-" + m[3].padStart(2, "0");
+  const parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.getFullYear() + "-" + String(parsed.getMonth() + 1).padStart(2, "0") + "-" + String(parsed.getDate()).padStart(2, "0");
+  }
+  return str;
+}
+
+/* 날짜에서 이틀 전 날짜 계산 (AN 발송 예정일 자동 계산용) */
+function subtractDaysFromDateStr(dateStr, days) {
+  const m = String(dateStr || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  d.setDate(d.getDate() - days);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function loadPortScheduleTab() {
+  const wrap = document.getElementById("portScheduleWrap");
+  if (!wrap) return;
+  wrap.innerHTML = `
+    <div class="desk-search-row">
+      <label class="excel-upload-box" id="portScheduleUploadBox" style="padding:18px 14px;">
+        <input type="file" id="portScheduleFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleFile(event)">
+        <div class="excel-upload-icon">📄</div>
+        <div class="excel-upload-label">raw 전체 파일 올리기</div>
+        <div class="excel-upload-sub">Vessel Name·Code·Voyage·Arrival·Terminal 등 raw 탭 그대로인 파일</div>
+      </label>
+      <label class="excel-upload-box" id="portScheduleTerminalUploadBox" style="padding:18px 14px;">
+        <input type="file" id="portScheduleTerminalFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleTerminalFile(event)">
+        <div class="excel-upload-icon">🚢</div>
+        <div class="excel-upload-label">BCT·PNIT·HPNT 갱신용 엑셀 올리기</div>
+        <div class="excel-upload-sub">선명으로 매칭해서 입항일·출항일만 갱신해요 (마감자 등은 안 건드림)</div>
+      </label>
+    </div>
+    <div id="portScheduleUploadResult"></div>
+    <button class="btn generate-btn" style="margin:12px 0;" onclick="openPortScheduleEditForm(null)">＋ 직접 한 건 등록</button>
+    <div id="portScheduleEditFormWrap"></div>
+    <div id="portScheduleTableWrap"></div>
+  `;
+
+  window.fbReady.then(() => {
+    portScheduleUnsubscribe = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).onSnapshot(
+      (snapshot) => {
+        PORT_SCHEDULE_LIST = snapshot.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            vesselName: d.vesselName || "",
+            vesselCode: d.vesselCode || "",
+            voyage: d.voyage || "",
+            arrivalDate: d.arrivalDate || "",
+            departureDate: d.departureDate || "",
+            terminal: d.terminal || "",
+            line: d.line || "",
+            manager: d.manager || "",
+            cargoDeadlineDate: d.cargoDeadlineDate || "",
+            cargoDeadlineTime: d.cargoDeadlineTime || "",
+            anSendDate: d.anSendDate || "",
+          };
+        });
+        renderPortScheduleTable();
+      },
+      (err) => console.error("노션 입항 스케줄 실시간 구독 실패:", err)
+    );
+  });
+  liveTabUnsubscribers.portSchedule = () => { if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; } };
+}
+
+function renderPortScheduleTable() {
+  const wrap = document.getElementById("portScheduleTableWrap");
+  if (!wrap) return;
+
+  if (PORT_SCHEDULE_LIST.length === 0) {
+    wrap.innerHTML = '<div class="empty-state">아직 등록된 스케줄이 없어요. 위에서 엑셀을 올려주세요.</div>';
+    return;
+  }
+
+  const sorted = PORT_SCHEDULE_LIST.slice().sort((a, b) => (a.arrivalDate || "").localeCompare(b.arrivalDate || ""));
+
+  const rows = sorted.map((r) => `
+    <tr data-id="${escapeHtml(r.id)}">
+      <td>${escapeHtml(r.vesselName)}</td>
+      <td>${escapeHtml(r.vesselCode)}</td>
+      <td>${escapeHtml(r.voyage)}</td>
+      <td>${escapeHtml(r.arrivalDate)}</td>
+      <td>${escapeHtml(r.departureDate)}</td>
+      <td>${escapeHtml(r.terminal)}</td>
+      <td>${escapeHtml(r.line)}</td>
+      <td>${escapeHtml(r.manager)}</td>
+      <td>${escapeHtml(r.cargoDeadlineDate)} ${escapeHtml(r.cargoDeadlineTime)}</td>
+      <td>${escapeHtml(r.anSendDate)}</td>
+      <td class="poa-row-actions">
+        <button type="button" class="poa-edit-btn" title="수정" onclick="openPortScheduleEditForm('${escapeHtml(r.id)}')">✏️</button>
+        <button type="button" class="poa-delete-btn" title="삭제" onclick="deletePortScheduleRow('${escapeHtml(r.id)}')">🗑️</button>
+      </td>
+    </tr>
+  `).join("");
+
+  wrap.innerHTML = `
+    <div class="hint" style="margin:10px 0;">총 ${sorted.length}건</div>
+    <div style="overflow-x:auto;">
+      <table class="contacts-table">
+        <tr>
+          <th>선명</th><th>코드</th><th>항차</th><th>입항일</th><th>출항일</th>
+          <th>터미널</th><th>LINE</th><th>마감자</th><th>적하목록 제출</th><th>AN발송예정</th><th>관리</th>
+        </tr>
+        ${rows}
+      </table>
+    </div>
+  `;
+}
+
+async function deletePortScheduleRow(id) {
+  if (!confirm("이 항목을 삭제할까요?")) return;
+  try {
+    await window.fbReady;
+    await window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(id).delete();
+  } catch (err) {
+    alert("삭제 실패: " + err);
+  }
+}
+
+/* ---------- 직접 등록/수정 폼 (마감자·적하목록 제출일 등 팀원이 손으로 입력하는 항목용) ---------- */
+function openPortScheduleEditForm(id) {
+  const item = id ? PORT_SCHEDULE_LIST.find((r) => r.id === id) : null;
+  const formWrap = document.getElementById("portScheduleEditFormWrap");
+  if (!formWrap) return;
+
+  const v = (field) => escapeHtml(item ? item[field] || "" : "");
+  formWrap.innerHTML = `
+    <div class="anemail-form" style="display:block;">
+      <div class="anemail-form-title">${item ? "항목 수정" : "새 항목 직접 등록"}</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px;">
+        <input id="psf-vesselName" type="text" placeholder="선명" value="${v("vesselName")}" />
+        <input id="psf-vesselCode" type="text" placeholder="선박코드" value="${v("vesselCode")}" />
+        <input id="psf-voyage" type="text" placeholder="항차" value="${v("voyage")}" />
+        <input id="psf-arrivalDate" type="date" value="${v("arrivalDate")}" />
+        <input id="psf-departureDate" type="date" value="${v("departureDate")}" />
+        <input id="psf-terminal" type="text" placeholder="터미널" value="${v("terminal")}" />
+        <input id="psf-line" type="text" placeholder="LINE" value="${v("line")}" />
+        <input id="psf-manager" type="text" placeholder="마감자" value="${v("manager")}" />
+        <input id="psf-cargoDeadlineDate" type="date" value="${v("cargoDeadlineDate")}" />
+        <input id="psf-cargoDeadlineTime" type="text" placeholder="적하목록 제출 시간 (예: 오후 3:00)" value="${v("cargoDeadlineTime")}" />
+        <input id="psf-anSendDate" type="date" value="${v("anSendDate")}" />
+      </div>
+      <div class="anemail-form-actions">
+        <button id="psf-save" type="button" onclick="savePortScheduleForm('${item ? item.id : ""}')">${item ? "수정 저장" : "등록"}</button>
+        <button type="button" onclick="document.getElementById('portScheduleEditFormWrap').innerHTML=''">취소</button>
+      </div>
+      <div id="psf-status"></div>
+    </div>
+  `;
+}
+
+async function savePortScheduleForm(id) {
+  const val = (fieldId) => document.getElementById(fieldId).value.trim();
+  const vesselName = val("psf-vesselName");
+  const vesselCode = val("psf-vesselCode");
+  const voyage = val("psf-voyage");
+  const arrivalDate = val("psf-arrivalDate");
+
+  if (!vesselName) { alert("선명은 필수예요."); return; }
+
+  const entry = {
+    vesselName, vesselCode, voyage, arrivalDate,
+    departureDate: val("psf-departureDate"),
+    terminal: val("psf-terminal"),
+    line: val("psf-line"),
+    manager: val("psf-manager"),
+    cargoDeadlineDate: val("psf-cargoDeadlineDate"),
+    cargoDeadlineTime: val("psf-cargoDeadlineTime"),
+    anSendDate: val("psf-anSendDate") || (arrivalDate ? subtractDaysFromDateStr(arrivalDate, 2) : ""),
+  };
+
+  const statusEl = document.getElementById("psf-status");
+  if (statusEl) statusEl.textContent = "저장 중...";
+
+  try {
+    await window.fbReady;
+    // 새로 등록하는 거면 선박코드+항차로 고정 ID를 씀(중복 방지), 기존 걸 고치는 거면 그 문서 ID 그대로 유지
+    const docId = id || portScheduleDocId(vesselCode, voyage);
+    await window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(docId).set(
+      Object.assign({}, entry, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }),
+      { merge: true }
+    );
+    document.getElementById("portScheduleEditFormWrap").innerHTML = "";
+  } catch (err) {
+    if (statusEl) statusEl.textContent = "저장 실패: " + err;
+  }
+}
+
+/* ---------- BCT·PNIT·HPNT 갱신용 엑셀 (선명으로 매칭해서 입항일/출항일/터미널만 갱신) ---------- */
+const TERMINAL_UPDATE_HEADER_ALIASES = {
+  vesselName: ["모선명", "선명"],
+  arrival: ["입항", "접안예정시간(etb)", "접안(예정)일시", "etb"],
+  departure: ["출항", "출항예정시간(etd)", "출항(예정)일시", "etd"],
+  terminal: ["terminal", "터미널"],
+};
+
+function findTerminalUpdateHeaderRow(aoa) {
+  for (let r = 0; r < Math.min(aoa.length, 5); r++) {
+    const row = aoa[r] || [];
+    const cellsLower = row.map((c) => String(c || "").trim().toLowerCase());
+    const vesselCol = cellsLower.findIndex((c) => TERMINAL_UPDATE_HEADER_ALIASES.vesselName.includes(c));
+    const arrivalCol = cellsLower.findIndex((c) => TERMINAL_UPDATE_HEADER_ALIASES.arrival.includes(c));
+    if (vesselCol >= 0 && arrivalCol >= 0) {
+      const colMap = {};
+      Object.keys(TERMINAL_UPDATE_HEADER_ALIASES).forEach((key) => {
+        const idx = cellsLower.findIndex((c) => TERMINAL_UPDATE_HEADER_ALIASES[key].includes(c));
+        colMap[key] = idx;
+      });
+      return { headerRowIdx: r, colMap };
+    }
+  }
+  return null;
+}
+
+function handlePortScheduleTerminalFile(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = "";
+  if (files.length) processPortScheduleTerminalFile(files[0]);
+}
+
+function processPortScheduleTerminalFile(file) {
+  if (portScheduleUploadBusy) {
+    alert("아직 이전 파일을 처리하고 있어요. 잠시만 기다려주세요.");
+    return;
+  }
+  portScheduleUploadBusy = true;
+  const resultEl = document.getElementById("portScheduleUploadResult");
+  if (resultEl) resultEl.innerHTML = '<div class="anemail-loading">파일 읽고 매칭하는 중...</div>';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+
+      const headerInfo = findTerminalUpdateHeaderRow(aoa);
+      if (!headerInfo) {
+        throw new Error('선명("모선명"/"선명")과 입항 컬럼을 못 찾았어요. 파일 형식을 확인해주세요.');
+      }
+      const { headerRowIdx, colMap } = headerInfo;
+
+      const updated = [];
+      const notFound = [];
+      const ambiguous = [];
+
+      for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+        const row = aoa[r];
+        if (!row) continue;
+        const get = (key) => (colMap[key] >= 0 ? row[colMap[key]] : null);
+        const vesselName = String(get("vesselName") || "").trim();
+        if (!vesselName) continue;
+
+        const arrivalDate = parsePortScheduleDate(get("arrival"));
+        const departureDate = parsePortScheduleDate(get("departure"));
+        const terminal = String(get("terminal") || "").trim();
+
+        const matches = PORT_SCHEDULE_LIST.filter(
+          (p) => p.vesselName.trim().toUpperCase() === vesselName.toUpperCase()
+        );
+
+        if (matches.length === 0) {
+          notFound.push(vesselName);
+        } else if (matches.length > 1) {
+          ambiguous.push(vesselName);
+        } else {
+          updated.push({ id: matches[0].id, vesselName, arrivalDate, departureDate, terminal });
+        }
+      }
+
+      if (updated.length > 0) {
+        await window.fbReady;
+        let batch = window.fbDb.batch();
+        updated.forEach((u, i) => {
+          const docRef = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(u.id);
+          const fields = { updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
+          if (u.arrivalDate) fields.arrivalDate = u.arrivalDate;
+          if (u.departureDate) fields.departureDate = u.departureDate;
+          if (u.terminal) fields.terminal = u.terminal;
+          batch.update(docRef, fields);
+        });
+        await batch.commit();
+      }
+
+      let html = `<div class="excel-question-box">✅ ${updated.length}건 갱신 완료</div>`;
+      if (ambiguous.length) {
+        html += `<div class="excel-warning-box" style="margin-top:8px;">
+          <div class="excel-warning-title">⚠️ 이름이 같은 배가 여러 건이라 자동 갱신 안 한 것 ${ambiguous.length}건 (직접 확인해서 수정 버튼으로 고쳐주세요)</div>
+          <ul style="margin:8px 0 0 18px;">${ambiguous.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+        </div>`;
+      }
+      if (notFound.length) {
+        html += `<div class="excel-warning-box" style="margin-top:8px;">
+          <div class="excel-warning-title">⚠️ raw 목록에 없어서 못 찾은 배 ${notFound.length}건 (아직 등록 안 됐을 수 있어요)</div>
+          <ul style="margin:8px 0 0 18px;">${notFound.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+        </div>`;
+      }
+      if (resultEl) resultEl.innerHTML = html;
+    } catch (err) {
+      if (resultEl) resultEl.innerHTML = `<div class="anemail-empty">❌ 처리 실패: ${escapeHtml(String(err.message || err))}</div>`;
+    } finally {
+      portScheduleUploadBusy = false;
+    }
+  };
+  reader.onerror = () => {
+    if (resultEl) resultEl.innerHTML = '<div class="anemail-empty">❌ 파일을 읽을 수 없어요.</div>';
+    portScheduleUploadBusy = false;
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+/* ---------- raw 전체 엑셀 업로드 → 파싱 → 일괄 반영 ---------- */
+
+const PORT_SCHEDULE_HEADER_ALIASES = {
+  vesselName: ["vessel name", "선명"],
+  vesselCode: ["vessel code", "선박코드", "코드"],
+  voyage: ["voyage", "항차"],
+  arrival: ["arrival", "입항", "입항일"],
+  departure: ["departure", "출항", "출항일"],
+  terminal: ["terminal", "터미널"],
+  line: ["line", "선사"],
+  manager: ["마감자"],
+  cargoDeadlineDate: ["적하목록 제출일"],
+  cargoDeadlineTime: ["적하목록 제출 시간"],
+  anSendDate: ["an 발송 예정일", "an발송예정일"],
+};
+
+function findPortScheduleHeaderRow(aoa) {
+  for (let r = 0; r < Math.min(aoa.length, 5); r++) {
+    const row = aoa[r] || [];
+    const cellsLower = row.map((c) => String(c || "").trim().toLowerCase());
+    const hasVesselName = cellsLower.some((c) => c === "vessel name" || c === "선명");
+    const hasArrival = cellsLower.some((c) => c.includes("arrival") || c === "입항" || c === "입항일");
+    if (hasVesselName && hasArrival) {
+      const colMap = {};
+      Object.keys(PORT_SCHEDULE_HEADER_ALIASES).forEach((key) => {
+        const aliases = PORT_SCHEDULE_HEADER_ALIASES[key];
+        const idx = cellsLower.findIndex((c) => aliases.includes(c));
+        colMap[key] = idx; // 못 찾으면 -1
+      });
+      return { headerRowIdx: r, colMap };
+    }
+  }
+  return null;
+}
+
+function handlePortScheduleFile(event) {
+  const files = Array.from(event.target.files || []);
+  event.target.value = "";
+  if (files.length) processPortScheduleFile(files[0]);
+}
+
+function processPortScheduleFile(file) {
+  if (portScheduleUploadBusy) {
+    alert("아직 이전 파일을 처리하고 있어요. 잠시만 기다려주세요.");
+    return;
+  }
+  portScheduleUploadBusy = true;
+  const resultEl = document.getElementById("portScheduleUploadResult");
+  if (resultEl) resultEl.innerHTML = '<div class="anemail-loading">파일 읽는 중...</div>';
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const wb = XLSX.read(data, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+
+      const headerInfo = findPortScheduleHeaderRow(aoa);
+      if (!headerInfo) {
+        throw new Error('"Vessel Name"·"Arrival" 컬럼(또는 "선명"·"입항")을 못 찾았어요. 헤더 행을 확인해주세요.');
+      }
+      const { headerRowIdx, colMap } = headerInfo;
+
+      const entries = [];
+      for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+        const row = aoa[r];
+        if (!row) continue;
+        const get = (key) => (colMap[key] >= 0 ? row[colMap[key]] : null);
+        const vesselName = String(get("vesselName") || "").trim();
+        const vesselCode = String(get("vesselCode") || "").trim();
+        if (!vesselName && !vesselCode) continue; // 빈 줄은 건너뜀
+
+        const arrivalDate = parsePortScheduleDate(get("arrival"));
+        const anSendRaw = get("anSendDate");
+        const anSendDate = anSendRaw ? parsePortScheduleDate(anSendRaw) : (arrivalDate ? subtractDaysFromDateStr(arrivalDate, 2) : "");
+
+        entries.push({
+          vesselName,
+          vesselCode,
+          voyage: String(get("voyage") || "").trim(),
+          arrivalDate,
+          departureDate: parsePortScheduleDate(get("departure")),
+          terminal: String(get("terminal") || "").trim(),
+          line: String(get("line") || "").trim(),
+          manager: String(get("manager") || "").trim(),
+          cargoDeadlineDate: parsePortScheduleDate(get("cargoDeadlineDate")),
+          cargoDeadlineTime: String(get("cargoDeadlineTime") || "").trim(),
+          anSendDate,
+        });
+      }
+
+      if (entries.length === 0) throw new Error("반영할 데이터가 없어요 (빈 파일이거나 형식이 안 맞을 수 있어요).");
+
+      await window.fbReady;
+      let batch = window.fbDb.batch();
+      let count = 0;
+      for (const entry of entries) {
+        const docRef = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(portScheduleDocId(entry.vesselCode, entry.voyage));
+        batch.set(docRef, Object.assign({}, entry, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }), { merge: true });
+        count++;
+        if (count % 400 === 0) { await batch.commit(); batch = window.fbDb.batch(); }
+      }
+      await batch.commit();
+
+      if (resultEl) resultEl.innerHTML = `<div class="excel-question-box">✅ ${count}건 반영 완료 (같은 선박+항차는 최신 정보로 덮어써졌어요)</div>`;
+    } catch (err) {
+      if (resultEl) resultEl.innerHTML = `<div class="anemail-empty">❌ 처리 실패: ${escapeHtml(String(err.message || err))}</div>`;
+    } finally {
+      portScheduleUploadBusy = false;
+    }
+  };
+  reader.onerror = () => {
+    if (resultEl) resultEl.innerHTML = '<div class="anemail-empty">❌ 파일을 읽을 수 없어요.</div>';
+    portScheduleUploadBusy = false;
+  };
+  reader.readAsArrayBuffer(file);
+}
+
 function loadBlDeskTab() {
   const wrap = document.getElementById("blDeskWrap");
   if (!wrap) return;

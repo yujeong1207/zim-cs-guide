@@ -110,6 +110,7 @@
   <button class="main-tab-btn" data-tab="blDesk" onclick="switchMainTab('blDesk')">📤 B/L 데스크</button>
   <button class="main-tab-btn" data-tab="poa" onclick="switchMainTab('poa')">🖋️ 위임장 현황</button>
   <button class="main-tab-btn" data-tab="obl" onclick="switchMainTab('obl')">📦 오비엘 접수</button>
+  <button class="main-tab-btn" data-tab="portSchedule" onclick="switchMainTab('portSchedule')">🗓️ 노션 입항 스케줄</button>
   <button class="main-tab-btn" data-tab="anemail" onclick="switchMainTab('anemail')">📧 AN 연락처</button>
 
   <div class="tab-group" data-group="schedule">
@@ -224,6 +225,12 @@
 <div class="tab-page" id="page-doDesk">
   <div class="hint" style="margin-bottom:14px;">💡 D/O 발행할 때 자주 같이 보는 3가지(위임장 · 모선 입항일 · DO 계산기)를 한 화면에 모아뒀어요.</div>
   <div id="doDeskWrap"></div>
+</div>
+
+<!-- ===== 🗓️ 노션 입항 스케줄 (BCT·PNIT·HPNT·ZIM 등에서 뽑은 raw 데이터) ===== -->
+<div class="tab-page" id="page-portSchedule">
+  <div class="hint" style="margin-bottom:14px;">💡 ZIM 홈페이지·BCT·PNIT·HPNT 등에서 다운받은 엑셀을 그대로 업로드하면 자동으로 반영돼요. 같은 선박+항차면 기존 항목이 최신 정보로 덮어써져요 (새로 추가되는 게 아니에요).</div>
+  <div id="portScheduleWrap"></div>
 </div>
 
 <!-- ===== 🚢 B/L 데스크 (모선 출항일 + 입금현황 한 화면) ===== -->
