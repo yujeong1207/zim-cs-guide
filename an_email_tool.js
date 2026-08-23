@@ -24,6 +24,29 @@ function anEmailDocId(line, code) {
 const AN_EMAIL_DEFAULT_LINE = "KCI";
 const AN_EMAIL_KNOWN_LINES = ["KCI", "ZAX", "ZCP", "ZNS", "ZSL", "ZNP"];
 
+/* ===== 브라우저 캐시 (Firestore 읽기 비용 절약) =====
+   contacts_script.js(AN 연락처)와 같은 방식이에요. 라인별로 따로 캐시해두고,
+   캐시가 아직 안 오래됐으면 Firestore를 아예 안 읽어요. */
+const AN_EMAIL_CACHE_MAX_AGE_MS = 3 * 60 * 60 * 1000; // 3시간
+function anEmailCacheKey(line) {
+  return "an_email_map_cache_v1_" + String(line || "").trim().toUpperCase();
+}
+function readAnEmailCache(line) {
+  try {
+    const raw = localStorage.getItem(anEmailCacheKey(line));
+    if (!raw) return null;
+    const cached = JSON.parse(raw);
+    if (Date.now() - (cached.savedAt || 0) >= AN_EMAIL_CACHE_MAX_AGE_MS) return null;
+    if (!cached.map) return null;
+    return cached;
+  } catch (e) { return null; }
+}
+function writeAnEmailCache(line, map, lastMaxUpdatedAt) {
+  try {
+    localStorage.setItem(anEmailCacheKey(line), JSON.stringify({ savedAt: Date.now(), map, lastMaxUpdatedAt: lastMaxUpdatedAt || null }));
+  } catch (e) { /* 저장 실패(용량 초과 등)해도 이번 세션 메모리로는 잘 쓰고 있으니 무시 */ }
+}
+
 function freshAnEmailState() {
   return {
     line: AN_EMAIL_DEFAULT_LINE,
@@ -55,7 +78,27 @@ function resetAnEmailState() {
 
 /* ---------- 서버(구글시트) 통신 ---------- */
 
-function loadAnEmailMapFromServer(markSeen) {
+function loadAnEmailMapFromServer(markSeen, forceReload) {
+  // 캐시가 아직 신선하면(3시간 이내) Firestore를 아예 안 읽고 캐시로 바로 그림
+  if (!forceReload) {
+    const cached = readAnEmailCache(anEmailState.line);
+    if (cached) {
+      anEmailState.map = cached.map;
+      anEmailState.lastMaxUpdatedAt = cached.lastMaxUpdatedAt;
+      anEmailState.mapLoading = false;
+      anEmailState.mapLoadError = null;
+      anEmailState.mapLoaded = true;
+      if (anEmailState.targetParsed) anEmailState.result = computeAnEmailFillResult();
+      if (markSeen) {
+        markAnEmailSeenTimestamp(anEmailState.line, cached.lastMaxUpdatedAt);
+      } else {
+        checkAnEmailUpdatesForNotice(anEmailState.line, cached.lastMaxUpdatedAt, null);
+      }
+      renderExcelTool();
+      return; // Firestore 읽기 없이 여기서 끝
+    }
+  }
+
   anEmailState.mapLoading = true;
   anEmailState.mapLoadError = null;
   renderExcelTool();
@@ -81,6 +124,7 @@ function loadAnEmailMapFromServer(markSeen) {
       anEmailState.lastMaxUpdatedAt = maxUpdatedAt;
       anEmailState.mapLoading = false;
       anEmailState.mapLoaded = true;
+      writeAnEmailCache(anEmailState.line, map, maxUpdatedAt);
       if (anEmailState.targetParsed) anEmailState.result = computeAnEmailFillResult();
       if (markSeen) {
         markAnEmailSeenTimestamp(anEmailState.line, maxUpdatedAt);
@@ -132,23 +176,35 @@ function markAnEmailSeenTimestamp(line, maxUpdatedAt) {
   if (typeof dismissSharedUpdateNotice === "function") dismissSharedUpdateNotice("an_email_" + line);
 }
 
-/* 페이지 로드 시 백그라운드로 한 번 조용히 확인 (탭을 안 열어봐도 새소식 배너가 뜨게) */
+/* 페이지 로드 시 백그라운드로 한 번 조용히 확인 (탭을 안 열어봐도 새소식 배너가 뜨게).
+   ⚠️ 예전엔 페이지를 열 때마다(새로고침 포함) 캐시 없이 6개 라인을 전부 다시 읽어와서
+   Firestore 읽기 비용이 컸어요. 이제는 "최근에 이미 확인했으면 건너뛰기" 방식으로 바꿨고,
+   확인할 때 받아온 데이터를 캐시에도 같이 저장해서 탭을 열 때 또 안 읽게 했어요. */
+const AN_EMAIL_BG_CHECK_INTERVAL_MS = 2 * 60 * 60 * 1000; // 2시간에 한 번이면 충분
+const AN_EMAIL_BG_CHECK_KEY = "an_email_bg_check_last_ts_v1";
 async function checkAnEmailUpdatesInBackground() {
   try {
+    const lastRaw = localStorage.getItem(AN_EMAIL_BG_CHECK_KEY);
+    if (lastRaw && (Date.now() - Number(lastRaw)) < AN_EMAIL_BG_CHECK_INTERVAL_MS) return; // 최근에 이미 확인했으면 건너뜀
+    localStorage.setItem(AN_EMAIL_BG_CHECK_KEY, String(Date.now()));
+
     await window.fbReady;
     for (const line of AN_EMAIL_KNOWN_LINES) {
       try {
         const snapshot = await window.fbDb.collection(AN_EMAIL_COLLECTION).where("line", "==", line).get();
+        const map = {};
         let maxUpdatedAt = null;
         let mostRecentRow = null;
         snapshot.forEach((doc) => {
           const row = doc.data();
+          map[row.code] = { email: row.email, date: [row.month, row.day], source: row.source };
           const updatedAtIso = row.updatedAt && row.updatedAt.toDate ? row.updatedAt.toDate().toISOString() : null;
           if (updatedAtIso && (!maxUpdatedAt || new Date(updatedAtIso) > new Date(maxUpdatedAt))) {
             maxUpdatedAt = updatedAtIso;
             mostRecentRow = { code: row.code, email: row.email };
           }
         });
+        writeAnEmailCache(line, map, maxUpdatedAt); // 여기서 받은 걸 캐시에 저장해두면, 나중에 그 라인 탭을 열 때 또 안 읽어도 됨
         checkAnEmailUpdatesForNotice(line, maxUpdatedAt, mostRecentRow);
       } catch (e) { /* 조용히 실패 (백그라운드 체크라 사용자에게 에러 안 띄움) */ }
     }
@@ -207,7 +263,7 @@ function clearAnEmailMap() {
         }
       }
       await batch.commit();
-      loadAnEmailMapFromServer(true);
+      loadAnEmailMapFromServer(true, true); // 방금 삭제했으니 캐시 말고 무조건 새로 읽어와야 함
     } catch (err) {
       alert("삭제 실패: " + err);
     }
@@ -385,6 +441,7 @@ function processAnEmailRefFiles(files) {
         fileCount: parsedFiles.length - failedFiles.length,
         addedCount, updatedCount, failedFiles, skippedOlder
       };
+      writeAnEmailCache(anEmailState.line, map, new Date().toISOString()); // 방금 갱신한 내용으로 캐시도 같이 최신화
       if (anEmailState.targetParsed) anEmailState.result = computeAnEmailFillResult();
       renderExcelTool();
     };
@@ -518,7 +575,7 @@ function buildAnEmailHtml() {
       <option value="__custom__">✏️ 직접 입력...</option>
     </select>
     <div class="excel-result-stat">현재 매핑 코드 수 <b>${mapCount.toLocaleString()}</b>건</div>
-    <button class="btn" style="padding:6px 12px;font-size:12px;" onclick="loadAnEmailMapFromServer(true)" title="다른 팀원이 방금 추가한 내용까지 새로 불러와요">🔄 새로고침</button>
+    <button class="btn" style="padding:6px 12px;font-size:12px;" onclick="loadAnEmailMapFromServer(true, true)" title="다른 팀원이 방금 추가한 내용까지 새로 불러와요">🔄 새로고침</button>
     ${mapCount ? `<button class="btn" style="padding:6px 12px;font-size:12px;" onclick="clearAnEmailMap()">🗑️ 이 라인 매핑 초기화</button>` : ""}
   </div>`;
 
