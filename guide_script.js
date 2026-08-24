@@ -17002,6 +17002,22 @@ function searchPoaByCompany(query) {
   );
 }
 
+/* D/O·B/L 데스크의 "📝 메모" 박스 - 팀 공유 아니고 이 브라우저에만 저장(개인 스크래치용).
+   입력할 때마다 바로 저장되고, 탭 다시 들어오면 그대로 남아있어요. */
+function saveDeskMemo(textareaId) {
+  const el = document.getElementById(textareaId);
+  if (!el) return;
+  try { localStorage.setItem("desk_memo_" + textareaId, el.value); } catch (e) { /* 저장 실패해도 이번 세션 입력은 그대로 남아있으니 무시 */ }
+}
+function loadDeskMemo(textareaId) {
+  const el = document.getElementById(textareaId);
+  if (!el) return;
+  try {
+    const saved = localStorage.getItem("desk_memo_" + textareaId);
+    if (saved !== null) el.value = saved;
+  } catch (e) { /* 무시 */ }
+}
+
 function loadDoDeskTab() {
   const wrap = document.getElementById("doDeskWrap");
   if (!wrap) return;
@@ -17020,8 +17036,13 @@ function loadDoDeskTab() {
     </div>
     <div class="label" style="margin:20px 0 8px;">🧮 DO 비용 계산기</div>
     <div id="doDeskCalcBody"></div>
+
+    <div class="label" style="margin:20px 0 8px;">📝 메모</div>
+    <div class="hint" style="margin:0 0 8px;">시스템 코드, 처리 순서 등 자유롭게 적어두세요. 이 브라우저에만 저장돼요(다른 팀원한텐 안 보여요).</div>
+    <textarea id="doDeskMemo" rows="6" placeholder="예: TDO101 - Freight Note 확인 - PLISM 발급 순서로" style="width:100%; box-sizing:border-box;" oninput="saveDeskMemo('doDeskMemo')"></textarea>
   `;
   renderDoCalculator("doDeskCalcBody");
+  loadDeskMemo("doDeskMemo");
 
   // 모선 일정/위임장 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
   loadVesselTab();
@@ -18000,6 +18021,11 @@ function loadBlDeskTab() {
         <input type="text" id="blDeskCreditInput" placeholder="예: KRSELDOWCE 또는 삼성전자" oninput="renderBlDeskCreditResult()">
         <div id="blDeskCreditResult" class="desk-result-box"></div>
       </div>
+      <div class="desk-search-col">
+        <label class="label">📝 메모</label>
+        <div class="hint" style="margin:0 0 8px;">시스템 코드, 처리 순서 등 자유롭게 적어두세요. 이 브라우저에만 저장돼요(다른 팀원한텐 안 보여요).</div>
+        <textarea id="blDeskMemo" rows="6" placeholder="예: TDO101 - Freight Note 확인 - PLISM 발급 순서로" style="width:100%; box-sizing:border-box;" oninput="saveDeskMemo('blDeskMemo')"></textarea>
+      </div>
     </div>
 
     <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
@@ -18014,6 +18040,8 @@ function loadBlDeskTab() {
       </iframe>
     </div>
   `;
+
+  loadDeskMemo("blDeskMemo");
 
   // 모선 일정 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
   loadVesselTab();
