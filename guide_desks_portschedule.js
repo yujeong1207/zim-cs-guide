@@ -305,6 +305,15 @@ let portScheduleHideEmpty = false;
 let portScheduleMonthFilter = ""; // "" = 전체, "2026-08" 같은 형식이면 그 달만
 let portScheduleLineFilter = ""; // "" = 전체
 let portScheduleManagerFilter = ""; // "" = 전체
+let portScheduleSearchDebounceTimer = null;
+
+/* 검색창에 칠 때마다 바로바로 636건씩 다시 걸러내면 타이핑이 버벅일 수 있어서,
+   짧게(120ms) 기다렸다가 입력이 멈추면 그때 한 번만 다시 그려요. */
+function onPortScheduleSearchInput(value) {
+  portScheduleQuery = value;
+  if (portScheduleSearchDebounceTimer) clearTimeout(portScheduleSearchDebounceTimer);
+  portScheduleSearchDebounceTimer = setTimeout(renderPortScheduleRows, 120);
+}
 
 function renderPortScheduleTable() {
   const wrap = document.getElementById("portScheduleTableWrap");
@@ -314,6 +323,25 @@ function renderPortScheduleTable() {
     wrap.innerHTML = '<div class="empty-state">아직 등록된 스케줄이 없어요. 위에서 엑셀을 올려주세요.</div>';
     return;
   }
+
+  // 검색창·드롭다운(컨트롤)은 데이터가 바뀌었을 때만 새로 만들고, 검색어 입력처럼 자주 일어나는 일은
+  // 아래 renderPortScheduleRows()가 표 부분만 다시 그려요. 컨트롤 영역까지 매번 통째로 새로 그리면
+  // 그 안의 검색창(<input>)도 매번 새로 만들어지는 셈이라, 한 글자 칠 때마다 포커스가 빠져서
+  // "한 글자씩만 입력되는" 것처럼 느껴지는 문제가 있었어요.
+  if (!document.getElementById("portScheduleControlsWrap")) {
+    wrap.innerHTML = `
+      <div id="portScheduleControlsWrap"></div>
+      <div id="portScheduleRowsWrap"></div>
+    `;
+  }
+  renderPortScheduleControls();
+  renderPortScheduleRows();
+}
+
+/* 검색창·필터 드롭다운 - 데이터가 바뀌었을 때(실시간 갱신, 필터 선택 등)만 다시 그림 */
+function renderPortScheduleControls() {
+  const controlsWrap = document.getElementById("portScheduleControlsWrap");
+  if (!controlsWrap) return;
 
   // 공통 조건(입항일 없는 항목 숨기기)만 우선 적용
   const baseList = portScheduleHideEmpty
@@ -344,6 +372,39 @@ function renderPortScheduleTable() {
   // 지금 골라둔 값이 새 옵션 목록에 더는 없으면(예: 8월로 바꿨는데 이전에 고른 LINE이 8월엔 없음) 자동으로 "전체"로 풀어줌
   if (portScheduleLineFilter && !lines.includes(portScheduleLineFilter)) portScheduleLineFilter = "";
   if (portScheduleManagerFilter && !managers.includes(portScheduleManagerFilter)) portScheduleManagerFilter = "";
+
+  controlsWrap.innerHTML = `
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
+      <input type="text" id="portScheduleSearchInput" placeholder="선명·코드·항차·터미널·LINE·마감자로 검색..."
+        value="${escapeHtml(portScheduleQuery)}" style="flex:1; min-width:220px; padding:8px;"
+        oninput="onPortScheduleSearchInput(this.value)" />
+      <select style="padding:8px;" onchange="portScheduleMonthFilter=this.value; renderPortScheduleTable();">
+        <option value="">입항월: 전체</option>
+        ${months.map((m) => `<option value="${m}" ${portScheduleMonthFilter === m ? "selected" : ""}>${m.replace("-", "년 ")}월</option>`).join("")}
+      </select>
+      <select style="padding:8px;" onchange="portScheduleLineFilter=this.value; renderPortScheduleTable();">
+        <option value="">LINE: 전체</option>
+        ${lines.map((l) => `<option value="${escapeHtml(l)}" ${portScheduleLineFilter === l ? "selected" : ""}>${escapeHtml(l)}</option>`).join("")}
+      </select>
+      <select style="padding:8px;" onchange="portScheduleManagerFilter=this.value; renderPortScheduleTable();">
+        <option value="">마감자: 전체</option>
+        ${managers.map((m) => `<option value="${escapeHtml(m)}" ${portScheduleManagerFilter === m ? "selected" : ""}>${escapeHtml(m)}</option>`).join("")}
+      </select>
+      <label style="display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap;">
+        <input type="checkbox" ${portScheduleHideEmpty ? "checked" : ""}
+          onchange="portScheduleHideEmpty=this.checked; renderPortScheduleTable();" />
+        입항일 없는 항목 숨기기
+      </label>
+      <span class="hint" id="portScheduleCountLabel" style="margin:0;"></span>
+    </div>
+  `;
+}
+
+/* 표(행)만 다시 그림 - 검색어 입력, 필터 조합 계산 등 자주 일어나는 일은 여기서만 처리해서
+   검색창·드롭다운 DOM은 안 건드림 (포커스 유지 + 매번 컨트롤 다시 계산 안 해도 되니 더 빠름) */
+function renderPortScheduleRows() {
+  const rowsWrap = document.getElementById("portScheduleRowsWrap");
+  if (!rowsWrap) return;
 
   const q = portScheduleQuery.trim().toUpperCase();
   let filtered = PORT_SCHEDULE_LIST.filter((r) => {
@@ -377,30 +438,7 @@ function renderPortScheduleTable() {
     </tr>
   `).join("");
 
-  wrap.innerHTML = `
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
-      <input type="text" id="portScheduleSearchInput" placeholder="선명·코드·항차·터미널·LINE·마감자로 검색..."
-        value="${escapeHtml(portScheduleQuery)}" style="flex:1; min-width:220px; padding:8px;"
-        oninput="portScheduleQuery=this.value; renderPortScheduleTable();" />
-      <select style="padding:8px;" onchange="portScheduleMonthFilter=this.value; renderPortScheduleTable();">
-        <option value="">입항월: 전체</option>
-        ${months.map((m) => `<option value="${m}" ${portScheduleMonthFilter === m ? "selected" : ""}>${m.replace("-", "년 ")}월</option>`).join("")}
-      </select>
-      <select style="padding:8px;" onchange="portScheduleLineFilter=this.value; renderPortScheduleTable();">
-        <option value="">LINE: 전체</option>
-        ${lines.map((l) => `<option value="${escapeHtml(l)}" ${portScheduleLineFilter === l ? "selected" : ""}>${escapeHtml(l)}</option>`).join("")}
-      </select>
-      <select style="padding:8px;" onchange="portScheduleManagerFilter=this.value; renderPortScheduleTable();">
-        <option value="">마감자: 전체</option>
-        ${managers.map((m) => `<option value="${escapeHtml(m)}" ${portScheduleManagerFilter === m ? "selected" : ""}>${escapeHtml(m)}</option>`).join("")}
-      </select>
-      <label style="display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap;">
-        <input type="checkbox" ${portScheduleHideEmpty ? "checked" : ""}
-          onchange="portScheduleHideEmpty=this.checked; renderPortScheduleTable();" />
-        입항일 없는 항목 숨기기
-      </label>
-      <span class="hint" style="margin:0;">${sorted.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건</span>
-    </div>
+  rowsWrap.innerHTML = `
     <div style="overflow-x:auto;">
       <table class="port-schedule-table">
         <tr>
@@ -411,6 +449,9 @@ function renderPortScheduleTable() {
       </table>
     </div>
   `;
+
+  const countLabel = document.getElementById("portScheduleCountLabel");
+  if (countLabel) countLabel.textContent = `${sorted.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건`;
 }
 
 async function deletePortScheduleRow(id) {
