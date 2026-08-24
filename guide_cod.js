@@ -9,7 +9,7 @@ let COD_LIST = [];
 let codUnsubscribe = null;
 let codDraft = null;
 let codQuickAddOpen = false;
-let codMonthFilter = "__current"; // "__all" | "YYYY-MM" | "__current"
+let codMonthFilter = "__all"; // "__all" | "YYYY-MM" | "__current" - 기본은 전체보기 (월 넘어가는 진행중 건이 안 숨겨지게)
 
 function codDocToEntry(doc) {
   const d = doc.data();

@@ -7,7 +7,7 @@ const FOLLOWUP_COLLECTION = "followup_board"; // Firestore 컬렉션 이름
 
 let FOLLOWUP_LIST = [];
 let followupUnsubscribe = null;
-let followupMonthFilter = "__current"; // "__all" | "YYYY-MM" | "__current"
+let followupMonthFilter = "__all"; // "__all" | "YYYY-MM" | "__current" - 기본은 전체보기 (월 넘어가는 진행중 건이 안 숨겨지게)
 let followupDraft = null; // 지금 편집중인 항목 (없으면 새 항목)
 let followupQuickAddOpen = false;
 
@@ -44,6 +44,7 @@ function followupDocToEntry(doc) {
     decision: d.decision || "",
     memo: d.memo || "",
     completedDate: d.completedDate || "",
+    pinned: d.pinned === true, // 급한 건 표 맨 위에 고정해서 보기
     createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : (d.createdAtIso || ""),
     updatedAt: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toISOString() : (d.updatedAtIso || ""),
   };
@@ -67,6 +68,7 @@ async function submitFollowupToServer(entry) {
       decision: entry.decision || "",
       memo: entry.memo || "",
       completedDate: entry.completedDate || "",
+      pinned: entry.pinned === true,
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtIso: nowIso,
@@ -96,6 +98,7 @@ async function updateFollowupOnServer(entry) {
       decision: entry.decision || "",
       memo: entry.memo || "",
       completedDate: entry.completedDate || "",
+      pinned: entry.pinned === true,
       updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
       updatedAtIso: new Date().toISOString(),
     });
@@ -133,6 +136,18 @@ async function toggleFollowupDone(id) {
     });
   } catch (err) {
     alert("상태 변경에 실패했어요: " + err);
+  }
+}
+
+/* 급한 건 표 맨 위에 고정 - 다시 누르면 고정 해제 */
+async function toggleFollowupPinned(id) {
+  const item = FOLLOWUP_LIST.find((f) => f.id === id);
+  if (!item) return;
+  try {
+    await window.fbReady;
+    await window.fbDb.collection(FOLLOWUP_COLLECTION).doc(id).update({ pinned: !item.pinned });
+  } catch (err) {
+    alert("고정 상태 변경에 실패했어요: " + err);
   }
 }
 
@@ -268,8 +283,9 @@ function renderFollowupList() {
     list = list.filter((f) => [f.customer, f.title, f.memo, f.owner, f.workType].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
 
-  // 등록일 최신순 (같은 날이면 최근 수정 순)
+  // 고정된 건 항상 맨 위, 그다음 등록일 최신순 (같은 날이면 최근 수정 순)
   list.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
     const ad = a.registeredDate || "", bd = b.registeredDate || "";
     if (ad !== bd) return bd.localeCompare(ad);
     return (b.updatedAt || "").localeCompare(a.updatedAt || "");
@@ -287,15 +303,17 @@ function renderFollowupList() {
   const table = document.createElement("table");
   table.className = "contacts-table followup-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>다음 액션</th><th>후속조치일</th><th>담당</th><th></th></tr>";
+  thead.innerHTML = "<tr><th></th><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>다음 액션</th><th>후속조치일</th><th>담당</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (followupQuickAddOpen) tbody.appendChild(buildFollowupQuickAddRow());
   list.forEach((f) => {
     const isDone = f.status === "완료";
+    const isPinned = f.pinned === true;
     const tr = document.createElement("tr");
-    if (isDone) tr.className = "row-done";
-    tr.innerHTML = `<td>${escapeHtml(f.registeredDate || "-")}</td>`
+    tr.className = [isDone ? "row-done" : "", isPinned ? "row-pinned" : ""].filter(Boolean).join(" ");
+    tr.innerHTML = `<td class="no-strike" style="text-align:center;"><button class="pin-btn ${isPinned ? "pinned" : ""}" title="${isPinned ? "고정 해제" : "표 맨 위에 고정"}" onclick="event.stopPropagation();toggleFollowupPinned('${f.id}')">📌</button></td>`
+      + `<td>${escapeHtml(f.registeredDate || "-")}</td>`
       + `<td>${escapeHtml(f.customer || "-")}</td>`
       + `<td>${escapeHtml(f.workType || "-")}</td>`
       + `<td class="followup-title-cell">${escapeHtml(f.title || "-")}${f.memo ? `<div class="followup-memo-preview">${escapeHtml(f.memo)}</div>` : ""}</td>`
@@ -335,6 +353,9 @@ function toggleFollowupQuickAdd() {
 function buildFollowupQuickAddRow() {
   const tr = document.createElement("tr");
   tr.className = "quick-add-row";
+
+  const pinTd = document.createElement("td");
+  tr.appendChild(pinTd);
 
   const onEnterOrEsc = (e) => {
     if (e.key === "Enter") { e.preventDefault(); saveFollowupQuickAdd(); }
@@ -469,7 +490,7 @@ function openFollowupEditor(existingId) {
     id: null,
     registeredDate: new Date().toISOString().slice(0, 10),
     customer: "", workType: "스케줄", title: "", urgency: "익일가능", status: "대기",
-    nextAction: "", followUpDate: "", owner: "", decision: "", memo: "", completedDate: "",
+    nextAction: "", followUpDate: "", owner: "", decision: "", memo: "", completedDate: "", pinned: false,
   };
   document.getElementById("followupEditTitle").textContent = existingId ? "✏️ 팔로우업 건 수정" : "➕ 팔로우업 건 등록";
   document.getElementById("followupEditOverlay").style.display = "flex";
@@ -570,6 +591,15 @@ function renderFollowupEditorBody() {
   completedInput.value = d.completedDate || "";
   body.appendChild(makeFollowupField("완료일 (완료 상태일 때만)", completedInput));
 
+  const pinnedLabel = document.createElement("label");
+  pinnedLabel.style.cssText = "display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13.5px;cursor:pointer;";
+  const pinnedCheckbox = document.createElement("input");
+  pinnedCheckbox.type = "checkbox";
+  pinnedCheckbox.checked = d.pinned === true;
+  pinnedLabel.appendChild(pinnedCheckbox);
+  pinnedLabel.appendChild(document.createTextNode("📌 표 맨 위에 고정"));
+  body.appendChild(pinnedLabel);
+
   const actions = document.createElement("div");
   actions.className = "edit-actions";
   const saveBtn = document.createElement("button");
@@ -590,6 +620,7 @@ function renderFollowupEditorBody() {
       decision: decisionSel.value,
       memo: memoInput.value.trim(),
       completedDate: completedInput.value,
+      pinned: pinnedCheckbox.checked,
     };
     if (!entry.registeredDate) { alert("등록일을 선택해주세요."); return; }
     if (!entry.title) { alert("건명 / BL No.를 입력해주세요."); return; }
