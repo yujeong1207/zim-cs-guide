@@ -17602,13 +17602,26 @@ function handlePortScheduleTerminalFile(event) {
 }
 
 function findHanjinIncheonHeaderRow(aoa) {
-  // 한진인천은 헤더가 2줄로 나뉘어 있어서(rowspan/colspan), 일반적인 방식으론 컬럼 위치가 안 맞아요.
-  // "모선명"이 들어있는 그 줄을 찾아서, 데이터 행의 실제 컬럼 순서(직접 확인함)를 고정으로 씀:
-  // 0:항차 1:모선명 2:선사 3:입항(항차번호, 날짜 아님!) 4:출항(항차번호, 날짜 아님!)
-  // 5:CCT 6:ETB/ATB(진짜 입항일시) 7:ETD/ATD(진짜 출항일시) 8:양하 9:적하 10:이적 11:선석 12:노선명
   for (let r = 0; r < Math.min(aoa.length, 6); r++) {
     const row = aoa[r] || [];
-    if (row.some((c) => String(c || "").trim() === "모선명")) {
+    const cells = row.map((c) => String(c || "").trim());
+
+    // ✅ 새 형식("선석배정현황" 등 - 한진인천이 요즘 주는 진짜 xlsx, 헤더가 한 줄로 깔끔함):
+    //    "모선명(Route)"처럼 괄호가 붙어있어도 "모선명"이 포함되면 찾고, 접안/출항 예정일시도
+    //    같은 줄에서 바로 찾아지면 그 위치를 그대로 씀 (터미널이 컬럼 순서를 바꿔도 안전함)
+    const vesselIdx = cells.findIndex((c) => c.includes("모선명"));
+    const arrivalIdx = cells.findIndex((c) => c.replace(/[()]/g, "").includes("접안") && c.includes("일시"));
+    const departureIdx = cells.findIndex((c) => c.replace(/[()]/g, "").includes("출항") && c.includes("일시"));
+    if (vesselIdx >= 0 && arrivalIdx >= 0 && departureIdx >= 0) {
+      return { headerRowIdx: r, colMap: { vesselName: vesselIdx, arrival: arrivalIdx, departure: departureIdx } };
+    }
+
+    // 옛날 형식(한진인천 홈페이지를 그대로 xls로 내려받은 것 - 헤더가 2줄로 나뉘어 있어서(rowspan/colspan)
+    //    이 줄에는 "모선명"이라는 셀만 정확히 있고 접안/출항 컬럼명은 안 보여요): 예전에 직접 확인해둔
+    //    고정 컬럼 순서를 그대로 씀 -
+    //    0:항차 1:모선명 2:선사 3:입항(항차번호, 날짜 아님!) 4:출항(항차번호, 날짜 아님!)
+    //    5:CCT 6:ETB/ATB(진짜 입항일시) 7:ETD/ATD(진짜 출항일시) 8:양하 9:적하 10:이적 11:선석 12:노선명
+    if (cells.some((c) => c === "모선명")) {
       return { headerRowIdx: r, colMap: { vesselName: 1, arrival: 6, departure: 7 } };
     }
   }
@@ -17644,7 +17657,9 @@ function processPortScheduleTerminalFile(file, terminalName) {
         const row = aoa[r];
         if (!row) continue;
         const get = (key) => (colMap[key] >= 0 ? row[colMap[key]] : null);
-        const vesselName = String(get("vesselName") || "").trim();
+        // "모선명(Route)" 컬럼처럼 선명 뒤에 항로/서비스 코드가 괄호로 붙어있는 경우가 있어서
+        // (예: "DONGJIN CONTINENTAL(IHP)"), 끝에 붙은 괄호 하나는 매칭 전에 떼어냄
+        const vesselName = String(get("vesselName") || "").trim().replace(/\s*\([^()]*\)\s*$/, "").trim();
         if (!vesselName) continue;
 
         const arrivalDate = parsePortScheduleDate(get("arrival"));
