@@ -17179,6 +17179,17 @@ function renderPortScheduleSubTabButtons() {
 function loadPortScheduleTab() {
   const wrap = document.getElementById("portScheduleWrap");
   if (!wrap) return;
+
+  // ⚠️ 예전엔 이 탭에 들어올 때마다 화면(wrap.innerHTML)을 통째로 새로 그렸는데, 정작 데이터 구독은
+  //    "처음 한 번만" 하도록 되어있어서 - 두 번째 방문부터는 화면만 텅 비워지고 아무도 다시 채워주질
+  //    않았어요 (그래서 강제 새로고침을 눌러야만 다시 보였던 거예요). 이제는 화면을 만드는 것도
+  //    딱 처음 한 번만 하고, 그다음부턴 이미 갖고 있는 데이터로 표·캘린더만 다시 그려요.
+  if (liveSubscribed.portSchedule) {
+    renderPortScheduleTable();
+    renderPortScheduleCalendar();
+    return;
+  }
+
   wrap.innerHTML = `
     <div id="portScheduleSubTabButtons" class="sub-tab-buttons"></div>
 
@@ -17236,36 +17247,34 @@ function loadPortScheduleTab() {
   }
   renderPortScheduleCalendar();
 
-  if (!liveSubscribed.portSchedule) {
-    window.fbReady.then(() => {
-      portScheduleUnsubscribe = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).onSnapshot(
-        (snapshot) => {
-          PORT_SCHEDULE_LIST = snapshot.docs.map((doc) => {
-            const d = doc.data();
-            return {
-              id: doc.id,
-              vesselName: d.vesselName || "",
-              vesselCode: d.vesselCode || "",
-              voyage: d.voyage || "",
-              arrivalDate: d.arrivalDate || "",
-              departureDate: d.departureDate || "",
-              terminal: d.terminal || "",
-              line: d.line || "",
-              manager: d.manager || "",
-              cargoDeadlineDate: d.cargoDeadlineDate || "",
-              cargoDeadlineTime: d.cargoDeadlineTime || "",
-              anSendDate: d.anSendDate || "",
-            };
-          });
-          renderPortScheduleTable();
-          renderPortScheduleCalendar();
-        },
-        (err) => console.error("노션 입항 스케줄 실시간 구독 실패:", err)
-      );
-    });
-    liveSubscribed.portSchedule = true;
-    liveTabUnsubscribers.portSchedule = () => { if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; liveSubscribed.portSchedule = false; } };
-  }
+  window.fbReady.then(() => {
+    portScheduleUnsubscribe = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).onSnapshot(
+      (snapshot) => {
+        PORT_SCHEDULE_LIST = snapshot.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            vesselName: d.vesselName || "",
+            vesselCode: d.vesselCode || "",
+            voyage: d.voyage || "",
+            arrivalDate: d.arrivalDate || "",
+            departureDate: d.departureDate || "",
+            terminal: d.terminal || "",
+            line: d.line || "",
+            manager: d.manager || "",
+            cargoDeadlineDate: d.cargoDeadlineDate || "",
+            cargoDeadlineTime: d.cargoDeadlineTime || "",
+            anSendDate: d.anSendDate || "",
+          };
+        });
+        renderPortScheduleTable();
+        renderPortScheduleCalendar();
+      },
+      (err) => console.error("노션 입항 스케줄 실시간 구독 실패:", err)
+    );
+  });
+  liveSubscribed.portSchedule = true;
+  liveTabUnsubscribers.portSchedule = () => { if (portScheduleUnsubscribe) { portScheduleUnsubscribe(); portScheduleUnsubscribe = null; liveSubscribed.portSchedule = false; } };
 }
 
 /* 새로고침 버튼용 - 기존 구독을 끊고 강제로 다시 읽어옴 */
@@ -17356,6 +17365,8 @@ function renderPortScheduleCalendar() {
 let portScheduleQuery = "";
 let portScheduleHideEmpty = false;
 let portScheduleMonthFilter = ""; // "" = 전체, "2026-08" 같은 형식이면 그 달만
+let portScheduleLineFilter = ""; // "" = 전체
+let portScheduleManagerFilter = ""; // "" = 전체
 
 function renderPortScheduleTable() {
   const wrap = document.getElementById("portScheduleTableWrap");
@@ -17371,10 +17382,20 @@ function renderPortScheduleTable() {
     PORT_SCHEDULE_LIST.map((r) => (r.arrivalDate || "").slice(0, 7)).filter(Boolean)
   )).sort((a, b) => b.localeCompare(a));
 
+  // LINE·마감자도 실제 데이터에 있는 값만 골라서 드롭다운 목록 만듦 (가나다/알파벳순)
+  const lines = Array.from(new Set(
+    PORT_SCHEDULE_LIST.map((r) => (r.line || "").trim()).filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b));
+  const managers = Array.from(new Set(
+    PORT_SCHEDULE_LIST.map((r) => (r.manager || "").trim()).filter(Boolean)
+  )).sort((a, b) => a.localeCompare(b));
+
   const q = portScheduleQuery.trim().toUpperCase();
   let filtered = PORT_SCHEDULE_LIST.filter((r) => {
     if (portScheduleHideEmpty && !r.arrivalDate) return false;
     if (portScheduleMonthFilter && (r.arrivalDate || "").slice(0, 7) !== portScheduleMonthFilter) return false;
+    if (portScheduleLineFilter && (r.line || "").trim() !== portScheduleLineFilter) return false;
+    if (portScheduleManagerFilter && (r.manager || "").trim() !== portScheduleManagerFilter) return false;
     if (!q) return true;
     return [r.vesselName, r.vesselCode, r.voyage, r.terminal, r.line, r.manager]
       .some((v) => String(v || "").toUpperCase().includes(q));
@@ -17409,6 +17430,14 @@ function renderPortScheduleTable() {
       <select style="padding:8px;" onchange="portScheduleMonthFilter=this.value; renderPortScheduleTable();">
         <option value="">입항월: 전체</option>
         ${months.map((m) => `<option value="${m}" ${portScheduleMonthFilter === m ? "selected" : ""}>${m.replace("-", "년 ")}월</option>`).join("")}
+      </select>
+      <select style="padding:8px;" onchange="portScheduleLineFilter=this.value; renderPortScheduleTable();">
+        <option value="">LINE: 전체</option>
+        ${lines.map((l) => `<option value="${escapeHtml(l)}" ${portScheduleLineFilter === l ? "selected" : ""}>${escapeHtml(l)}</option>`).join("")}
+      </select>
+      <select style="padding:8px;" onchange="portScheduleManagerFilter=this.value; renderPortScheduleTable();">
+        <option value="">마감자: 전체</option>
+        ${managers.map((m) => `<option value="${escapeHtml(m)}" ${portScheduleManagerFilter === m ? "selected" : ""}>${escapeHtml(m)}</option>`).join("")}
       </select>
       <label style="display:flex; align-items:center; gap:6px; font-size:13px; white-space:nowrap;">
         <input type="checkbox" ${portScheduleHideEmpty ? "checked" : ""}
