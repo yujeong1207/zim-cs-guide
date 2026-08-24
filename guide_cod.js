@@ -9,6 +9,7 @@ let COD_LIST = [];
 let codUnsubscribe = null;
 let codDraft = null;
 let codQuickAddOpen = false;
+let codQuickDraft = {}; // 빠른등록 줄에 입력 중이던 값 - 실시간 갱신으로 표가 다시 그려져도 안 날아가게 여기 저장해뒀다가 복원함
 let codMonthFilter = "__all"; // "__all" | "YYYY-MM" | "__current" - 기본은 전체보기 (월 넘어가는 진행중 건이 안 숨겨지게)
 
 function codDocToEntry(doc) {
@@ -216,6 +217,7 @@ function renderCodList() {
     const isPinned = c.pinned === true;
     const tr = document.createElement("tr");
     tr.className = [isDone ? "row-done" : "", isPinned ? "row-pinned" : ""].filter(Boolean).join(" ");
+    tr.dataset.codId = c.id;
     tr.innerHTML = `<td class="no-strike" style="text-align:center;"><button class="pin-btn ${isPinned ? "pinned" : ""}" title="${isPinned ? "고정 해제" : "표 맨 위에 고정"}" onclick="event.stopPropagation();toggleCodPinned('${c.id}')">📌</button></td>`
       + `<td>${escapeHtml(c.registeredDate || "-")}</td>`
       + `<td>${escapeHtml(c.shpr || "-")}</td>`
@@ -260,12 +262,14 @@ function buildCodQuickAddRow() {
   const pinTd = document.createElement("td");
   tr.appendChild(pinTd);
 
-  const mk = (id, placeholder) => {
+  const mk = (id, placeholder, draftKey) => {
     const td = document.createElement("td");
     const input = document.createElement("input");
     input.id = id;
     input.placeholder = placeholder;
     input.className = "quick-add-input";
+    if (codQuickDraft[draftKey]) input.value = codQuickDraft[draftKey]; // 실시간 갱신으로 다시 그려져도 입력하던 값 복원
+    input.addEventListener("input", () => { codQuickDraft[draftKey] = input.value; });
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); saveCodQuickAdd(); }
       if (e.key === "Escape") { toggleCodQuickAdd(); }
@@ -279,7 +283,8 @@ function buildCodQuickAddRow() {
   dateInput.type = "date";
   dateInput.id = "codQuickDate";
   dateInput.className = "quick-add-input";
-  dateInput.value = new Date().toISOString().slice(0, 10);
+  dateInput.value = codQuickDraft.registeredDate || new Date().toISOString().slice(0, 10);
+  dateInput.addEventListener("input", () => { codQuickDraft.registeredDate = dateInput.value; });
   dateInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); saveCodQuickAdd(); }
     if (e.key === "Escape") { toggleCodQuickAdd(); }
@@ -287,12 +292,12 @@ function buildCodQuickAddRow() {
   dateTd.appendChild(dateInput);
   tr.appendChild(dateTd);
 
-  tr.appendChild(mk("codQuickShpr", "SHPR"));
-  tr.appendChild(mk("codQuickBl", "BL#"));
-  tr.appendChild(mk("codQuickVsl", "VSL"));
-  tr.appendChild(mk("codQuickBefore", "USSAV"));
-  tr.appendChild(mk("codQuickAfter", "USCHS"));
-  tr.appendChild(mk("codQuickStatus", "진행 상황"));
+  tr.appendChild(mk("codQuickShpr", "SHPR", "shpr"));
+  tr.appendChild(mk("codQuickBl", "BL#", "blNumber"));
+  tr.appendChild(mk("codQuickVsl", "VSL", "vsl"));
+  tr.appendChild(mk("codQuickBefore", "USSAV", "codBefore"));
+  tr.appendChild(mk("codQuickAfter", "USCHS", "codAfter"));
+  tr.appendChild(mk("codQuickStatus", "진행 상황", "status"));
 
   const actionTd = document.createElement("td");
   actionTd.colSpan = 2;
@@ -306,7 +311,7 @@ function buildCodQuickAddRow() {
   closeBtn.className = "btn secondary-btn";
   closeBtn.style.cssText = "padding:4px 10px;font-size:12px;";
   closeBtn.textContent = "✕";
-  closeBtn.onclick = () => toggleCodQuickAdd();
+  closeBtn.onclick = () => { codQuickDraft = {}; toggleCodQuickAdd(); }; // ✕는 진짜로 닫는 거니까 기억해둔 값도 같이 지움
   actionTd.appendChild(saveBtn);
   actionTd.appendChild(closeBtn);
   tr.appendChild(actionTd);
@@ -329,8 +334,9 @@ async function saveCodQuickAdd() {
     status: (document.getElementById("codQuickStatus").value || "").trim(),
   };
   const result = await submitCodToServer(entry);
-  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류") + " - 입력하신 내용은 그대로 남아있으니 다시 저장을 눌러주세요."); return; }
   // 저장되면 실시간 구독이 목록을 바로 갱신해주지만, 입력칸은 즉시 비워서 바로 다음 줄 입력 가능하게 (등록일은 이어서 쓰기 편하게 유지)
+  codQuickDraft = {}; // 저장 성공했으니 기억해둔 값도 같이 비움 (등록일은 아래에서 오늘 날짜로 다시 채움)
   ["codQuickShpr", "codQuickBl", "codQuickVsl", "codQuickBefore", "codQuickAfter", "codQuickStatus"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";

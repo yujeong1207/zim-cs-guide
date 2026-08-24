@@ -143,7 +143,7 @@
 </div>
 
 <div class="search-bar-wrap">
-  <input id="globalSearch" placeholder="🔍 전체 검색 - 절차, FAQ, 자료, 메일 템플릿, 공문 전체에서 한 번에 찾아요" oninput="onSearchInput()">
+  <input id="globalSearch" placeholder="🔍 전체 검색 - 절차, FAQ, 자료, 메일 템플릿, 공문, 팔로우업·COD·삼국간 전체에서 한 번에 찾아요" oninput="onSearchInput()">
 </div>
 
 <div id="recentItemsRow" class="recent-items-row" style="display:none;"></div>
@@ -492,6 +492,14 @@
     </div>
   </div>
 
+  <div class="howto-item howto-live">
+    <div class="howto-icon">📌</div>
+    <div class="howto-body">
+      <div class="howto-title">수출 CS 공유 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
+      <div class="howto-desc">팔로우업 보드·COD 현황·삼국간, 3개 표가 모여있어요. <b>팔로우업 보드</b>는 미완료 건 포함해서 계속 이어서 기록하는 보드예요 (상태를 "완료"로 바꾸면 미완료 건수에서 자동으로 빠져요). <b>COD 현황</b>은 목적항 변경 건만, <b>삼국간</b>은 BL번호별 POP CHARGE·MFST CLOSE·인보이스 발송요청·송금완료·POL/POD 인폼 체크리스트예요. 셋 다 "➕ 빠른 등록"을 누르면 표 맨 위에 빈 줄이 열려서 <b>엑셀처럼 바로 입력</b>하고 Enter 치면 저장되면서 다음 줄이 이어 열려요 (메모까지 자세히 적고 싶으면 "📝 자세히 입력"으로). 급한 건은 📌 눌러서 표 맨 위에 고정해두세요. 팀원 누구나 등록·수정하면 <b>바로 전체 화면에 반영</b>돼요.</div>
+    </div>
+  </div>
+
   <div class="howto-item">
     <div class="howto-icon">📚</div>
     <div class="howto-body">
@@ -557,10 +565,26 @@
   </div>
 
   <div class="howto-item">
+    <div class="howto-icon">🗝️</div>
+    <div class="howto-body">
+      <div class="howto-title">D/O 데스크 <span class="howto-badge">선박 입항일 · 위임장 확인 · DO 계산기 · 메모</span></div>
+      <div class="howto-desc">D/O 발행할 때 자주 같이 보는 화면들을 한곳에 모았어요. 선박명 검색하면 입항일이, 업체명 검색하면 위임장 제출 여부가 바로 떠요. 아래 DO 비용 계산기까지 한 화면에서 이어서 쓸 수 있어요. 맨 아래 <b>"📝 메모"</b>는 시스템 코드나 처리 순서 등 자유롭게 적어두는 칸인데, ⚠️ <b>이 브라우저에만 저장돼요</b> (다른 팀원한텐 안 보여요, 팀 공유 아님).</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
     <div class="howto-icon">💰</div>
     <div class="howto-body">
-      <div class="howto-title">B/L 데스크 <span class="howto-badge">모선 출항일 + 입금현황 + 재무팀 원드라이브 파일 보기</span></div>
-      <div class="howto-desc">재무팀에서 관리하는 입금증파일을 그대로 볼 수 있어요. 비엘번호로 찾을 땐 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색하세요. 원본이 재무팀에서 바뀌면 여기도 그대로 반영돼요. 여기서 직접 입력·수정은 안 되고, 보기 전용이에요.</div>
+      <div class="howto-title">B/L 데스크 <span class="howto-badge">출항일 · 입금현황 · 신용업체 조회 · 메모</span></div>
+      <div class="howto-desc">재무팀에서 관리하는 입금증 파일을 그대로 볼 수 있어요. BL번호 여러 개를 한 번에 넣고 "🔍 조회"하면 발행 가능 여부가 바로 떠요. <b>목록에 없다고 뜨면</b> 신용거래 업체라 애초에 입금현황에 안 잡히는 경우일 수 있어요 — 이럴 땐 옆에 있는 <b>"🏦 신용업체 조회"</b>에 CUCC 코드나 업체명을 쳐보세요, 신용거래 업체면 "✅ BL 발행 가능"으로 바로 확인돼요. 여기도 맨 아래 "📝 메모"는 이 브라우저에만 저장되는 개인용이에요. 원본 파일을 직접 보고 싶으면 아래 화면을 클릭한 다음 Ctrl+F로 검색하면 돼요 (여기서 직접 입력·수정은 안 돼요, 보기 전용).</div>
+    </div>
+  </div>
+
+  <div class="howto-item howto-live">
+    <div class="howto-icon">🗓️</div>
+    <div class="howto-body">
+      <div class="howto-title">노션 입항 스케줄 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
+      <div class="howto-desc">BCT·PNIT·HPNT·한진인천 등에서 받은 원본 파일을 그대로 올려서 관리하는 표예요. <b>"📄 raw 전체 파일 올리기"</b>는 선명·코드·항차·입항일 등이 다 담긴 전체 파일용이고(선명 하나에 "이름(코드) 항차"가 다 같이 붙어있는 형식도 자동으로 알아서 쪼개져요), <b>"🚢 터미널 갱신용 엑셀 올리기"</b>는 터미널을 먼저 고른 다음 선명으로 매칭해서 입항일·출항일·터미널만 갱신해요 (마감자 등 직접 입력한 정보는 안 건드려요). 검색창 옆 <b>입항월·LINE·마감자 드롭다운은 서로 연동</b>돼요 — 예를 들어 8월로 걸면 LINE·마감자 목록도 8월에 실제로 있는 값만 남아요. "📅 입항 캘린더" 탭을 누르면 노션에 올릴 2주치 달력 형태로도 볼 수 있어요.</div>
     </div>
   </div>
 
@@ -599,7 +623,7 @@
     <div class="howto-icon">🔐</div>
     <div class="howto-body">
       <div class="howto-title">어디까지 내가 고친 게 다른 사람한테 보일까?</div>
-      <div class="howto-desc"><b>모선 일정, 위임장 현황, 오비엘 접수, 의견 남기기, 휴가 찜하기, 확정휴가, 공휴일, 팀 일정, 공지 배너</b> — 이것들은 진짜 실시간으로 모두에게 반영돼요 (일부는 관리자 키가 필요해요, 위 "일정관리" 항목 참고). <b>AN 연락처, AN 주소 채우기(엑셀정리 안)</b>는 등록/수정 자체는 서버에 바로 반영되지만, 다른 팀원 화면엔 자동으로 안 뜨고 "🔄 새로고침"을 눌러야 최신 내용이 보여요 (대신 새 소식이 있으면 화면 오른쪽 아래에 알림 배너가 떠요). <b>날씨·세계시간</b>은 팀 공유가 아니라 각자 브라우저에만 저장돼요(도시 검색해서 추가한 게 다른 사람한테는 안 보여요). "⚙️ 관리" 버튼은 <b>비밀번호를 알아야 들어갈 수 있고,</b> 그 안에서 고친 나머지(절차/FAQ/메일템플릿/공문/자료모음/서비스라인 T/T/연락처/팀원 휴가일수/명언문구/메모)는 자기 브라우저에만 남고 다른 팀원에게는 보이지 않습니다. 수정 또는 추가를 원한다면 의견 남기기로 요청해 주세요.</div>
+      <div class="howto-desc"><b>모선 일정, 위임장 현황, 오비엘 접수, 팔로우업 보드, COD 현황, 삼국간, 노션 입항 스케줄, 의견 남기기, 휴가 찜하기, 확정휴가, 공휴일, 팀 일정, 공지 배너</b> — 이것들은 진짜 실시간으로 모두에게 반영돼요 (일부는 관리자 키가 필요해요, 위 "일정관리" 항목 참고). <b>AN 연락처, AN 주소 채우기(엑셀정리 안)</b>는 등록/수정 자체는 서버에 바로 반영되지만, 다른 팀원 화면엔 자동으로 안 뜨고 "🔄 새로고침"을 눌러야 최신 내용이 보여요 (대신 새 소식이 있으면 화면 오른쪽 아래에 알림 배너가 떠요). <b>날씨·세계시간, D/O·B/L 데스크의 "📝 메모"</b>는 팀 공유가 아니라 각자 브라우저에만 저장돼요(다른 사람한테는 안 보여요). "⚙️ 관리" 버튼은 <b>비밀번호를 알아야 들어갈 수 있고,</b> 그 안에서 고친 나머지(절차/FAQ/메일템플릿/공문/자료모음/서비스라인 T/T/연락처/팀원 휴가일수/명언문구/메모)는 자기 브라우저에만 남고 다른 팀원에게는 보이지 않습니다. 수정 또는 추가를 원한다면 의견 남기기로 요청해 주세요.</div>
     </div>
   </div>
 
@@ -752,7 +776,16 @@
 <script src="bl_list_tool.js"></script>
 <script src="an_email_tool.js"></script>
 <script src="contacts_script.js"></script>
-<script src="guide_script.js"></script>
+<script src="guide_realtime_config.js"></script>
+<script src="guide_data.js"></script>
+<script src="guide_storage_widgets.js"></script>
+<script src="guide_core_ui.js"></script>
+<script src="guide_desks_portschedule.js"></script>
+<script src="guide_tabs_reference.js"></script>
+<script src="guide_tabs_mail.js"></script>
+<script src="guide_admin.js"></script>
+<script src="guide_import_convert.js"></script>
+<script src="guide_finalize.js"></script>
 <script src="guide_followup.js"></script>
 <script src="guide_cod.js"></script>
 <script src="guide_triangle.js"></script>

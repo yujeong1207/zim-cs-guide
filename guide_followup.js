@@ -10,6 +10,7 @@ let followupUnsubscribe = null;
 let followupMonthFilter = "__all"; // "__all" | "YYYY-MM" | "__current" - 기본은 전체보기 (월 넘어가는 진행중 건이 안 숨겨지게)
 let followupDraft = null; // 지금 편집중인 항목 (없으면 새 항목)
 let followupQuickAddOpen = false;
+let followupQuickDraft = {}; // 빠른등록 줄에 입력 중이던 값 - 실시간 갱신으로 표가 다시 그려져도 안 날아가게 여기 저장해뒀다가 복원함
 
 const FOLLOWUP_WORK_TYPES = ["스케줄", "COD", "정산/비용", "클레임", "기타"];
 const FOLLOWUP_URGENCIES = ["당일필수", "익일가능", "오늘확인"];
@@ -312,6 +313,7 @@ function renderFollowupList() {
     const isPinned = f.pinned === true;
     const tr = document.createElement("tr");
     tr.className = [isDone ? "row-done" : "", isPinned ? "row-pinned" : ""].filter(Boolean).join(" ");
+    tr.dataset.followupId = f.id;
     tr.innerHTML = `<td class="no-strike" style="text-align:center;"><button class="pin-btn ${isPinned ? "pinned" : ""}" title="${isPinned ? "고정 해제" : "표 맨 위에 고정"}" onclick="event.stopPropagation();toggleFollowupPinned('${f.id}')">📌</button></td>`
       + `<td>${escapeHtml(f.registeredDate || "-")}</td>`
       + `<td>${escapeHtml(f.customer || "-")}</td>`
@@ -368,7 +370,8 @@ function buildFollowupQuickAddRow() {
   dateInput.type = "date";
   dateInput.id = "followupQuickDate";
   dateInput.className = "quick-add-input";
-  dateInput.value = new Date().toISOString().slice(0, 10);
+  dateInput.value = followupQuickDraft.registeredDate || new Date().toISOString().slice(0, 10);
+  dateInput.addEventListener("input", () => { followupQuickDraft.registeredDate = dateInput.value; });
   dateInput.addEventListener("keydown", onEnterOrEsc);
   dateTd.appendChild(dateInput);
   tr.appendChild(dateTd);
@@ -378,14 +381,17 @@ function buildFollowupQuickAddRow() {
   customerInput.id = "followupQuickCustomer";
   customerInput.placeholder = "고객/거래처";
   customerInput.className = "quick-add-input";
+  if (followupQuickDraft.customer) customerInput.value = followupQuickDraft.customer;
+  customerInput.addEventListener("input", () => { followupQuickDraft.customer = customerInput.value; });
   customerInput.addEventListener("keydown", onEnterOrEsc);
   customerTd.appendChild(customerInput);
   tr.appendChild(customerTd);
 
   const workTypeTd = document.createElement("td");
-  const workTypeSel = makeFollowupSelect(FOLLOWUP_WORK_TYPES, "스케줄");
+  const workTypeSel = makeFollowupSelect(FOLLOWUP_WORK_TYPES, followupQuickDraft.workType || "스케줄");
   workTypeSel.id = "followupQuickWorkType";
   workTypeSel.className = "quick-add-input";
+  workTypeSel.addEventListener("change", () => { followupQuickDraft.workType = workTypeSel.value; });
   workTypeTd.appendChild(workTypeSel);
   tr.appendChild(workTypeTd);
 
@@ -394,21 +400,25 @@ function buildFollowupQuickAddRow() {
   titleInput.id = "followupQuickTitle";
   titleInput.placeholder = "건명 / BL No.";
   titleInput.className = "quick-add-input";
+  if (followupQuickDraft.title) titleInput.value = followupQuickDraft.title;
+  titleInput.addEventListener("input", () => { followupQuickDraft.title = titleInput.value; });
   titleInput.addEventListener("keydown", onEnterOrEsc);
   titleTd.appendChild(titleInput);
   tr.appendChild(titleTd);
 
   const urgencyTd = document.createElement("td");
-  const urgencySel = makeFollowupSelect(FOLLOWUP_URGENCIES, "익일가능");
+  const urgencySel = makeFollowupSelect(FOLLOWUP_URGENCIES, followupQuickDraft.urgency || "익일가능");
   urgencySel.id = "followupQuickUrgency";
   urgencySel.className = "quick-add-input";
+  urgencySel.addEventListener("change", () => { followupQuickDraft.urgency = urgencySel.value; });
   urgencyTd.appendChild(urgencySel);
   tr.appendChild(urgencyTd);
 
   const statusTd = document.createElement("td");
-  const statusSel = makeFollowupSelect(FOLLOWUP_STATUSES, "대기");
+  const statusSel = makeFollowupSelect(FOLLOWUP_STATUSES, followupQuickDraft.status || "대기");
   statusSel.id = "followupQuickStatus";
   statusSel.className = "quick-add-input";
+  statusSel.addEventListener("change", () => { followupQuickDraft.status = statusSel.value; });
   statusTd.appendChild(statusSel);
   tr.appendChild(statusTd);
 
@@ -417,6 +427,8 @@ function buildFollowupQuickAddRow() {
   nextActionInput.id = "followupQuickNextAction";
   nextActionInput.placeholder = "진행 상황";
   nextActionInput.className = "quick-add-input";
+  if (followupQuickDraft.nextAction) nextActionInput.value = followupQuickDraft.nextAction;
+  nextActionInput.addEventListener("input", () => { followupQuickDraft.nextAction = nextActionInput.value; });
   nextActionInput.addEventListener("keydown", onEnterOrEsc);
   nextActionTd.appendChild(nextActionInput);
   tr.appendChild(nextActionTd);
@@ -426,14 +438,17 @@ function buildFollowupQuickAddRow() {
   followDateInput.type = "date";
   followDateInput.id = "followupQuickFollowDate";
   followDateInput.className = "quick-add-input";
+  if (followupQuickDraft.followUpDate) followDateInput.value = followupQuickDraft.followUpDate;
+  followDateInput.addEventListener("input", () => { followupQuickDraft.followUpDate = followDateInput.value; });
   followDateInput.addEventListener("keydown", onEnterOrEsc);
   followDateTd.appendChild(followDateInput);
   tr.appendChild(followDateTd);
 
   const ownerTd = document.createElement("td");
-  const ownerSel = makeFollowupSelect(["", ...OBL_TEAM_MEMBERS], "");
+  const ownerSel = makeFollowupSelect(["", ...OBL_TEAM_MEMBERS], followupQuickDraft.owner || "");
   ownerSel.id = "followupQuickOwner";
   ownerSel.className = "quick-add-input";
+  ownerSel.addEventListener("change", () => { followupQuickDraft.owner = ownerSel.value; });
   ownerTd.appendChild(ownerSel);
   tr.appendChild(ownerTd);
 
@@ -448,7 +463,7 @@ function buildFollowupQuickAddRow() {
   closeBtn.className = "btn secondary-btn";
   closeBtn.style.cssText = "padding:4px 10px;font-size:12px;";
   closeBtn.textContent = "✕";
-  closeBtn.onclick = () => toggleFollowupQuickAdd();
+  closeBtn.onclick = () => { followupQuickDraft = {}; toggleFollowupQuickAdd(); }; // ✕는 진짜로 닫는 거니까 기억해둔 값도 같이 지움
   actionTd.appendChild(saveBtn);
   actionTd.appendChild(closeBtn);
   tr.appendChild(actionTd);
@@ -475,8 +490,9 @@ async function saveFollowupQuickAdd() {
     decision: "", memo: "", completedDate: "",
   };
   const result = await submitFollowupToServer(entry);
-  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류") + " - 입력하신 내용은 그대로 남아있으니 다시 저장을 눌러주세요."); return; }
   // 저장되면 실시간 구독이 목록을 바로 갱신해주지만, 다음 줄 입력을 위해 필요한 칸만 비워둠 (날짜/업무유형/긴급도/상태/담당은 이어서 쓰기 편하게 유지)
+  followupQuickDraft = {}; // 저장 성공했으니 기억해둔 값도 비움
   ["followupQuickCustomer", "followupQuickTitle", "followupQuickNextAction", "followupQuickFollowDate"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
