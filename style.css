@@ -1920,3 +1920,12 @@ input, select, textarea {
 .triangle-cell-badge.ok { background: #dcfce7; color: #166534; }
 .triangle-cell-badge.note { background: #fef3c7; color: #92400e; }
 .triangle-cell-badge.empty { background: #f3f4f6; color: #9ca3af; font-weight: 400; }
+
+/* ===== 엑셀처럼 표 위에서 바로 입력하는 빠른등록 줄 ===== */
+.quick-add-row { background: #f5f3ff; }
+.quick-add-row td { padding: 6px 8px; vertical-align: middle; }
+.quick-add-input {
+  width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #ddd6fe; border-radius: 6px;
+  font-size: 13px; background: white;
+}
+.quick-add-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }

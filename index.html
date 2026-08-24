@@ -316,7 +316,8 @@
   <div class="hint" style="margin-bottom:10px;">수출 CS 미완료 건 포함해서 계속 기록하는 보드예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있고, 상태를 "완료"로 바꾸면 미완료 건수에서 자동으로 빠져요.</div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-    <button class="btn generate-btn" onclick="openFollowupEditor(null)">➕ 새 건 등록하기</button>
+    <button class="btn generate-btn" onclick="toggleFollowupQuickAdd()">➕ 빠른 등록 (표에 바로 입력)</button>
+    <button class="btn secondary-btn" onclick="openFollowupEditor(null)">📝 자세히 입력 (메모 포함)</button>
     <button class="btn secondary-btn" onclick="loadFollowupTab()">🔄 새로고침</button>
     <select id="followupMonthSelect" class="poa-date-input" style="max-width:180px;" onchange="onFollowupMonthChange()"></select>
     <select id="followupStatusFilter" class="poa-date-input" style="max-width:130px;" onchange="renderFollowupList()">
@@ -338,7 +339,8 @@
   <div class="hint" style="margin-bottom:10px;">COD(목적항 변경) 건만 따로 모아보는 표예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있어요.</div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <button class="btn generate-btn" onclick="openCodEditor(null)">➕ COD 건 등록하기</button>
+    <button class="btn generate-btn" onclick="toggleCodQuickAdd()">➕ 빠른 등록 (표에 바로 입력)</button>
+    <button class="btn secondary-btn" onclick="openCodEditor(null)">📝 자세히 입력</button>
     <button class="btn secondary-btn" onclick="loadCodTab()">🔄 새로고침</button>
   </div>
 
@@ -351,7 +353,8 @@
   <div class="hint" style="margin-bottom:10px;">BL번호별로 POP CHARGE / MFST CLOSE / 인보이스 발송요청 / 송금완료 / POL·POD 인폼 진행 상황을 체크하는 표예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있어요.</div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
-    <button class="btn generate-btn" onclick="openTriangleEditor(null)">➕ 삼국간 건 등록하기</button>
+    <button class="btn generate-btn" onclick="toggleTriangleQuickAdd()">➕ 빠른 등록 (표에 바로 입력)</button>
+    <button class="btn secondary-btn" onclick="openTriangleEditor(null)">📝 자세히 입력</button>
     <button class="btn secondary-btn" onclick="loadTriangleTab()">🔄 새로고침</button>
   </div>
 

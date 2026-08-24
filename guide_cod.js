@@ -8,6 +8,7 @@ const COD_COLLECTION = "cod_list"; // Firestore 컬렉션 이름
 let COD_LIST = [];
 let codUnsubscribe = null;
 let codDraft = null;
+let codQuickAddOpen = false;
 
 function codDocToEntry(doc) {
   const d = doc.data();
@@ -98,7 +99,7 @@ function renderCodList() {
   const qEl = document.getElementById("codFilter");
   const q = (qEl ? qEl.value : "").trim().toLowerCase();
 
-  if (COD_LIST.length === 0) {
+  if (COD_LIST.length === 0 && !codQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">아직 등록된 COD 건이 없어요. 위 "➕ COD 건 등록하기" 버튼으로 첫 건을 등록해보세요.</div>';
     return;
   }
@@ -108,7 +109,7 @@ function renderCodList() {
     list = list.filter((c) => [c.shpr, c.blNumber, c.vsl, c.codBefore, c.codAfter, c.status].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
 
-  if (q && list.length === 0) {
+  if (q && list.length === 0 && !codQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요.</div>';
     return;
   }
@@ -116,6 +117,7 @@ function renderCodList() {
   const table = document.createElement("table");
   table.className = "contacts-table";
   table.innerHTML = "<tr><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th></th></tr>";
+  if (codQuickAddOpen) table.appendChild(buildCodQuickAddRow());
   list.forEach((c) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${escapeHtml(c.shpr || "-")}</td>`
@@ -137,6 +139,83 @@ function renderCodList() {
   countInfo.style.marginTop = "8px";
   countInfo.textContent = "✅ " + list.length + "건 표시됨";
   wrap.appendChild(countInfo);
+
+  const firstInput = document.getElementById("codQuickShpr");
+  if (firstInput) firstInput.focus();
+}
+
+/* ---- 엑셀처럼 표 맨 위에 빈 줄 하나 열어서 바로 입력하는 빠른등록 ---- */
+function toggleCodQuickAdd() {
+  codQuickAddOpen = !codQuickAddOpen;
+  renderCodList();
+}
+
+function buildCodQuickAddRow() {
+  const tr = document.createElement("tr");
+  tr.className = "quick-add-row";
+
+  const mk = (id, placeholder) => {
+    const td = document.createElement("td");
+    const input = document.createElement("input");
+    input.id = id;
+    input.placeholder = placeholder;
+    input.className = "quick-add-input";
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); saveCodQuickAdd(); }
+      if (e.key === "Escape") { toggleCodQuickAdd(); }
+    });
+    td.appendChild(input);
+    return td;
+  };
+
+  tr.appendChild(mk("codQuickShpr", "SHPR"));
+  tr.appendChild(mk("codQuickBl", "BL#"));
+  tr.appendChild(mk("codQuickVsl", "VSL"));
+  tr.appendChild(mk("codQuickBefore", "USSAV"));
+  tr.appendChild(mk("codQuickAfter", "USCHS"));
+  tr.appendChild(mk("codQuickStatus", "진행 상황"));
+
+  const actionTd = document.createElement("td");
+  actionTd.style.whiteSpace = "nowrap";
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn generate-btn";
+  saveBtn.style.cssText = "padding:4px 10px;font-size:12px;margin-right:4px;";
+  saveBtn.textContent = "✓ 저장";
+  saveBtn.onclick = () => saveCodQuickAdd();
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "btn secondary-btn";
+  closeBtn.style.cssText = "padding:4px 10px;font-size:12px;";
+  closeBtn.textContent = "✕";
+  closeBtn.onclick = () => toggleCodQuickAdd();
+  actionTd.appendChild(saveBtn);
+  actionTd.appendChild(closeBtn);
+  tr.appendChild(actionTd);
+
+  return tr;
+}
+
+async function saveCodQuickAdd() {
+  const shpr = (document.getElementById("codQuickShpr").value || "").trim();
+  const blNumber = (document.getElementById("codQuickBl").value || "").trim();
+  if (!shpr) { alert("SHPR을 입력해주세요."); document.getElementById("codQuickShpr").focus(); return; }
+  if (!blNumber) { alert("BL#을 입력해주세요."); document.getElementById("codQuickBl").focus(); return; }
+
+  const entry = {
+    shpr, blNumber,
+    vsl: (document.getElementById("codQuickVsl").value || "").trim(),
+    codBefore: (document.getElementById("codQuickBefore").value || "").trim(),
+    codAfter: (document.getElementById("codQuickAfter").value || "").trim(),
+    status: (document.getElementById("codQuickStatus").value || "").trim(),
+  };
+  const result = await submitCodToServer(entry);
+  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+  // 저장되면 실시간 구독이 목록을 바로 갱신해주지만, 입력칸은 즉시 비워서 바로 다음 줄 입력 가능하게
+  ["codQuickShpr", "codQuickBl", "codQuickVsl", "codQuickBefore", "codQuickAfter", "codQuickStatus"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const first = document.getElementById("codQuickShpr");
+  if (first) first.focus();
 }
 
 function openCodEditor(existingId) {

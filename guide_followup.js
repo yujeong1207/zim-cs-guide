@@ -9,6 +9,7 @@ let FOLLOWUP_LIST = [];
 let followupUnsubscribe = null;
 let followupMonthFilter = "__current"; // "__all" | "YYYY-MM" | "__current"
 let followupDraft = null; // 지금 편집중인 항목 (없으면 새 항목)
+let followupQuickAddOpen = false;
 
 const FOLLOWUP_WORK_TYPES = ["스케줄", "COD", "정산/비용", "클레임", "기타"];
 const FOLLOWUP_URGENCIES = ["당일필수", "익일가능", "오늘확인"];
@@ -255,11 +256,11 @@ function renderFollowupList() {
     return (b.updatedAt || "").localeCompare(a.updatedAt || "");
   });
 
-  if (FOLLOWUP_LIST.length === 0) {
+  if (FOLLOWUP_LIST.length === 0 && !followupQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">아직 등록된 건이 없어요. 위 "➕ 새 건 등록하기" 버튼으로 첫 건을 등록해보세요.</div>';
     return;
   }
-  if (list.length === 0) {
+  if (list.length === 0 && !followupQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">조건에 맞는 건이 없어요.</div>';
     return;
   }
@@ -267,6 +268,7 @@ function renderFollowupList() {
   const table = document.createElement("table");
   table.className = "contacts-table followup-table";
   table.innerHTML = "<tr><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>다음 액션</th><th>후속조치일</th><th>담당</th><th></th></tr>";
+  if (followupQuickAddOpen) table.appendChild(buildFollowupQuickAddRow());
   list.forEach((f) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td>${escapeHtml(f.registeredDate || "-")}</td>`
@@ -291,6 +293,146 @@ function renderFollowupList() {
   countInfo.style.marginTop = "8px";
   countInfo.textContent = "✅ " + list.length + "건 표시됨";
   wrap.appendChild(countInfo);
+
+  const firstInput = document.getElementById("followupQuickCustomer");
+  if (firstInput) firstInput.focus();
+}
+
+/* ---- 엑셀처럼 표 맨 위에 빈 줄 하나 열어서 바로 입력하는 빠른등록 ---- */
+function toggleFollowupQuickAdd() {
+  followupQuickAddOpen = !followupQuickAddOpen;
+  renderFollowupList();
+}
+
+function buildFollowupQuickAddRow() {
+  const tr = document.createElement("tr");
+  tr.className = "quick-add-row";
+
+  const onEnterOrEsc = (e) => {
+    if (e.key === "Enter") { e.preventDefault(); saveFollowupQuickAdd(); }
+    if (e.key === "Escape") { toggleFollowupQuickAdd(); }
+  };
+
+  const dateTd = document.createElement("td");
+  const dateInput = document.createElement("input");
+  dateInput.type = "date";
+  dateInput.id = "followupQuickDate";
+  dateInput.className = "quick-add-input";
+  dateInput.value = new Date().toISOString().slice(0, 10);
+  dateInput.addEventListener("keydown", onEnterOrEsc);
+  dateTd.appendChild(dateInput);
+  tr.appendChild(dateTd);
+
+  const customerTd = document.createElement("td");
+  const customerInput = document.createElement("input");
+  customerInput.id = "followupQuickCustomer";
+  customerInput.placeholder = "고객/거래처";
+  customerInput.className = "quick-add-input";
+  customerInput.addEventListener("keydown", onEnterOrEsc);
+  customerTd.appendChild(customerInput);
+  tr.appendChild(customerTd);
+
+  const workTypeTd = document.createElement("td");
+  const workTypeSel = makeFollowupSelect(FOLLOWUP_WORK_TYPES, "스케줄");
+  workTypeSel.id = "followupQuickWorkType";
+  workTypeSel.className = "quick-add-input";
+  workTypeTd.appendChild(workTypeSel);
+  tr.appendChild(workTypeTd);
+
+  const titleTd = document.createElement("td");
+  const titleInput = document.createElement("input");
+  titleInput.id = "followupQuickTitle";
+  titleInput.placeholder = "건명 / BL No.";
+  titleInput.className = "quick-add-input";
+  titleInput.addEventListener("keydown", onEnterOrEsc);
+  titleTd.appendChild(titleInput);
+  tr.appendChild(titleTd);
+
+  const urgencyTd = document.createElement("td");
+  const urgencySel = makeFollowupSelect(FOLLOWUP_URGENCIES, "익일가능");
+  urgencySel.id = "followupQuickUrgency";
+  urgencySel.className = "quick-add-input";
+  urgencyTd.appendChild(urgencySel);
+  tr.appendChild(urgencyTd);
+
+  const statusTd = document.createElement("td");
+  const statusSel = makeFollowupSelect(FOLLOWUP_STATUSES, "대기");
+  statusSel.id = "followupQuickStatus";
+  statusSel.className = "quick-add-input";
+  statusTd.appendChild(statusSel);
+  tr.appendChild(statusTd);
+
+  const nextActionTd = document.createElement("td");
+  const nextActionInput = document.createElement("input");
+  nextActionInput.id = "followupQuickNextAction";
+  nextActionInput.placeholder = "다음 액션";
+  nextActionInput.className = "quick-add-input";
+  nextActionInput.addEventListener("keydown", onEnterOrEsc);
+  nextActionTd.appendChild(nextActionInput);
+  tr.appendChild(nextActionTd);
+
+  const followDateTd = document.createElement("td");
+  const followDateInput = document.createElement("input");
+  followDateInput.type = "date";
+  followDateInput.id = "followupQuickFollowDate";
+  followDateInput.className = "quick-add-input";
+  followDateInput.addEventListener("keydown", onEnterOrEsc);
+  followDateTd.appendChild(followDateInput);
+  tr.appendChild(followDateTd);
+
+  const ownerTd = document.createElement("td");
+  const ownerSel = makeFollowupSelect(["", ...OBL_TEAM_MEMBERS], "");
+  ownerSel.id = "followupQuickOwner";
+  ownerSel.className = "quick-add-input";
+  ownerTd.appendChild(ownerSel);
+  tr.appendChild(ownerTd);
+
+  const actionTd = document.createElement("td");
+  actionTd.style.whiteSpace = "nowrap";
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn generate-btn";
+  saveBtn.style.cssText = "padding:4px 10px;font-size:12px;margin-right:4px;";
+  saveBtn.textContent = "✓ 저장";
+  saveBtn.onclick = () => saveFollowupQuickAdd();
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "btn secondary-btn";
+  closeBtn.style.cssText = "padding:4px 10px;font-size:12px;";
+  closeBtn.textContent = "✕";
+  closeBtn.onclick = () => toggleFollowupQuickAdd();
+  actionTd.appendChild(saveBtn);
+  actionTd.appendChild(closeBtn);
+  tr.appendChild(actionTd);
+
+  return tr;
+}
+
+async function saveFollowupQuickAdd() {
+  const title = (document.getElementById("followupQuickTitle").value || "").trim();
+  const registeredDate = document.getElementById("followupQuickDate").value;
+  if (!registeredDate) { alert("등록일을 선택해주세요."); return; }
+  if (!title) { alert("건명 / BL No.를 입력해주세요."); document.getElementById("followupQuickTitle").focus(); return; }
+
+  const entry = {
+    registeredDate,
+    customer: (document.getElementById("followupQuickCustomer").value || "").trim(),
+    workType: document.getElementById("followupQuickWorkType").value,
+    title,
+    urgency: document.getElementById("followupQuickUrgency").value,
+    status: document.getElementById("followupQuickStatus").value,
+    nextAction: (document.getElementById("followupQuickNextAction").value || "").trim(),
+    followUpDate: document.getElementById("followupQuickFollowDate").value,
+    owner: document.getElementById("followupQuickOwner").value,
+    decision: "", memo: "", completedDate: "",
+  };
+  const result = await submitFollowupToServer(entry);
+  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+  // 저장되면 실시간 구독이 목록을 바로 갱신해주지만, 다음 줄 입력을 위해 필요한 칸만 비워둠 (날짜/업무유형/긴급도/상태/담당은 이어서 쓰기 편하게 유지)
+  ["followupQuickCustomer", "followupQuickTitle", "followupQuickNextAction", "followupQuickFollowDate"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const first = document.getElementById("followupQuickCustomer");
+  if (first) first.focus();
 }
 
 /* ---- 등록/수정 모달 ---- */

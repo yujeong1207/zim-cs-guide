@@ -8,6 +8,7 @@ const TRIANGLE_COLLECTION = "triangle_trade"; // Firestore 컬렉션 이름
 let TRIANGLE_LIST = [];
 let triangleUnsubscribe = null;
 let triangleDraft = null;
+let triangleQuickAddOpen = false;
 
 function triangleDocToEntry(doc) {
   const d = doc.data();
@@ -108,7 +109,7 @@ function renderTriangleList() {
   const qEl = document.getElementById("triangleFilter");
   const q = (qEl ? qEl.value : "").trim().toLowerCase();
 
-  if (TRIANGLE_LIST.length === 0) {
+  if (TRIANGLE_LIST.length === 0 && !triangleQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">아직 등록된 삼국간 건이 없어요. 위 "➕ 삼국간 건 등록하기" 버튼으로 첫 건을 등록해보세요.</div>';
     return;
   }
@@ -118,7 +119,7 @@ function renderTriangleList() {
     list = list.filter((t) => [t.blNumber, t.remark, t.remittance].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
 
-  if (q && list.length === 0) {
+  if (q && list.length === 0 && !triangleQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요.</div>';
     return;
   }
@@ -126,6 +127,7 @@ function renderTriangleList() {
   const table = document.createElement("table");
   table.className = "contacts-table";
   table.innerHTML = "<tr><th>BL번호</th><th>POP CHARGE</th><th>MFST CLOSE</th><th>인보이스 발송요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>REMARK</th><th></th></tr>";
+  if (triangleQuickAddOpen) table.appendChild(buildTriangleQuickAddRow());
   list.forEach((t) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td><b>${escapeHtml(t.blNumber || "-")}</b></td>`
@@ -148,6 +150,84 @@ function renderTriangleList() {
   countInfo.style.marginTop = "8px";
   countInfo.textContent = "✅ " + list.length + "건 표시됨";
   wrap.appendChild(countInfo);
+
+  const firstInput = document.getElementById("triangleQuickBl");
+  if (firstInput) firstInput.focus();
+}
+
+/* ---- 엑셀처럼 표 맨 위에 빈 줄 하나 열어서 바로 입력하는 빠른등록 ---- */
+function toggleTriangleQuickAdd() {
+  triangleQuickAddOpen = !triangleQuickAddOpen;
+  renderTriangleList();
+}
+
+function buildTriangleQuickAddRow() {
+  const tr = document.createElement("tr");
+  tr.className = "quick-add-row";
+
+  const mk = (id, placeholder, bold) => {
+    const td = document.createElement("td");
+    const input = document.createElement("input");
+    input.id = id;
+    input.placeholder = placeholder;
+    input.className = "quick-add-input";
+    if (bold) input.style.fontWeight = "700";
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); saveTriangleQuickAdd(); }
+      if (e.key === "Escape") { toggleTriangleQuickAdd(); }
+    });
+    td.appendChild(input);
+    return td;
+  };
+
+  tr.appendChild(mk("triangleQuickBl", "BL번호", true));
+  tr.appendChild(mk("triangleQuickPop", "예: O"));
+  tr.appendChild(mk("triangleQuickMfst", "예: O"));
+  tr.appendChild(mk("triangleQuickInvoice", "예: O"));
+  tr.appendChild(mk("triangleQuickRemit", "예: O, 신용거래"));
+  tr.appendChild(mk("triangleQuickInform", "예: O"));
+  tr.appendChild(mk("triangleQuickRemark", "REMARK"));
+
+  const actionTd = document.createElement("td");
+  actionTd.style.whiteSpace = "nowrap";
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn generate-btn";
+  saveBtn.style.cssText = "padding:4px 10px;font-size:12px;margin-right:4px;";
+  saveBtn.textContent = "✓ 저장";
+  saveBtn.onclick = () => saveTriangleQuickAdd();
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "btn secondary-btn";
+  closeBtn.style.cssText = "padding:4px 10px;font-size:12px;";
+  closeBtn.textContent = "✕";
+  closeBtn.onclick = () => toggleTriangleQuickAdd();
+  actionTd.appendChild(saveBtn);
+  actionTd.appendChild(closeBtn);
+  tr.appendChild(actionTd);
+
+  return tr;
+}
+
+async function saveTriangleQuickAdd() {
+  const blNumber = (document.getElementById("triangleQuickBl").value || "").trim();
+  if (!blNumber) { alert("BL번호를 입력해주세요."); document.getElementById("triangleQuickBl").focus(); return; }
+
+  const entry = {
+    blNumber,
+    popCharge: (document.getElementById("triangleQuickPop").value || "").trim(),
+    mfstClose: (document.getElementById("triangleQuickMfst").value || "").trim(),
+    invoiceRequest: (document.getElementById("triangleQuickInvoice").value || "").trim(),
+    remittance: (document.getElementById("triangleQuickRemit").value || "").trim(),
+    polPodInform: (document.getElementById("triangleQuickInform").value || "").trim(),
+    remark: (document.getElementById("triangleQuickRemark").value || "").trim(),
+  };
+  const result = await submitTriangleToServer(entry);
+  if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+  ["triangleQuickBl", "triangleQuickPop", "triangleQuickMfst", "triangleQuickInvoice", "triangleQuickRemit", "triangleQuickInform", "triangleQuickRemark"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const first = document.getElementById("triangleQuickBl");
+  if (first) first.focus();
 }
 
 function openTriangleEditor(existingId) {
