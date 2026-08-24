@@ -17377,18 +17377,35 @@ function renderPortScheduleTable() {
     return;
   }
 
-  // 실제 데이터에 있는 입항월들만 골라서 드롭다운 목록 만듦 (최신순)
+  // 공통 조건(입항일 없는 항목 숨기기)만 우선 적용
+  const baseList = portScheduleHideEmpty
+    ? PORT_SCHEDULE_LIST.filter((r) => !!r.arrivalDate)
+    : PORT_SCHEDULE_LIST;
+
+  // 드롭다운 하나하나는 "자기 자신 빼고 나머지 필터가 이미 적용된" 목록 기준으로 옵션을 만들어요.
+  // (엑셀 자동필터처럼 서로 연동되게 - 8월로 걸면 LINE·마감자엔 8월에 실제로 있는 값만 나와요)
+  const matchesExcept = (r, exceptKey) => {
+    if (exceptKey !== "month" && portScheduleMonthFilter && (r.arrivalDate || "").slice(0, 7) !== portScheduleMonthFilter) return false;
+    if (exceptKey !== "line" && portScheduleLineFilter && (r.line || "").trim() !== portScheduleLineFilter) return false;
+    if (exceptKey !== "manager" && portScheduleManagerFilter && (r.manager || "").trim() !== portScheduleManagerFilter) return false;
+    return true;
+  };
+
   const months = Array.from(new Set(
-    PORT_SCHEDULE_LIST.map((r) => (r.arrivalDate || "").slice(0, 7)).filter(Boolean)
+    baseList.filter((r) => matchesExcept(r, "month")).map((r) => (r.arrivalDate || "").slice(0, 7)).filter(Boolean)
   )).sort((a, b) => b.localeCompare(a));
 
-  // LINE·마감자도 실제 데이터에 있는 값만 골라서 드롭다운 목록 만듦 (가나다/알파벳순)
   const lines = Array.from(new Set(
-    PORT_SCHEDULE_LIST.map((r) => (r.line || "").trim()).filter(Boolean)
+    baseList.filter((r) => matchesExcept(r, "line")).map((r) => (r.line || "").trim()).filter(Boolean)
   )).sort((a, b) => a.localeCompare(b));
+
   const managers = Array.from(new Set(
-    PORT_SCHEDULE_LIST.map((r) => (r.manager || "").trim()).filter(Boolean)
+    baseList.filter((r) => matchesExcept(r, "manager")).map((r) => (r.manager || "").trim()).filter(Boolean)
   )).sort((a, b) => a.localeCompare(b));
+
+  // 지금 골라둔 값이 새 옵션 목록에 더는 없으면(예: 8월로 바꿨는데 이전에 고른 LINE이 8월엔 없음) 자동으로 "전체"로 풀어줌
+  if (portScheduleLineFilter && !lines.includes(portScheduleLineFilter)) portScheduleLineFilter = "";
+  if (portScheduleManagerFilter && !managers.includes(portScheduleManagerFilter)) portScheduleManagerFilter = "";
 
   const q = portScheduleQuery.trim().toUpperCase();
   let filtered = PORT_SCHEDULE_LIST.filter((r) => {
