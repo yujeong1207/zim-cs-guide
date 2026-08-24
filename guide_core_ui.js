@@ -221,6 +221,7 @@ async function loadTeamCalendarTab() {
 }
 
 function switchMainTab(tab) {
+  closeAllTabGroups(); // 드롭다운 메뉴에서 항목을 눌러 이동한 경우, 열려있던 드롭다운을 닫아줌
   const searchInput = document.getElementById("globalSearch");
   if (searchInput.value.trim()) searchInput.value = "";
   // 캘린더 캡처용으로 "의견 남기기" 버튼을 숨겨둔 채로 다른 탭에 갔으면, 깜빡한 걸 수 있으니 자동으로 복구

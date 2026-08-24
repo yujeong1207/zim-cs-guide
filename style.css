@@ -2013,7 +2013,11 @@ input, select, textarea {
   .main-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 0; }
   .main-tab-btn, .tab-group-btn { padding: 8px 12px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
   .tab-group { flex-shrink: 0; }
-  .tab-group-dropdown { left: 0; right: auto; max-width: 90vw; }
+  /* 드롭다운은 JS가 열 때 position:fixed로 바꿔서 화면 기준 버튼 바로 아래에 배치해요
+     (가로 스크롤 컨테이너 안에 갇혀서 잘리거나 늘어나 보이는 문제를 막기 위함).
+     여기서는 그때 깔끔한 리스트처럼 보이게 폭·그림자만 잡아줌 */
+  .tab-group-dropdown { max-width: none; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.18); }
+  .tab-group-dropdown .main-tab-btn { width: 100%; font-size: 14px; padding: 11px 14px; }
 
   .tab-page { padding: 12px; }
 

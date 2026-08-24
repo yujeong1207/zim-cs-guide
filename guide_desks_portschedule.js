@@ -1100,11 +1100,49 @@ function toggleTabGroup(group) {
   if (!dropdown) return;
   const willOpen = !dropdown.classList.contains("open");
   closeAllTabGroups();
-  if (willOpen) dropdown.classList.add("open");
+  if (willOpen) {
+    dropdown.classList.add("open");
+    positionTabGroupDropdownForMobile(dropdown);
+  }
 }
 
+/* 모바일 화면에서는 탭 메뉴 줄 자체가 가로 스크롤 컨테이너라, 그 안에서 절대위치(position:absolute)로
+   드롭다운을 띄우면 스크롤 영역에 갇혀서 이상하게 잘리거나 늘어나 보여요 (실제로 그런 문제가 있었어요).
+   그래서 768px 이하일 때만, 드롭다운을 화면 기준 고정 위치(position:fixed)로 바꾸고 버튼 바로 아래에
+   정확히 오도록 좌표를 직접 계산해서 배치해요. 데스크톱에서는 원래 방식(absolute) 그대로예요. */
+function positionTabGroupDropdownForMobile(dropdown) {
+  if (window.innerWidth > 768) {
+    dropdown.style.position = "";
+    dropdown.style.top = "";
+    dropdown.style.left = "";
+    dropdown.style.right = "";
+    dropdown.style.width = "";
+    return;
+  }
+  const btn = dropdown.parentElement ? dropdown.parentElement.querySelector(".tab-group-btn") : null;
+  if (!btn) return;
+  const rect = btn.getBoundingClientRect();
+  dropdown.style.position = "fixed";
+  dropdown.style.top = (rect.bottom + 4) + "px";
+  dropdown.style.left = "12px";
+  dropdown.style.right = "12px";
+  dropdown.style.width = "auto";
+}
+
+window.addEventListener("resize", () => {
+  const open = document.querySelector(".tab-group-dropdown.open");
+  if (open) positionTabGroupDropdownForMobile(open);
+});
+
 function closeAllTabGroups() {
-  document.querySelectorAll(".tab-group-dropdown").forEach((d) => d.classList.remove("open"));
+  document.querySelectorAll(".tab-group-dropdown").forEach((d) => {
+    d.classList.remove("open");
+    d.style.position = "";
+    d.style.top = "";
+    d.style.left = "";
+    d.style.right = "";
+    d.style.width = "";
+  });
 }
 
 document.addEventListener("click", (e) => {
