@@ -17731,6 +17731,8 @@ const PORT_SCHEDULE_HEADER_ALIASES = {
   vesselName: ["vessel name", "선명"],
   vesselCode: ["vessel code", "선박코드", "코드"],
   voyage: ["voyage", "항차"],
+  // "Vessel" 한 컬럼에 "JADE I (ZJ3) 9E"처럼 이름+코드+항차가 다 같이 들어있는 형식(ZIM/GSL Integrated Schedule 등)도 지원
+  vesselCombined: ["vessel"],
   arrival: ["arrival", "입항", "입항일"],
   departure: ["departure", "출항", "출항일"],
   terminal: ["terminal", "터미널"],
@@ -17741,11 +17743,21 @@ const PORT_SCHEDULE_HEADER_ALIASES = {
   anSendDate: ["an 발송 예정일", "an발송예정일"],
 };
 
+/* "JADE I (ZJ3) 9E" 처럼 한 셀에 이름+코드+항차가 다 같이 들어있는 걸 세 개로 쪼갬.
+   패턴에 안 맞으면 null (그럼 그냥 vesselName 칸에 원본 그대로 들어감) */
+function splitCombinedVesselCell(raw) {
+  const str = String(raw || "").trim();
+  if (!str) return null;
+  const m = str.match(/^(.*?)\s*\(([^()]+)\)\s*(\S+)\s*$/);
+  if (!m) return null;
+  return { name: m[1].trim(), code: m[2].trim(), voyage: m[3].trim() };
+}
+
 function findPortScheduleHeaderRow(aoa) {
   for (let r = 0; r < Math.min(aoa.length, 5); r++) {
     const row = aoa[r] || [];
     const cellsLower = row.map((c) => String(c || "").trim().toLowerCase());
-    const hasVesselName = cellsLower.some((c) => c === "vessel name" || c === "선명");
+    const hasVesselName = cellsLower.some((c) => c === "vessel name" || c === "선명" || c === "vessel");
     const hasArrival = cellsLower.some((c) => c.includes("arrival") || c === "입항" || c === "입항일");
     if (hasVesselName && hasArrival) {
       const colMap = {};
@@ -17785,7 +17797,7 @@ function processPortScheduleFile(file) {
 
       const headerInfo = findPortScheduleHeaderRow(aoa);
       if (!headerInfo) {
-        throw new Error('"Vessel Name"·"Arrival" 컬럼(또는 "선명"·"입항")을 못 찾았어요. 헤더 행을 확인해주세요.');
+        throw new Error('"Vessel Name" 또는 "Vessel"·"Arrival" 컬럼(또는 "선명"·"입항")을 못 찾았어요. 헤더 행을 확인해주세요.');
       }
       const { headerRowIdx, colMap } = headerInfo;
 
@@ -17794,8 +17806,22 @@ function processPortScheduleFile(file) {
         const row = aoa[r];
         if (!row) continue;
         const get = (key) => (colMap[key] >= 0 ? row[colMap[key]] : null);
-        const vesselName = String(get("vesselName") || "").trim();
-        const vesselCode = String(get("vesselCode") || "").trim();
+        let vesselName = String(get("vesselName") || "").trim();
+        let vesselCode = String(get("vesselCode") || "").trim();
+        let voyage = String(get("voyage") || "").trim();
+
+        // "Vessel" 한 컬럼에 이름+코드+항차가 다 같이 들어있는 형식이면(예: "JADE I (ZJ3) 9E") 쪼개서 채움.
+        // 이름/코드/항차가 각각 따로 있는 파일이면 그쪽을 우선 쓰고, 통합 컬럼은 비어있을 때만 보충함.
+        if (colMap.vesselCombined >= 0) {
+          const split = splitCombinedVesselCell(get("vesselCombined"));
+          if (split) {
+            if (!vesselName) vesselName = split.name;
+            if (!vesselCode) vesselCode = split.code;
+            if (!voyage) voyage = split.voyage;
+          } else if (!vesselName) {
+            vesselName = String(get("vesselCombined") || "").trim(); // 패턴이 안 맞으면 원본 그대로라도 이름 칸에 넣음
+          }
+        }
         if (!vesselName && !vesselCode) continue; // 빈 줄은 건너뜀
 
         const arrivalDate = parsePortScheduleDate(get("arrival"));
@@ -17805,7 +17831,7 @@ function processPortScheduleFile(file) {
         entries.push({
           vesselName,
           vesselCode,
-          voyage: String(get("voyage") || "").trim(),
+          voyage,
           arrivalDate,
           departureDate: parsePortScheduleDate(get("departure")),
           terminal: String(get("terminal") || "").trim(),
