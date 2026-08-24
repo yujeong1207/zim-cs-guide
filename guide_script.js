@@ -17074,10 +17074,13 @@ let portScheduleUploadBusy = false;
 
 /* 선박코드+항차로 고정된 문서 ID를 만들어서, 같은 배/항차를 다시 올리면
    자동으로 "새로 추가"가 아니라 "기존 걸 최신 정보로 덮어쓰기"가 되게 함 */
-function portScheduleDocId(vesselCode, voyage) {
+function portScheduleDocId(vesselCode, voyage, terminal) {
   const safeCode = String(vesselCode || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "_") || "CODE";
   const safeVoyage = String(voyage || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "_") || "VOY";
-  return safeCode + "__" + safeVoyage;
+  // ⚠️ 터미널도 꼭 ID에 넣어야 해요 - 같은 배·같은 항차가 두 터미널에 나눠서 기항하는 경우(예: BPT 다음 HJNT)가
+  // 있는데, 터미널을 안 넣으면 두 줄이 같은 ID를 갖게 돼서 나중 줄이 먼저 줄을 덮어써버려요 (실제로 있었던 버그).
+  const safeTerminal = String(terminal || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "_") || "TERM";
+  return safeCode + "__" + safeVoyage + "__" + safeTerminal;
 }
 
 /* 엑셀 셀 값(Date 객체든 문자열이든)을 항상 "YYYY-MM-DD"로 통일 */
@@ -17505,8 +17508,8 @@ async function savePortScheduleForm(id) {
 
   try {
     await window.fbReady;
-    // 새로 등록하는 거면 선박코드+항차로 고정 ID를 씀(중복 방지), 기존 걸 고치는 거면 그 문서 ID 그대로 유지
-    const docId = id || portScheduleDocId(vesselCode, voyage);
+    // 새로 등록하는 거면 선박코드+항차+터미널로 고정 ID를 씀(중복 방지), 기존 걸 고치는 거면 그 문서 ID 그대로 유지
+    const docId = id || portScheduleDocId(vesselCode, voyage, entry.terminal);
     await window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(docId).set(
       Object.assign({}, entry, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }),
       { merge: true }
@@ -17849,7 +17852,7 @@ function processPortScheduleFile(file) {
       let batch = window.fbDb.batch();
       let count = 0;
       for (const entry of entries) {
-        const docRef = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(portScheduleDocId(entry.vesselCode, entry.voyage));
+        const docRef = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(portScheduleDocId(entry.vesselCode, entry.voyage, entry.terminal));
         batch.set(docRef, Object.assign({}, entry, { updatedAt: firebase.firestore.FieldValue.serverTimestamp() }), { merge: true });
         count++;
         if (count % 400 === 0) { await batch.commit(); batch = window.fbDb.batch(); }
