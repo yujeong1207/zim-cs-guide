@@ -1976,3 +1976,24 @@ input, select, textarea {
 .pin-btn.pinned { opacity: 1; }
 .row-pinned { background: #fff7ed; }
 .row-pinned:hover { background: #ffedd5; }
+
+/* ===== 수출 CS 공유(팔로우업/COD/삼국간) 색상 통일 - 업무절차 표와 같은 하늘색 계열로 =====
+   기존 보라/인디고(#6366f1 등)는 이 세 탭 안에서만 하늘색(#0c447c 계열)으로 덮어써요.
+   다른 탭의 버튼 색은 그대로 유지돼요(전역 .generate-btn은 안 건드림). */
+#page-followup .generate-btn, #page-cod .generate-btn, #page-triangle .generate-btn {
+  background: #0c78c9;
+}
+#page-followup .generate-btn:hover, #page-cod .generate-btn:hover, #page-triangle .generate-btn:hover {
+  background: #0c447c;
+}
+#page-followup .quick-add-row, #page-cod .quick-add-row, #page-triangle .quick-add-row {
+  background: #eff8ff;
+}
+#page-followup .quick-add-input, #page-cod .quick-add-input, #page-triangle .quick-add-input {
+  border-color: #bfdbfe;
+}
+#page-followup .quick-add-input:focus, #page-cod .quick-add-input:focus, #page-triangle .quick-add-input:focus {
+  border-color: #0c78c9; box-shadow: 0 0 0 2px rgba(12,120,201,0.15);
+}
+#page-followup .followup-stat-num { color: #0c447c; }
+#page-followup .followup-badge.normal { background: #dbeafe; color: #1d4ed8; }
