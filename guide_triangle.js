@@ -21,6 +21,7 @@ function triangleDocToEntry(doc) {
     remittance: d.remittance || "",
     polPodInform: d.polPodInform || "",
     remark: d.remark || "",
+    doneStatus: d.doneStatus || "progress", // "progress" | "done" - 처리완료 여부 (표에서 회색·취소선으로 표시)
     createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : (d.createdAtIso || ""),
   };
 }
@@ -36,6 +37,7 @@ async function submitTriangleToServer(entry) {
       remittance: entry.remittance || "",
       polPodInform: entry.polPodInform || "",
       remark: entry.remark || "",
+      doneStatus: entry.doneStatus || "progress",
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtIso: new Date().toISOString(),
     });
@@ -57,6 +59,7 @@ async function updateTriangleOnServer(entry) {
       remittance: entry.remittance || "",
       polPodInform: entry.polPodInform || "",
       remark: entry.remark || "",
+      doneStatus: entry.doneStatus || "progress",
     });
     return { ok: true };
   } catch (err) {
@@ -73,6 +76,19 @@ async function deleteTriangleFromServer(id) {
   } catch (err) {
     console.error("삼국간 서버 삭제 실패:", err);
     return { ok: false, error: String(err) };
+  }
+}
+
+/* 표에서 "처리완료"/"진행중" 버튼 한 번 누르면 바로 바뀌게 - 전체 폼 열 필요 없음 */
+async function toggleTriangleDoneStatus(id) {
+  const item = TRIANGLE_LIST.find((t) => t.id === id);
+  if (!item) return;
+  const nextStatus = item.doneStatus === "done" ? "progress" : "done";
+  try {
+    await window.fbReady;
+    await window.fbDb.collection(TRIANGLE_COLLECTION).doc(id).update({ doneStatus: nextStatus });
+  } catch (err) {
+    alert("상태 변경에 실패했어요: " + err);
   }
 }
 
@@ -125,11 +141,16 @@ function renderTriangleList() {
   }
 
   const table = document.createElement("table");
-  table.className = "contacts-table";
-  table.innerHTML = "<tr><th>BL번호</th><th>POP CHARGE</th><th>MFST CLOSE</th><th>인보이스 발송요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>REMARK</th><th></th></tr>";
-  if (triangleQuickAddOpen) table.appendChild(buildTriangleQuickAddRow());
+  table.className = "contacts-table triangle-table sticky-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>BL번호</th><th>POP CHARGE</th><th>MFST CLOSE</th><th>인보이스 발송요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>REMARK</th><th>처리</th><th></th></tr>";
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  if (triangleQuickAddOpen) tbody.appendChild(buildTriangleQuickAddRow());
   list.forEach((t) => {
+    const isDone = t.doneStatus === "done";
     const tr = document.createElement("tr");
+    if (isDone) tr.className = "row-done";
     tr.innerHTML = `<td><b>${escapeHtml(t.blNumber || "-")}</b></td>`
       + `<td><span class="${triangleCellClass(t.popCharge)}">${escapeHtml(t.popCharge || "-")}</span></td>`
       + `<td><span class="${triangleCellClass(t.mfstClose)}">${escapeHtml(t.mfstClose || "-")}</span></td>`
@@ -137,11 +158,16 @@ function renderTriangleList() {
       + `<td><span class="${triangleCellClass(t.remittance)}">${escapeHtml(t.remittance || "-")}</span></td>`
       + `<td><span class="${triangleCellClass(t.polPodInform)}">${escapeHtml(t.polPodInform || "-")}</span></td>`
       + `<td>${escapeHtml(t.remark || "-")}</td>`
-      + `<td><button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="openTriangleEditor('${t.id}')">✏️ 수정</button></td>`;
+      + `<td class="no-strike"><span class="${isDone ? "done-badge done" : "done-badge progress"}">${isDone ? "✅ 완료" : "🔄 진행중"}</span></td>`
+      + `<td class="no-strike" style="white-space:nowrap;">`
+      + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleTriangleDoneStatus('${t.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
+      + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openTriangleEditor('${t.id}')">✏️ 수정</button>`
+      + `</td>`;
     tr.style.cursor = "pointer";
     tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openTriangleEditor(t.id); };
-    table.appendChild(tr);
+    tbody.appendChild(tr);
   });
+  table.appendChild(tbody);
   wrap.innerHTML = "";
   wrap.appendChild(table);
 
@@ -189,6 +215,7 @@ function buildTriangleQuickAddRow() {
   tr.appendChild(mk("triangleQuickRemark", "REMARK"));
 
   const actionTd = document.createElement("td");
+  actionTd.colSpan = 2;
   actionTd.style.whiteSpace = "nowrap";
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn generate-btn";
@@ -232,7 +259,7 @@ async function saveTriangleQuickAdd() {
 
 function openTriangleEditor(existingId) {
   triangleDraft = existingId ? Object.assign({}, TRIANGLE_LIST.find((t) => t.id === existingId)) : {
-    id: null, blNumber: "", popCharge: "", mfstClose: "", invoiceRequest: "", remittance: "", polPodInform: "", remark: "",
+    id: null, blNumber: "", popCharge: "", mfstClose: "", invoiceRequest: "", remittance: "", polPodInform: "", remark: "", doneStatus: "progress",
   };
   document.getElementById("triangleEditTitle").textContent = existingId ? "✏️ 삼국간 건 수정" : "➕ 삼국간 건 등록";
   document.getElementById("triangleEditOverlay").style.display = "flex";
@@ -295,6 +322,10 @@ function renderTriangleEditorBody() {
   remarkInput.value = d.remark || "";
   body.appendChild(makeFollowupField("REMARK", remarkInput));
 
+  const doneSel = makeFollowupSelect(["progress", "done"], d.doneStatus || "progress");
+  Array.from(doneSel.options).forEach((o) => { o.textContent = o.value === "done" ? "✅ 처리완료" : "🔄 진행중"; });
+  body.appendChild(makeFollowupField("처리 상태", doneSel));
+
   const actions = document.createElement("div");
   actions.className = "edit-actions";
   const saveBtn = document.createElement("button");
@@ -310,6 +341,7 @@ function renderTriangleEditorBody() {
       remittance: remitField._input.value.trim(),
       polPodInform: informField._input.value.trim(),
       remark: remarkInput.value.trim(),
+      doneStatus: doneSel.value,
     };
     if (!entry.blNumber) { alert("BL번호를 입력해주세요."); return; }
 

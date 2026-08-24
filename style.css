@@ -1929,3 +1929,21 @@ input, select, textarea {
   font-size: 13px; background: white;
 }
 .quick-add-input:focus { outline: none; border-color: #6366f1; box-shadow: 0 0 0 2px rgba(99,102,241,0.15); }
+
+/* ===== 헤더 고정(스크롤해도 따라옴) + 처리완료 표시 (팔로우업/COD/삼국간) ===== */
+.sticky-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: #f9fafb;
+  box-shadow: 0 1px 0 #e5e7eb;
+}
+
+.row-done { background: #f3f4f6; }
+.row-done td { color: #9ca3af; }
+.row-done td:not(.no-strike) { text-decoration: line-through; }
+.row-done .followup-memo-preview { color: #c4c9d1; }
+
+.done-badge { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.done-badge.done { background: #dcfce7; color: #166534; }
+.done-badge.progress { background: #f3f4f6; color: #6b7280; }

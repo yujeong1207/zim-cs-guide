@@ -117,6 +117,25 @@ async function deleteFollowupFromServer(id) {
   }
 }
 
+/* 표에서 "처리완료"/"되돌리기" 버튼 한 번 누르면 바로 바뀌게 - 전체 폼 열 필요 없음.
+   완료로 바꿀 땐 완료일도 오늘 날짜로 같이 채워주고, 되돌릴 땐 "진행중"으로 돌려놓음. */
+async function toggleFollowupDone(id) {
+  const item = FOLLOWUP_LIST.find((f) => f.id === id);
+  if (!item) return;
+  const nowDone = item.status !== "완료";
+  try {
+    await window.fbReady;
+    await window.fbDb.collection(FOLLOWUP_COLLECTION).doc(id).update({
+      status: nowDone ? "완료" : "진행중",
+      completedDate: nowDone ? new Date().toISOString().slice(0, 10) : "",
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      updatedAtIso: new Date().toISOString(),
+    });
+  } catch (err) {
+    alert("상태 변경에 실패했어요: " + err);
+  }
+}
+
 /* 팔로우업보드 탭을 열 때 호출 - 처음 한 번만 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면 반영.
    forceRefresh=true(새로고침 버튼)일 때만 구독을 끊고 다시 읽어옴 - 탭을 그냥 오갈 땐 재구독 안 해서 Firestore 읽기 비용이 안 쌓여요. */
 async function loadFollowupTab(forceRefresh) {
@@ -266,25 +285,34 @@ function renderFollowupList() {
   }
 
   const table = document.createElement("table");
-  table.className = "contacts-table followup-table";
-  table.innerHTML = "<tr><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>다음 액션</th><th>후속조치일</th><th>담당</th><th></th></tr>";
-  if (followupQuickAddOpen) table.appendChild(buildFollowupQuickAddRow());
+  table.className = "contacts-table followup-table sticky-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>다음 액션</th><th>후속조치일</th><th>담당</th><th></th></tr>";
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  if (followupQuickAddOpen) tbody.appendChild(buildFollowupQuickAddRow());
   list.forEach((f) => {
+    const isDone = f.status === "완료";
     const tr = document.createElement("tr");
+    if (isDone) tr.className = "row-done";
     tr.innerHTML = `<td>${escapeHtml(f.registeredDate || "-")}</td>`
       + `<td>${escapeHtml(f.customer || "-")}</td>`
       + `<td>${escapeHtml(f.workType || "-")}</td>`
       + `<td class="followup-title-cell">${escapeHtml(f.title || "-")}${f.memo ? `<div class="followup-memo-preview">${escapeHtml(f.memo)}</div>` : ""}</td>`
-      + `<td><span class="${followupUrgencyBadgeClass(f.urgency)}">${escapeHtml(f.urgency || "-")}</span></td>`
-      + `<td><span class="${followupStatusBadgeClass(f.status)}">${escapeHtml(f.status || "-")}</span></td>`
+      + `<td class="no-strike"><span class="${followupUrgencyBadgeClass(f.urgency)}">${escapeHtml(f.urgency || "-")}</span></td>`
+      + `<td class="no-strike"><span class="${followupStatusBadgeClass(f.status)}">${escapeHtml(f.status || "-")}</span></td>`
       + `<td>${escapeHtml(f.nextAction || "-")}</td>`
       + `<td>${escapeHtml(f.followUpDate || "-")}</td>`
       + `<td>${escapeHtml(f.owner || "-")}</td>`
-      + `<td><button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="openFollowupEditor('${f.id}')">✏️ 수정</button></td>`;
+      + `<td class="no-strike" style="white-space:nowrap;">`
+      + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleFollowupDone('${f.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
+      + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openFollowupEditor('${f.id}')">✏️ 수정</button>`
+      + `</td>`;
     tr.style.cursor = "pointer";
     tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openFollowupEditor(f.id); };
-    table.appendChild(tr);
+    tbody.appendChild(tr);
   });
+  table.appendChild(tbody);
   wrap.innerHTML = "";
   wrap.appendChild(table);
 

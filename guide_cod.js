@@ -20,6 +20,7 @@ function codDocToEntry(doc) {
     codBefore: d.codBefore || "",
     codAfter: d.codAfter || "",
     status: d.status || "",
+    doneStatus: d.doneStatus || "progress", // "progress" | "done" - 처리완료 여부 (표에서 회색·취소선으로 표시)
     createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : (d.createdAtIso || ""),
   };
 }
@@ -34,6 +35,7 @@ async function submitCodToServer(entry) {
       codBefore: entry.codBefore || "",
       codAfter: entry.codAfter || "",
       status: entry.status || "",
+      doneStatus: entry.doneStatus || "progress",
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtIso: new Date().toISOString(),
     });
@@ -54,6 +56,7 @@ async function updateCodOnServer(entry) {
       codBefore: entry.codBefore || "",
       codAfter: entry.codAfter || "",
       status: entry.status || "",
+      doneStatus: entry.doneStatus || "progress",
     });
     return { ok: true };
   } catch (err) {
@@ -70,6 +73,19 @@ async function deleteCodFromServer(id) {
   } catch (err) {
     console.error("COD 서버 삭제 실패:", err);
     return { ok: false, error: String(err) };
+  }
+}
+
+/* 표에서 "처리완료"/"진행중" 버튼 한 번 누르면 바로 바뀌게 - 전체 폼 열 필요 없음 */
+async function toggleCodDoneStatus(id) {
+  const item = COD_LIST.find((c) => c.id === id);
+  if (!item) return;
+  const nextStatus = item.doneStatus === "done" ? "progress" : "done";
+  try {
+    await window.fbReady;
+    await window.fbDb.collection(COD_COLLECTION).doc(id).update({ doneStatus: nextStatus });
+  } catch (err) {
+    alert("상태 변경에 실패했어요: " + err);
   }
 }
 
@@ -115,22 +131,32 @@ function renderCodList() {
   }
 
   const table = document.createElement("table");
-  table.className = "contacts-table";
-  table.innerHTML = "<tr><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th></th></tr>";
-  if (codQuickAddOpen) table.appendChild(buildCodQuickAddRow());
+  table.className = "contacts-table cod-table sticky-table";
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th>처리</th><th></th></tr>";
+  table.appendChild(thead);
+  const tbody = document.createElement("tbody");
+  if (codQuickAddOpen) tbody.appendChild(buildCodQuickAddRow());
   list.forEach((c) => {
+    const isDone = c.doneStatus === "done";
     const tr = document.createElement("tr");
+    if (isDone) tr.className = "row-done";
     tr.innerHTML = `<td>${escapeHtml(c.shpr || "-")}</td>`
       + `<td>${escapeHtml(c.blNumber || "-")}</td>`
       + `<td>${escapeHtml(c.vsl || "-")}</td>`
       + `<td>${escapeHtml(c.codBefore || "-")}</td>`
       + `<td>${escapeHtml(c.codAfter || "-")}</td>`
       + `<td>${escapeHtml(c.status || "-")}</td>`
-      + `<td><button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="openCodEditor('${c.id}')">✏️ 수정</button></td>`;
+      + `<td class="no-strike"><span class="${isDone ? "done-badge done" : "done-badge progress"}">${isDone ? "✅ 완료" : "🔄 진행중"}</span></td>`
+      + `<td class="no-strike" style="white-space:nowrap;">`
+      + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleCodDoneStatus('${c.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
+      + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openCodEditor('${c.id}')">✏️ 수정</button>`
+      + `</td>`;
     tr.style.cursor = "pointer";
     tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openCodEditor(c.id); };
-    table.appendChild(tr);
+    tbody.appendChild(tr);
   });
+  table.appendChild(tbody);
   wrap.innerHTML = "";
   wrap.appendChild(table);
 
@@ -176,6 +202,7 @@ function buildCodQuickAddRow() {
   tr.appendChild(mk("codQuickStatus", "진행 상황"));
 
   const actionTd = document.createElement("td");
+  actionTd.colSpan = 2;
   actionTd.style.whiteSpace = "nowrap";
   const saveBtn = document.createElement("button");
   saveBtn.className = "btn generate-btn";
@@ -220,7 +247,7 @@ async function saveCodQuickAdd() {
 
 function openCodEditor(existingId) {
   codDraft = existingId ? Object.assign({}, COD_LIST.find((c) => c.id === existingId)) : {
-    id: null, shpr: "", blNumber: "", vsl: "", codBefore: "", codAfter: "", status: "",
+    id: null, shpr: "", blNumber: "", vsl: "", codBefore: "", codAfter: "", status: "", doneStatus: "progress",
   };
   document.getElementById("codEditTitle").textContent = existingId ? "✏️ COD 건 수정" : "➕ COD 건 등록";
   document.getElementById("codEditOverlay").style.display = "flex";
@@ -271,6 +298,10 @@ function renderCodEditorBody() {
   statusInput.value = d.status || "";
   body.appendChild(makeFollowupField("진행 상황", statusInput));
 
+  const doneSel = makeFollowupSelect(["progress", "done"], d.doneStatus || "progress");
+  Array.from(doneSel.options).forEach((o) => { o.textContent = o.value === "done" ? "✅ 처리완료" : "🔄 진행중"; });
+  body.appendChild(makeFollowupField("처리 상태", doneSel));
+
   const actions = document.createElement("div");
   actions.className = "edit-actions";
   const saveBtn = document.createElement("button");
@@ -285,6 +316,7 @@ function renderCodEditorBody() {
       codBefore: beforeInput.value.trim(),
       codAfter: afterInput.value.trim(),
       status: statusInput.value.trim(),
+      doneStatus: doneSel.value,
     };
     if (!entry.shpr) { alert("SHPR을 입력해주세요."); return; }
     if (!entry.blNumber) { alert("BL#을 입력해주세요."); return; }
