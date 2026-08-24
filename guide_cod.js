@@ -9,9 +9,11 @@ let COD_LIST = [];
 let codUnsubscribe = null;
 let codDraft = null;
 let codQuickAddOpen = false;
+let codMonthFilter = "__current"; // "__all" | "YYYY-MM" | "__current"
 
 function codDocToEntry(doc) {
   const d = doc.data();
+  const createdAtIso = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : (d.createdAtIso || "");
   return {
     id: doc.id,
     shpr: d.shpr || "",
@@ -21,7 +23,8 @@ function codDocToEntry(doc) {
     codAfter: d.codAfter || "",
     status: d.status || "",
     doneStatus: d.doneStatus || "progress", // "progress" | "done" - 처리완료 여부 (표에서 회색·취소선으로 표시)
-    createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : (d.createdAtIso || ""),
+    registeredDate: d.registeredDate || (createdAtIso ? createdAtIso.slice(0, 10) : ""), // 예전 데이터(등록일 없이 만들어진 것)는 등록시각 날짜로 대체
+    createdAt: createdAtIso,
   };
 }
 
@@ -36,6 +39,7 @@ async function submitCodToServer(entry) {
       codAfter: entry.codAfter || "",
       status: entry.status || "",
       doneStatus: entry.doneStatus || "progress",
+      registeredDate: entry.registeredDate || new Date().toISOString().slice(0, 10),
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtIso: new Date().toISOString(),
     });
@@ -57,6 +61,7 @@ async function updateCodOnServer(entry) {
       codAfter: entry.codAfter || "",
       status: entry.status || "",
       doneStatus: entry.doneStatus || "progress",
+      registeredDate: entry.registeredDate || "",
     });
     return { ok: true };
   } catch (err) {
@@ -89,6 +94,53 @@ async function toggleCodDoneStatus(id) {
   }
 }
 
+/* 월 선택 드롭다운 채우기 - 등록된 건들의 연-월을 모아서 최신순으로, 맨 앞엔 "전체"와 이번 달 */
+function populateCodMonthFilter() {
+  const sel = document.getElementById("codMonthSelect");
+  if (!sel) return;
+  const cur = currentYearMonth();
+  const months = new Set([cur]);
+  COD_LIST.forEach((c) => { if (c.registeredDate) months.add(c.registeredDate.slice(0, 7)); });
+  const sortedMonths = Array.from(months).sort().reverse();
+
+  const prevValue = sel.value || codMonthFilter;
+  sel.innerHTML = "";
+  const allOpt = document.createElement("option");
+  allOpt.value = "__all";
+  allOpt.textContent = "전체 보기";
+  sel.appendChild(allOpt);
+  sortedMonths.forEach((ym) => {
+    const opt = document.createElement("option");
+    opt.value = ym;
+    const [y, m] = ym.split("-");
+    opt.textContent = `${y}년 ${Number(m)}월` + (ym === cur ? " (이번 달)" : "");
+    sel.appendChild(opt);
+  });
+
+  const keep = prevValue === "__current" ? cur : prevValue;
+  if (Array.from(sel.options).some((o) => o.value === keep)) {
+    sel.value = keep;
+    codMonthFilter = keep;
+  } else {
+    sel.value = cur;
+    codMonthFilter = cur;
+  }
+}
+
+function onCodMonthChange() {
+  const sel = document.getElementById("codMonthSelect");
+  codMonthFilter = sel ? sel.value : "__all";
+  renderCodList();
+}
+
+function codFilteredList() {
+  let list = COD_LIST.slice();
+  if (codMonthFilter && codMonthFilter !== "__all") {
+    list = list.filter((c) => (c.registeredDate || "").slice(0, 7) === codMonthFilter);
+  }
+  return list;
+}
+
 async function loadCodTab(forceRefresh) {
   const wrap = document.getElementById("codListWrap");
   if (liveSubscribed.cod && !forceRefresh) { renderCodList(); return; }
@@ -98,6 +150,7 @@ async function loadCodTab(forceRefresh) {
   codUnsubscribe = window.fbDb.collection(COD_COLLECTION).onSnapshot(
     (snapshot) => {
       COD_LIST = snapshot.docs.map((doc) => codDocToEntry(doc));
+      populateCodMonthFilter();
       renderCodList();
     },
     (err) => {
@@ -120,10 +173,15 @@ function renderCodList() {
     return;
   }
 
-  let list = COD_LIST.slice().sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+  let list = codFilteredList();
   if (q) {
     list = list.filter((c) => [c.shpr, c.blNumber, c.vsl, c.codBefore, c.codAfter, c.status].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
+  list.sort((a, b) => {
+    const ad = a.registeredDate || "", bd = b.registeredDate || "";
+    if (ad !== bd) return bd.localeCompare(ad);
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
 
   if (q && list.length === 0 && !codQuickAddOpen) {
     wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요.</div>';
@@ -133,7 +191,7 @@ function renderCodList() {
   const table = document.createElement("table");
   table.className = "contacts-table cod-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th>처리</th><th></th></tr>";
+  thead.innerHTML = "<tr><th>등록일</th><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th>처리</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (codQuickAddOpen) tbody.appendChild(buildCodQuickAddRow());
@@ -141,7 +199,8 @@ function renderCodList() {
     const isDone = c.doneStatus === "done";
     const tr = document.createElement("tr");
     if (isDone) tr.className = "row-done";
-    tr.innerHTML = `<td>${escapeHtml(c.shpr || "-")}</td>`
+    tr.innerHTML = `<td>${escapeHtml(c.registeredDate || "-")}</td>`
+      + `<td>${escapeHtml(c.shpr || "-")}</td>`
       + `<td>${escapeHtml(c.blNumber || "-")}</td>`
       + `<td>${escapeHtml(c.vsl || "-")}</td>`
       + `<td>${escapeHtml(c.codBefore || "-")}</td>`
@@ -194,6 +253,19 @@ function buildCodQuickAddRow() {
     return td;
   };
 
+  const dateTd = document.createElement("td");
+  const dateInput = document.createElement("input");
+  dateInput.type = "date";
+  dateInput.id = "codQuickDate";
+  dateInput.className = "quick-add-input";
+  dateInput.value = new Date().toISOString().slice(0, 10);
+  dateInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); saveCodQuickAdd(); }
+    if (e.key === "Escape") { toggleCodQuickAdd(); }
+  });
+  dateTd.appendChild(dateInput);
+  tr.appendChild(dateTd);
+
   tr.appendChild(mk("codQuickShpr", "SHPR"));
   tr.appendChild(mk("codQuickBl", "BL#"));
   tr.appendChild(mk("codQuickVsl", "VSL"));
@@ -229,6 +301,7 @@ async function saveCodQuickAdd() {
 
   const entry = {
     shpr, blNumber,
+    registeredDate: document.getElementById("codQuickDate").value || new Date().toISOString().slice(0, 10),
     vsl: (document.getElementById("codQuickVsl").value || "").trim(),
     codBefore: (document.getElementById("codQuickBefore").value || "").trim(),
     codAfter: (document.getElementById("codQuickAfter").value || "").trim(),
@@ -236,7 +309,7 @@ async function saveCodQuickAdd() {
   };
   const result = await submitCodToServer(entry);
   if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
-  // 저장되면 실시간 구독이 목록을 바로 갱신해주지만, 입력칸은 즉시 비워서 바로 다음 줄 입력 가능하게
+  // 저장되면 실시간 구독이 목록을 바로 갱신해주지만, 입력칸은 즉시 비워서 바로 다음 줄 입력 가능하게 (등록일은 이어서 쓰기 편하게 유지)
   ["codQuickShpr", "codQuickBl", "codQuickVsl", "codQuickBefore", "codQuickAfter", "codQuickStatus"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -248,6 +321,7 @@ async function saveCodQuickAdd() {
 function openCodEditor(existingId) {
   codDraft = existingId ? Object.assign({}, COD_LIST.find((c) => c.id === existingId)) : {
     id: null, shpr: "", blNumber: "", vsl: "", codBefore: "", codAfter: "", status: "", doneStatus: "progress",
+    registeredDate: new Date().toISOString().slice(0, 10),
   };
   document.getElementById("codEditTitle").textContent = existingId ? "✏️ COD 건 수정" : "➕ COD 건 등록";
   document.getElementById("codEditOverlay").style.display = "flex";
@@ -263,6 +337,11 @@ function renderCodEditorBody() {
   const body = document.getElementById("codEditBody");
   body.innerHTML = "";
   const d = codDraft;
+
+  const dateInput = document.createElement("input");
+  dateInput.type = "date";
+  dateInput.value = d.registeredDate || new Date().toISOString().slice(0, 10);
+  body.appendChild(makeFollowupField("등록일", dateInput));
 
   const shprInput = document.createElement("input");
   shprInput.placeholder = "예: UNICO";
@@ -310,6 +389,7 @@ function renderCodEditorBody() {
   saveBtn.onclick = async () => {
     const entry = {
       id: d.id,
+      registeredDate: dateInput.value || new Date().toISOString().slice(0, 10),
       shpr: shprInput.value.trim(),
       blNumber: blInput.value.trim(),
       vsl: vslInput.value.trim(),

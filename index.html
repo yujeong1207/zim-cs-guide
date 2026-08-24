@@ -338,10 +338,11 @@
 <div class="tab-page" id="page-cod">
   <div class="hint" style="margin-bottom:10px;">COD(목적항 변경) 건만 따로 모아보는 표예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있어요.</div>
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <button class="btn generate-btn" onclick="toggleCodQuickAdd()">➕ 빠른 등록 (표에 바로 입력)</button>
     <button class="btn secondary-btn" onclick="openCodEditor(null)">📝 자세히 입력</button>
     <button class="btn secondary-btn" onclick="loadCodTab()">🔄 새로고침</button>
+    <select id="codMonthSelect" class="poa-date-input" style="max-width:180px;" onchange="onCodMonthChange()"></select>
   </div>
 
   <input id="codFilter" class="contacts-filter-input" placeholder="🔍 SHPR·BL#·VSL·POD로 검색" oninput="renderCodList()" style="margin-top:14px;">
