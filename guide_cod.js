@@ -23,6 +23,7 @@ function codDocToEntry(doc) {
     codAfter: d.codAfter || "",
     status: d.status || "",
     doneStatus: d.doneStatus || "progress", // "progress" | "done" - 처리완료 여부 (표에서 회색·취소선으로 표시)
+    pinned: d.pinned === true, // 급한 건 표 맨 위에 고정해서 보기
     registeredDate: d.registeredDate || (createdAtIso ? createdAtIso.slice(0, 10) : ""), // 예전 데이터(등록일 없이 만들어진 것)는 등록시각 날짜로 대체
     createdAt: createdAtIso,
   };
@@ -39,6 +40,7 @@ async function submitCodToServer(entry) {
       codAfter: entry.codAfter || "",
       status: entry.status || "",
       doneStatus: entry.doneStatus || "progress",
+      pinned: entry.pinned === true,
       registeredDate: entry.registeredDate || new Date().toISOString().slice(0, 10),
       createdAt: firebase.firestore.FieldValue.serverTimestamp(),
       createdAtIso: new Date().toISOString(),
@@ -61,6 +63,7 @@ async function updateCodOnServer(entry) {
       codAfter: entry.codAfter || "",
       status: entry.status || "",
       doneStatus: entry.doneStatus || "progress",
+      pinned: entry.pinned === true,
       registeredDate: entry.registeredDate || "",
     });
     return { ok: true };
@@ -91,6 +94,18 @@ async function toggleCodDoneStatus(id) {
     await window.fbDb.collection(COD_COLLECTION).doc(id).update({ doneStatus: nextStatus });
   } catch (err) {
     alert("상태 변경에 실패했어요: " + err);
+  }
+}
+
+/* 급한 건 표 맨 위에 고정 - 다시 누르면 고정 해제 */
+async function toggleCodPinned(id) {
+  const item = COD_LIST.find((c) => c.id === id);
+  if (!item) return;
+  try {
+    await window.fbReady;
+    await window.fbDb.collection(COD_COLLECTION).doc(id).update({ pinned: !item.pinned });
+  } catch (err) {
+    alert("고정 상태 변경에 실패했어요: " + err);
   }
 }
 
@@ -178,6 +193,7 @@ function renderCodList() {
     list = list.filter((c) => [c.shpr, c.blNumber, c.vsl, c.codBefore, c.codAfter, c.status].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
   list.sort((a, b) => {
+    if (a.pinned !== b.pinned) return a.pinned ? -1 : 1; // 고정된 건 항상 맨 위
     const ad = a.registeredDate || "", bd = b.registeredDate || "";
     if (ad !== bd) return bd.localeCompare(ad);
     return (b.createdAt || "").localeCompare(a.createdAt || "");
@@ -191,15 +207,17 @@ function renderCodList() {
   const table = document.createElement("table");
   table.className = "contacts-table cod-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>등록일</th><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th>처리</th><th></th></tr>";
+  thead.innerHTML = "<tr><th></th><th>등록일</th><th>SHPR</th><th>BL#</th><th>VSL</th><th>COD 전</th><th>COD 후</th><th>진행 상황</th><th>처리</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (codQuickAddOpen) tbody.appendChild(buildCodQuickAddRow());
   list.forEach((c) => {
     const isDone = c.doneStatus === "done";
+    const isPinned = c.pinned === true;
     const tr = document.createElement("tr");
-    if (isDone) tr.className = "row-done";
-    tr.innerHTML = `<td>${escapeHtml(c.registeredDate || "-")}</td>`
+    tr.className = [isDone ? "row-done" : "", isPinned ? "row-pinned" : ""].filter(Boolean).join(" ");
+    tr.innerHTML = `<td class="no-strike" style="text-align:center;"><button class="pin-btn ${isPinned ? "pinned" : ""}" title="${isPinned ? "고정 해제" : "표 맨 위에 고정"}" onclick="event.stopPropagation();toggleCodPinned('${c.id}')">📌</button></td>`
+      + `<td>${escapeHtml(c.registeredDate || "-")}</td>`
       + `<td>${escapeHtml(c.shpr || "-")}</td>`
       + `<td>${escapeHtml(c.blNumber || "-")}</td>`
       + `<td>${escapeHtml(c.vsl || "-")}</td>`
@@ -238,6 +256,9 @@ function toggleCodQuickAdd() {
 function buildCodQuickAddRow() {
   const tr = document.createElement("tr");
   tr.className = "quick-add-row";
+
+  const pinTd = document.createElement("td");
+  tr.appendChild(pinTd);
 
   const mk = (id, placeholder) => {
     const td = document.createElement("td");
@@ -320,7 +341,7 @@ async function saveCodQuickAdd() {
 
 function openCodEditor(existingId) {
   codDraft = existingId ? Object.assign({}, COD_LIST.find((c) => c.id === existingId)) : {
-    id: null, shpr: "", blNumber: "", vsl: "", codBefore: "", codAfter: "", status: "", doneStatus: "progress",
+    id: null, shpr: "", blNumber: "", vsl: "", codBefore: "", codAfter: "", status: "", doneStatus: "progress", pinned: false,
     registeredDate: new Date().toISOString().slice(0, 10),
   };
   document.getElementById("codEditTitle").textContent = existingId ? "✏️ COD 건 수정" : "➕ COD 건 등록";
@@ -381,6 +402,15 @@ function renderCodEditorBody() {
   Array.from(doneSel.options).forEach((o) => { o.textContent = o.value === "done" ? "✅ 처리완료" : "🔄 진행중"; });
   body.appendChild(makeFollowupField("처리 상태", doneSel));
 
+  const pinnedLabel = document.createElement("label");
+  pinnedLabel.style.cssText = "display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13.5px;cursor:pointer;";
+  const pinnedCheckbox = document.createElement("input");
+  pinnedCheckbox.type = "checkbox";
+  pinnedCheckbox.checked = d.pinned === true;
+  pinnedLabel.appendChild(pinnedCheckbox);
+  pinnedLabel.appendChild(document.createTextNode("📌 표 맨 위에 고정"));
+  body.appendChild(pinnedLabel);
+
   const actions = document.createElement("div");
   actions.className = "edit-actions";
   const saveBtn = document.createElement("button");
@@ -397,6 +427,7 @@ function renderCodEditorBody() {
       codAfter: afterInput.value.trim(),
       status: statusInput.value.trim(),
       doneStatus: doneSel.value,
+      pinned: pinnedCheckbox.checked,
     };
     if (!entry.shpr) { alert("SHPR을 입력해주세요."); return; }
     if (!entry.blNumber) { alert("BL#을 입력해주세요."); return; }
