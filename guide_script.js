@@ -17870,6 +17870,61 @@ function processPortScheduleFile(file) {
   reader.readAsArrayBuffer(file);
 }
 
+const CREDIT_COMPANIES = [
+  { name: "DOW CHEMICAL COMPANY (MI)", cucc: "KRSELDOWCE" },
+  { name: "ECU-LINE NV", cucc: "KRSELECKKE" },
+  { name: "TOLL GLOBAL FORWARDING", cucc: "KRSETOLLGL" },
+  { name: "SAMSUNG ELECTRONICS CO. LTD.", cucc: "KRSAMSUNGY" },
+  { name: "General Motors", cucc: "KRS1GMDA" },
+  { name: "Sejung Shipping Co., Ltd.", cucc: "KRSJSFF" },
+  { name: "LOTTE GLOBAL LOGISTICS CO LTD", cucc: "KRS1HDLO" },
+  { name: "KOLON PLASTICS INC", cucc: "KRKLNPLSTC" },
+  { name: "KOLON INDUSTRY", cucc: "KRSELKOLOI" },
+  { name: "KOLON INDUSTRIES INC", cucc: "KRS1KOLO" },
+  { name: "KOLON LIFE SCIENCE INC", cucc: "KRSELKOLLI" },
+  { name: "KOLON ADVANCED FIBER, INC", cucc: "KRPUSKOLOA" },
+  { name: "BENISON INTERNATIONAL CO., LTD", cucc: "KRSELNISON" },
+  { name: "FLEXPORT INTERNATIONAL LLC", cucc: "KRSEOFLEXP" },
+  { name: "SCHENKER INTERNATIONAL DEUTSCHLAND", cucc: "KRSKRL01" },
+  { name: "CKX CO., LTD.", cucc: "KRSECKXCOD" },
+  { name: "MCI GLOBAL LOGISTICS CO., LTD", cucc: "KRMCIGLB" },
+  { name: "EUKOR CAR CARRIERS CORP.", cucc: "KRSEEUKCAR" },
+  { name: "SEBANG EXPRESS CO.,LTD (Seoul)", cucc: "KRSEBAE1" },
+  { name: "TAEWOONG LOGISTICS CO., LTD", cucc: "KRTALOG1" },
+  { name: "CNC Global", cucc: "KRSELCNCGL" },
+  { name: "J&B LINERS", cucc: "KRSELJBLIN" },
+  { name: "Samyang Logistics", cucc: "KRSELSAGUM" },
+  { name: "EURO LINE GLOBAL CO", cucc: "KREULIN1" },
+  { name: "TRI-X INTERNATIONAL", cucc: "KRTEIFF" },
+  { name: "SAMSUNG SDS CO.,LTD.", cucc: "KRSELSAMSN" },
+  { name: "KG MOBILITY", cucc: "KRSSANYO" },
+  { name: "CASCADIA MARITIME LOGISTICS", cucc: "AEDUBCASCA" },
+  { name: "C.H. ROBINSON INTL  (MN)", cucc: "KRCHROBINS" },
+  { name: "PANTOS LOGISTICS CO.,LTD", cucc: "KRPANTOS" },
+  { name: "DSV AIR & SEA LTD.", cucc: "KRDFDFF" },
+  { name: "HELLMANN WORLDWIDE LOGISTICS", cucc: "KRHELLM1" },
+  { name: "OEC FREIGHT (NY) INC ORIENT EXPRESS", cucc: "KRSELOECWO" },
+  { name: "OEC FREIGHT (NY) INC ORIENT EXPRESS", cucc: "KRSWHOECGL" },
+  { name: "CEVA FREIGHT ITALY SRL", cucc: "KRCEVALO" },
+  { name: "DHL GLOBAL FORWARDING", cucc: "KRDHLGL1" },
+  { name: "EXPEDITORS (SEATTLE WA) CORP OFFC", cucc: "KREXPSEL" },
+  { name: "KUEHNE & NAGEL CO LTD", cucc: "KRS1KHNG" },
+  { name: "WOOSUNG SHIPPING CO., LTD.", cucc: "KRSELWOS" },
+  { name: "DY ULC CO., LTD.", cucc: "KRSELDULYK" },
+  { name: "DAELIM CO.,LTD.", cucc: "KRSELDAELM" },
+  { name: "KUMHO TIRE CO., INC.", cucc: "KRS1KHTC" },
+  { name: "HYUNDAI GLOVIS CO., LTD.", cucc: "KRS1GLCO" },
+  { name: "HYOSUNG Corporation", cucc: "KRS1HYOS" },
+  { name: "PNS NETWORKS", cucc: "KRPNSNET" },
+  { name: "HAN EXPRESS CO.LTD.", cucc: "KRS1HANX" },
+  { name: "EUSU LOGISTICS", cucc: "KRSELEUSUL" },
+  { name: "RENAULT KOREA MOTORS CO LTD", cucc: "KRSELRENAU" },
+  { name: "CJ LOGISTICS CORPORATION", cucc: "KRTKOREA" },
+  { name: "HANKOOK TIRE CO LTD.", cucc: "KRS1HTCL" },
+  { name: "TRAWELL LOGISTICS CO.,LTD.", cucc: "KRSELTRAEL" },
+
+];
+
 function loadBlDeskTab() {
   const wrap = document.getElementById("blDeskWrap");
   if (!wrap) return;
@@ -17889,6 +17944,12 @@ function loadBlDeskTab() {
           <span id="paymentRefreshStatus" class="hint" style="margin-top:0;"></span>
         </div>
         <div id="blDeskPaymentResult" class="desk-result-box"></div>
+      </div>
+      <div class="desk-search-col">
+        <label class="label">🏦 신용업체 조회 (CUCC / 업체명)</label>
+        <div class="hint" style="margin:0 0 8px;">입금현황에 O 표시가 없어도, 여기서 나오면 신용거래 업체라 그냥 BL 발행하면 돼요.</div>
+        <input type="text" id="blDeskCreditInput" placeholder="예: KRSELDOWCE 또는 삼성전자" oninput="renderBlDeskCreditResult()">
+        <div id="blDeskCreditResult" class="desk-result-box"></div>
       </div>
     </div>
 
@@ -17949,7 +18010,7 @@ function checkPaymentStatusForBlDesk() {
     .map((bl) => {
       const data = paymentDataCache[bl];
       if (!data) {
-        return `<div class="payment-row not-found">⚠️ ${bl} — 목록에 없음 (번호 확인 필요)</div>`;
+        return `<div class="payment-row not-found">⚠️ ${bl} — 목록에 없음 (번호 확인 필요, 혹은 신용거래 업체일 수 있으니 옆 칸에서 CUCC/업체명으로 확인해보세요)</div>`;
       }
       const ready = data.issued.toUpperCase() === "O";
       const statusText = ready ? "✅ BL 발행 가능" : "❌ BL 발행 불가";
@@ -17957,6 +18018,27 @@ function checkPaymentStatusForBlDesk() {
       return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
     })
     .join("");
+}
+
+/* 🏦 신용업체(CUCC) 조회 - CUCC 코드나 업체명 일부만 입력해도 찾아줌 */
+function renderBlDeskCreditResult() {
+  const inputEl = document.getElementById("blDeskCreditInput");
+  const box = document.getElementById("blDeskCreditResult");
+  if (!inputEl || !box) return;
+  const q = inputEl.value.trim().toLowerCase();
+  if (!q) { box.innerHTML = ""; return; }
+
+  const matches = CREDIT_COMPANIES.filter((c) =>
+    c.cucc.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)
+  ).slice(0, 15);
+
+  if (matches.length === 0) {
+    box.innerHTML = `<div class="payment-row not-found">❌ 신용업체 목록에 없어요 - 신용거래가 아닐 가능성이 높아요 (그래도 확실하지 않으면 팀장님께 확인해주세요)</div>`;
+    return;
+  }
+  box.innerHTML = matches.map((c) =>
+    `<div class="payment-row ready">✅ ${escapeHtml(c.name)} <span class="desk-vessel-code">${escapeHtml(c.cucc)}</span> — 신용거래 업체 (BL 발행 가능)</div>`
+  ).join("");
 }
 
 const TAB_GROUPS = {
