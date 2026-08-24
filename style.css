@@ -1997,3 +1997,48 @@ input, select, textarea {
 }
 #page-followup .followup-stat-num { color: #0c447c; }
 #page-followup .followup-badge.normal { background: #dbeafe; color: #1d4ed8; }
+
+/* ===== 📱 모바일 대응 =====
+   업무시간에 데스크톱으로 주로 쓰는 툴이지만, 급하게 폰으로 확인할 때도 표를 알아볼 수 있게.
+   기본 전략: 표는 억지로 욱여넣어 안 보이게 짜부러뜨리지 않고, 가로 스크롤로 보게 함. */
+
+.table-scroll-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 768px) {
+  /* 헤더·상단 날씨위젯 - 줄바꿈 허용, 글자 좀 작게 */
+  .header { padding: 12px 14px; font-size: 16px; flex-wrap: wrap; gap: 8px; }
+  .header-subtitle { font-size: 10.5px; }
+
+  /* 메인 탭 - 가로 스크롤로 넘기게 (줄바꿈으로 여러 줄 되면 화면을 너무 많이 차지해서) */
+  .main-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 0; }
+  .main-tab-btn, .tab-group-btn { padding: 8px 12px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+  .tab-group { flex-shrink: 0; }
+  .tab-group-dropdown { left: 0; right: auto; max-width: 90vw; }
+
+  .tab-page { padding: 12px; }
+
+  /* 표는 짜부러뜨리지 않고 가로 스크롤로 - 컬럼 폭 최소치를 정해서 읽을 수 있는 크기는 유지 */
+  .table-scroll-wrap .followup-table { min-width: 1100px; }
+  .table-scroll-wrap .cod-table { min-width: 900px; }
+  .table-scroll-wrap .triangle-table { min-width: 850px; }
+  .table-scroll-wrap .contacts-table { min-width: 620px; }
+  .port-schedule-table { min-width: 950px; }
+  .vessel-table, .step-table { min-width: 560px; }
+
+  /* 두 칸 나란히 배치되던 검색 영역들 - 한 칸씩 세로로 */
+  .desk-search-row { grid-template-columns: 1fr; }
+
+  /* 관리자 패널·수정 모달 - 화면 꽉 채우게, 옆 여백 최소화 */
+  .admin-panel, .admin-panel.small-panel { width: 94vw; max-width: 94vw; margin: 0 auto; padding: 16px; }
+  .admin-overlay { padding: 10px; }
+
+  /* 빠른등록 입력칸 - 너무 좁아지지 않게 최소폭 확보(표 자체가 가로 스크롤되므로 안전) */
+  .quick-add-input { min-width: 90px; }
+
+  /* 사용법 탭 카드 - 아이콘 위, 텍스트 아래로 쌓이게(가로가 좁아서 나란히 두면 아이콘이 텍스트를 너무 눌러버림) */
+  .howto-item { flex-direction: column; gap: 10px; padding: 14px; }
+  .howto-icon { width: 40px; height: 40px; font-size: 22px; }
+
+  /* 요약 숫자 박스(팔로우업보드) - 2개씩 두 줄로 */
+  .followup-summary-row { display: grid; grid-template-columns: 1fr 1fr; }
+}
