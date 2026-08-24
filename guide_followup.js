@@ -303,7 +303,7 @@ function renderFollowupList() {
   const table = document.createElement("table");
   table.className = "contacts-table followup-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th></th><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>다음 액션</th><th>후속조치일</th><th>담당</th><th></th></tr>";
+  thead.innerHTML = "<tr><th></th><th>등록일</th><th>고객/거래처</th><th>업무유형</th><th>건명 / BL No.</th><th>긴급도</th><th>상태</th><th>진행 상황</th><th>메모 / 히스토리</th><th>후속조치일</th><th>담당</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (followupQuickAddOpen) tbody.appendChild(buildFollowupQuickAddRow());
@@ -316,10 +316,11 @@ function renderFollowupList() {
       + `<td>${escapeHtml(f.registeredDate || "-")}</td>`
       + `<td>${escapeHtml(f.customer || "-")}</td>`
       + `<td>${escapeHtml(f.workType || "-")}</td>`
-      + `<td class="followup-title-cell">${escapeHtml(f.title || "-")}${f.memo ? `<div class="followup-memo-preview">${escapeHtml(f.memo)}</div>` : ""}</td>`
+      + `<td class="followup-title-cell">${escapeHtml(f.title || "-")}</td>`
       + `<td class="no-strike"><span class="${followupUrgencyBadgeClass(f.urgency)}">${escapeHtml(f.urgency || "-")}</span></td>`
       + `<td class="no-strike"><span class="${followupStatusBadgeClass(f.status)}">${escapeHtml(f.status || "-")}</span></td>`
       + `<td>${escapeHtml(f.nextAction || "-")}</td>`
+      + `<td class="followup-memo-cell">${f.memo ? escapeHtml(f.memo) : "-"}</td>`
       + `<td>${escapeHtml(f.followUpDate || "-")}</td>`
       + `<td>${escapeHtml(f.owner || "-")}</td>`
       + `<td class="no-strike" style="white-space:nowrap;">`
@@ -414,7 +415,7 @@ function buildFollowupQuickAddRow() {
   const nextActionTd = document.createElement("td");
   const nextActionInput = document.createElement("input");
   nextActionInput.id = "followupQuickNextAction";
-  nextActionInput.placeholder = "다음 액션";
+  nextActionInput.placeholder = "진행 상황";
   nextActionInput.className = "quick-add-input";
   nextActionInput.addEventListener("keydown", onEnterOrEsc);
   nextActionTd.appendChild(nextActionInput);
@@ -561,11 +562,11 @@ function renderFollowupEditorBody() {
   body.appendChild(row2);
 
   const nextActionInput = document.createElement("textarea");
-  nextActionInput.rows = 2;
+  nextActionInput.rows = 4;
   nextActionInput.style.cssText = "width:100%;resize:vertical;box-sizing:border-box;";
-  nextActionInput.placeholder = "예: 선사 회신 확인 후 고객 안내";
+  nextActionInput.placeholder = "예: 서렌더 처리 완료 -> 반출일정 확인중 -> 08/21 리마인더 발송";
   nextActionInput.value = d.nextAction || "";
-  body.appendChild(makeFollowupField("다음 액션", nextActionInput));
+  body.appendChild(makeFollowupField("진행 상황", nextActionInput));
 
   const row3 = document.createElement("div");
   row3.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;";
