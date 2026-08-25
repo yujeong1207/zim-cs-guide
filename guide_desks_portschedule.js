@@ -680,6 +680,7 @@ function processPortScheduleTerminalFile(file, terminalName) {
       const updated = [];
       const notFound = [];
       const ambiguous = [];
+      const terminalMismatch = []; // 이미 다른 터미널로 등록되어 있는 배 - 자동으로 안 덮어쓰고 따로 알려줌
 
       for (let r = headerRowIdx + 1; r < aoa.length; r++) {
         const row = aoa[r];
@@ -708,7 +709,14 @@ function processPortScheduleTerminalFile(file, terminalName) {
         } else if (matches.length > 1) {
           ambiguous.push(vesselName);
         } else {
-          updated.push({ id: matches[0].id, vesselName, arrivalDate, departureDate });
+          const existing = matches[0];
+          // ⚠️ 이미 다른 터미널로 등록되어 있으면(예: 광양서부인데 BPT 파일에 이름이 겹침) 자동으로
+          //    덮어쓰지 않아요. 터미널이 다르면 배정 자체가 바뀐 게 아니라 다른 배일 가능성이 높거든요.
+          if (existing.terminal && existing.terminal !== terminalName) {
+            terminalMismatch.push({ vesselName, existingTerminal: existing.terminal });
+          } else {
+            updated.push({ id: existing.id, vesselName, arrivalDate, departureDate });
+          }
         }
       }
 
@@ -731,6 +739,12 @@ function processPortScheduleTerminalFile(file, terminalName) {
         html += `<div class="excel-warning-box" style="margin-top:8px;">
           <div class="excel-warning-title">⚠️ 이름이 같은 배가 여러 건이라 자동 갱신 안 한 것 ${ambiguous.length}건 (직접 확인해서 수정 버튼으로 고쳐주세요)</div>
           <ul style="margin:8px 0 0 18px;">${ambiguous.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>
+        </div>`;
+      }
+      if (terminalMismatch.length) {
+        html += `<div class="excel-warning-box" style="margin-top:8px;">
+          <div class="excel-warning-title">⚠️ 이미 다른 터미널로 등록되어 있어서 자동 갱신 안 한 것 ${terminalMismatch.length}건 (배정이 실제로 바뀐 거면 직접 수정 버튼으로 고쳐주세요)</div>
+          <ul style="margin:8px 0 0 18px;">${terminalMismatch.map((m) => `<li>${escapeHtml(m.vesselName)} — 현재 ${escapeHtml(m.existingTerminal)} → [${escapeHtml(terminalName)}] 파일에 있음</li>`).join("")}</ul>
         </div>`;
       }
       if (notFound.length) {
