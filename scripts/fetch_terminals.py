@@ -385,9 +385,15 @@ def fetch_bct():
     resp.encoding = "utf-8"
     text = resp.text
 
-    # 그래도 에러가 오면(ErrorCode가 찍히면), 원인을 바로 알 수 있게 명확히 에러를 냄
-    if "ErrorCode" in text and "<Body>" not in text:
-        raise RuntimeError(f"BCT가 에러를 응답했어요 (WMONID='{wmonid}'로 시도함). 응답: {text[:400]}")
+    # ⚠️ 처음엔 "ErrorCode"라는 글자만 있으면 무조건 실패로 판단했는데, 알고 보니 성공 응답에도
+    #    항상 "ErrorCode: 0"이 찍혀있어서(0 = 정상, 그 외 숫자 = 진짜 에러) 성공한 응답을 실패로
+    #    오해하고 있었어요. 이제 ErrorCode 값 자체를 확인해서, 0이 아닌 진짜 에러일 때만 실패 처리함.
+    error_code_match = re.search(r'"ErrorCode"[^>]*>(-?\d+)<', text)
+    if error_code_match and error_code_match.group(1) != "0":
+        raise RuntimeError(f"BCT가 에러코드 {error_code_match.group(1)}을 응답했어요. 응답: {text[:400]}")
+
+    # 진단용 - 나중에 또 구조가 바뀌면 바로 알아볼 수 있게, 응답 앞부분을 넉넉히 로그로 남겨둠
+    log(f"[BCT 진단] 응답 길이: {len(text)}자, 앞부분 2000자:\n{text[:2000]}")
 
     # "Body" 섹션 이후, 실제 데이터가 "N<행번호>style<서식번호><값>style<서식번호><값>..." 패턴으로 반복됨.
     # 한 행 = 18개 컬럼(맨 앞은 항상 빈 값, 그다음 선석/선사/모선항차/입항/출항/CCT/ETB/ETD/양하/적하/이적/
