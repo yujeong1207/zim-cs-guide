@@ -1,0 +1,36 @@
+name: (긴급) 잘못 쌓인 터미널 데이터 정리
+
+on:
+  # 이건 자동으로 절대 안 돌아요. 사람이 직접 버튼 눌러야만 실행됨.
+  workflow_dispatch:
+    inputs:
+      confirm_delete:
+        description: '진짜로 삭제하려면 여기에 정확히 "삭제확인"이라고 입력하세요 (미리보기만 하려면 비워두세요)'
+        required: false
+        default: ""
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 필요한 패키지 설치
+        run: pip install firebase-admin==6.5.0
+
+      - name: 미리보기 (항상 실행됨 - 몇 건이 삭제 대상인지 먼저 보여줌)
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        run: python scripts/cleanup_bad_data.py
+
+      - name: 실제 삭제 (confirm_delete에 "삭제확인"을 정확히 입력했을 때만 실행)
+        if: ${{ github.event.inputs.confirm_delete == '삭제확인' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        run: python scripts/cleanup_bad_data.py --confirm
