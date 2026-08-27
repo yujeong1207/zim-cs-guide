@@ -1,0 +1,49 @@
+name: 터미널 스케줄 자동 수집 (매일 아침 9:10)
+
+on:
+  # 매일 한국시간 9:10에 자동 실행.
+  # ⚠️ GitHub Actions는 UTC(세계표준시) 기준으로 시간을 지정해야 해서, 한국시간(UTC+9)보다
+  #    9시간 늦게 적어야 해요. 그래서 "0 0 * * *"(UTC 0시0분) = 한국시간 9시0분이고,
+  #    9시10분을 맞추려면 UTC 0시10분 = "10 0 * * *" 로 적어요.
+  #    (GitHub Actions의 자동 실행은 시스템 부하에 따라 몇 분씩 늦게 시작될 수 있어요 -
+  #     정확히 9:10:00에 딱 시작되는 건 보장이 안 되고, 보통 9:10~9:15 사이에는 시작돼요.)
+  schedule:
+    - cron: "10 0 * * *"
+
+  # 매일 자동 실행 말고도, GitHub 웹사이트에서 "Run workflow" 버튼 눌러서 언제든 수동으로도
+  # 실행해볼 수 있게 해둠 (테스트하거나, 아침에 실패했을 때 바로 재시도하고 싶을 때 유용해요)
+  workflow_dispatch: {}
+
+jobs:
+  fetch-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 필요한 패키지 설치
+        run: pip install -r scripts/requirements.txt
+
+      - name: 터미널 5곳에서 데이터 수집
+        run: python scripts/fetch_terminals.py
+        working-directory: .
+
+      - name: Firestore에 반영
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        run: python scripts/push_to_firestore.py
+
+      # 수집 결과(terminal_data.json)를 매번 로그로 남겨둬서, 실패했을 때 어떤 터미널이
+      # 몇 건 가져왔는지/에러 메시지가 뭔지 GitHub 웹사이트에서 바로 다운받아 확인할 수 있게 함
+      - name: 수집 결과 저장 (문제 생겼을 때 확인용)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-data-${{ github.run_number }}
+          path: terminal_data.json
+          retention-days: 14
