@@ -295,12 +295,21 @@ def get_bct_session_cookies():
         page = context.new_page()
         page.on("request", lambda req: captured_urls.append(req.url))
 
-        page.goto("https://info.bct2-4.com/infoservice/index.html", wait_until="networkidle", timeout=30000)
-        # Nexacro 프레임워크가 자체적으로 초기화하면서 세션을 만드는 데 시간이 좀 걸릴 수 있어서,
-        # networkidle 이후에도 약간 더 기다려줌
-        page.wait_for_timeout(3000)
+        # ⚠️ 처음엔 "networkidle"(네트워크 요청이 완전히 멈출 때까지 대기)로 기다렸는데 타임아웃났어요.
+        #    Nexacro 프레임워크는 백그라운드에서 계속 폴링성 요청을 보내는 경우가 많아서, 네트워크가
+        #    "완전히" 잠잠해지는 순간이 아예 안 올 수 있어요. 그래서 조건을 "DOM이 다 만들어지는
+        #    시점"(domcontentloaded, 훨씬 가벼운 기준)으로 낮추고, 타임아웃도 60초로 늘렸어요.
+        #    그 대신 그 뒤에 자바스크립트가 세션을 만들 시간을 좀 더 넉넉하게(5초) 기다려줘요.
+        try:
+            page.goto("https://info.bct2-4.com/infoservice/index.html", wait_until="domcontentloaded", timeout=60000)
+        except Exception as e:
+            browser.close()
+            raise RuntimeError(f"BCT 페이지 접속 자체가 실패했어요: {e}")
+        page.wait_for_timeout(5000)
 
         cookies = context.cookies()
+        page_url_after = page.url
+        page_title = page.title()
         browser.close()
 
     wmonid = ""
@@ -320,6 +329,7 @@ def get_bct_session_cookies():
     if not wmonid:
         raise RuntimeError(
             f"가상 브라우저로 접속했는데도 WMONID를 못 찾았어요. "
+            f"현재 URL: {page_url_after} / 페이지 제목: {page_title} / "
             f"받은 쿠키 이름들: {[c.get('name') for c in cookies]} / "
             f"로딩 중 관찰된 요청 수: {len(captured_urls)}건"
         )
