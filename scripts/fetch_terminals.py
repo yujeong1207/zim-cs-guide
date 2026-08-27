@@ -182,22 +182,26 @@ def fetch_hpnt():
     resp1.raise_for_status()
     resp1.encoding = "utf-8"
 
-    # ⚠️ 실패 원인 추정: 이전 정규식이 "name=... value=..."가 바로 붙어있는 경우만 잡았는데,
-    #    실제로는 그 사이에 type="hidden" 같은 다른 속성이 끼어있거나(id, type 등),
-    #    <input value="..." name="CSRF_TOKEN"> 처럼 순서가 반대로 되어있을 수 있어요.
-    #    그래서 순서에 안 얽매이고, "CSRF_TOKEN"이 들어간 태그 하나를 통째로 찾은 다음
-    #    그 안에서 value 속성만 따로 뽑아내는 방식으로 더 느슨하게 고쳤어요.
+    # ⚠️ 실제 확인된 구조(GitHub Actions 로그로 확인): CSRF_TOKEN이 완성된 HTML 태그가 아니라
+    #    자바스크립트 코드 안에서 동적으로 만들어지고 있었어요:
+    #      $('<input/>', {name: 'CSRF_TOKEN', value:'d527b04c-...'})
+    #    그래서 HTML 태그를 찾는 방식 대신, 이 자바스크립트 패턴 자체를 먼저 찾도록 순서를 바꿈.
     csrf_token = None
-    tag_match = re.search(r'<input\b[^>]*\bCSRF_TOKEN\b[^>]*>', resp1.text, re.I)
-    if tag_match:
-        value_match = re.search(r'value=["\']([^"\']+)["\']', tag_match.group(0), re.I)
-        if value_match:
-            csrf_token = value_match.group(1)
+    js_match = re.search(r"name:\s*['\"]CSRF_TOKEN['\"]\s*,\s*value\s*:\s*['\"]([a-zA-Z0-9-]{10,})['\"]", resp1.text, re.I)
+    if js_match:
+        csrf_token = js_match.group(1)
     if not csrf_token:
-        # meta 태그 형식(예: <meta name="CSRF_TOKEN" content="...">)도 시도
-        m = re.search(r'CSRF_TOKEN["\']?\s*(?:content|value)?\s*[:=]\s*["\']([a-zA-Z0-9-]{10,})["\']', resp1.text, re.I)
-        if m:
-            csrf_token = m.group(1)
+        # 순서가 반대(value 먼저, name 나중)인 경우도 시도
+        js_match2 = re.search(r"value\s*:\s*['\"]([a-zA-Z0-9-]{10,})['\"]\s*,\s*name\s*:\s*['\"]CSRF_TOKEN['\"]", resp1.text, re.I)
+        if js_match2:
+            csrf_token = js_match2.group(1)
+    if not csrf_token:
+        # 혹시 완성된 HTML 태그로 내려주는 경우도 대비해서 그대로 남겨둠
+        tag_match = re.search(r'<input\b[^>]*\bCSRF_TOKEN\b[^>]*>', resp1.text, re.I)
+        if tag_match:
+            value_match = re.search(r'value=["\']([^"\']+)["\']', tag_match.group(0), re.I)
+            if value_match:
+                csrf_token = value_match.group(1)
     if not csrf_token:
         # ⚠️ 진단용 - "CSRF_TOKEN" 문자열 주변 실제 텍스트를 그대로 보여줘서, 정확히 어떤 형태로
         #    박혀있는지(속성 순서, 태그 종류 등) 다음 시도 때 바로 알 수 있게 함.
@@ -265,7 +269,12 @@ def fetch_hpnt():
 #       보여주시면 파싱 규칙을 다시 맞춰드릴게요.
 # ============================================================
 def fetch_bct():
-    base_url = "https://info.bct2-4.com/"
+    # ⚠️ 실제 확인된 구조(GitHub Actions 로그로 확인): "https://info.bct2-4.com/"에 접속하면
+    #    실제 내용은 하나도 없고 자바스크립트로 "./infoservice/index.html"로 이동시키기만 하는
+    #    빈 껍데기 페이지가 응답으로 옴 (그래서 쿠키도 전혀 안 내려줌). 세션(WMONID)은 실제
+    #    데이터 화면이 있는 그 진짜 페이지에 접속해야 발급되는 것 같아서, base_url을
+    #    "infoservice/index.html"로 바로 바꿈.
+    base_url = "https://info.bct2-4.com/infoservice/index.html"
     api_url = "https://info.bct2-4.com/nxCtr.do?version=1.0.0"
 
     # ⚠️ 실패 원인 파악됨(GitHub Actions 로그로 확인): 서버가 "ErrorCode: -600"으로 거부했음.
@@ -288,12 +297,14 @@ def fetch_bct():
         wmonid = m.group(1) if m else ""
 
     if not wmonid:
-        # ⚠️ WMONID를 진짜 못 찾은 경우 - 다음 시도 때 원인을 바로 알 수 있게, 지금 받은 쿠키
-        #    목록과 홈페이지 응답 앞부분을 그대로 에러 메시지에 실어서 로그에 남김.
+        # ⚠️ 그래도 못 찾으면, 이번엔 응답 헤더의 Set-Cookie까지 통째로 로그에 남겨서
+        #    정확히 뭐가 오고 있는지(쿠키 자체가 아예 안 오는지, 이름이 다른지) 확인함.
         cookie_names = list(session.cookies.keys())
+        set_cookie_header = resp0.headers.get("Set-Cookie", "(없음)")
         raise RuntimeError(
-            f"BCT 홈페이지에서 WMONID를 못 찾았어요. 받은 쿠키 목록: {cookie_names} / "
-            f"홈페이지 응답 앞부분(500자): {resp0.text[:500]}"
+            f"BCT에서 WMONID를 못 찾았어요. 접속한 URL: {resp0.url} / "
+            f"받은 쿠키 목록: {cookie_names} / Set-Cookie 헤더: {set_cookie_header} / "
+            f"응답 앞부분(300자): {resp0.text[:300]}"
         )
 
     xml_body = f"""<?xml version="1.0" encoding="UTF-8"?>
