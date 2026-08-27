@@ -199,9 +199,13 @@ def fetch_hpnt():
         if m:
             csrf_token = m.group(1)
     if not csrf_token:
+        # ⚠️ 진단용 - "CSRF_TOKEN" 문자열 주변 실제 텍스트를 그대로 보여줘서, 정확히 어떤 형태로
+        #    박혀있는지(속성 순서, 태그 종류 등) 다음 시도 때 바로 알 수 있게 함.
+        idx = resp1.text.upper().find("CSRF_TOKEN")
+        surrounding = resp1.text[max(0, idx - 100):idx + 200] if idx >= 0 else "(문자열 자체를 못 찾음)"
         raise RuntimeError(
             "HPNT 페이지에서 CSRF_TOKEN을 못 찾았어요 (사이트 구조가 바뀌었을 수 있어요). "
-            f"페이지에 'CSRF_TOKEN' 문자열이 있긴 한지: {'CSRF_TOKEN' in resp1.text}"
+            f"'CSRF_TOKEN' 주변 실제 텍스트: {surrounding}"
         )
 
     # 2단계: 실제 조회 요청
@@ -282,6 +286,15 @@ def fetch_bct():
         # 쿠키에 없으면 응답 본문 안에 박혀있는 경우도 있어서 한 번 더 찾아봄
         m = re.search(r"WMONID=([A-Za-z0-9]+)", resp0.text)
         wmonid = m.group(1) if m else ""
+
+    if not wmonid:
+        # ⚠️ WMONID를 진짜 못 찾은 경우 - 다음 시도 때 원인을 바로 알 수 있게, 지금 받은 쿠키
+        #    목록과 홈페이지 응답 앞부분을 그대로 에러 메시지에 실어서 로그에 남김.
+        cookie_names = list(session.cookies.keys())
+        raise RuntimeError(
+            f"BCT 홈페이지에서 WMONID를 못 찾았어요. 받은 쿠키 목록: {cookie_names} / "
+            f"홈페이지 응답 앞부분(500자): {resp0.text[:500]}"
+        )
 
     xml_body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Root xmlns="http://www.nexacroplatform.com/platform/dataset">
