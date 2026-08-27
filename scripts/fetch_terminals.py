@@ -1,0 +1,465 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+매일 아침 자동으로 PNIT / BPT / HPNT / BCT / 한진인천, 5개 터미널 사이트에서
+선박 스케줄(raw 데이터)을 가져와서 Firestore(port_schedule 컬렉션)에 반영하는 스크립트예요.
+
+⚠️ 실제로 터미널 사이트에 접속해서 확인한 요청 방식을 그대로 코드로 옮긴 거라,
+   터미널 쪽에서 사이트 구조를 바꾸면 이 스크립트도 같이 고쳐야 해요.
+   각 함수 위에 "실제로 F12로 확인한 내용"을 주석으로 남겨뒀으니, 나중에
+   뭔가 안 되면 그 주석과 실제 사이트를 다시 비교해보면 원인을 찾기 쉬워요.
+
+전체 흐름:
+  1. 터미널 5곳에서 각각 오늘 기준 앞으로 2주 정도의 스케줄을 받아옴
+  2. 터미널마다 컬럼 이름이 다 달라서, 공통 형식(vesselName/vesselCode/voyage/arrivalDate/...)으로 통일
+  3. 기존 가이드 페이지 로직과 똑같은 규칙으로 Firestore에 반영:
+     - 문서 ID = 선박코드 + 항차 + 터미널 (겹침 방지)
+     - 이미 있는 문서면 merge(마감자 등 수동 입력값은 안 건드림)
+     - "같은 달에 같은 배가 여러 번" 상황은 이 자동화에서는 발생하지 않음
+       (raw 전체 업로드라서 코드+항차+터미널로 정확히 구분되기 때문 - 이건 "터미널 갱신용"
+       업로드에서만 생기는 문제였어요)
+"""
+
+import os
+import re
+import sys
+import json
+import time
+import datetime
+import traceback
+
+import requests
+
+# ============================================================
+# 공통 설정
+# ============================================================
+
+TODAY = datetime.date.today()
+FROM_DATE = TODAY
+TO_DATE = TODAY + datetime.timedelta(days=13)  # 앞으로 2주치
+
+HEADERS_COMMON = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+}
+
+RESULTS = {}   # { "PNIT": [entry, ...], "BPT": [...], ... }
+ERRORS = {}    # { "PNIT": "에러 메시지", ... } - 실패한 터미널만 기록
+
+
+def log(msg):
+    print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
+
+
+def parse_date_loose(value):
+    """엑셀/텍스트에서 온 날짜 비슷한 문자열을 최대한 'YYYY-MM-DD'로 통일.
+    실패하면 빈 문자열을 돌려줌 (가이드 페이지의 parsePortScheduleDate와 같은 역할)."""
+    if value is None:
+        return ""
+    s = str(value).strip()
+    if not s:
+        return ""
+    # "2026-08-30 13:00", "2026-08-30", "2026/08/30" 등
+    m = re.match(r"^(\d{4})[-./](\d{1,2})[-./](\d{1,2})", s)
+    if m:
+        return f"{m.group(1)}-{int(m.group(2)):02d}-{int(m.group(3)):02d}"
+    return ""
+
+
+def clean_vessel_name(raw):
+    """'DONGJIN CONTINENTAL(IHP)'처럼 끝에 괄호로 항로/서비스 코드가 붙은 경우 떼어냄
+    (가이드 페이지 splitCombinedVesselCell / vesselName 정리 로직과 동일한 규칙)."""
+    if not raw:
+        return ""
+    s = str(raw).strip()
+    s = re.sub(r"\s*\([^()]*\)\s*$", "", s).strip()
+    return s
+
+
+# ============================================================
+# 1. PNIT - 로그인 없이 GET, 표가 HTML에 그대로 들어있음
+#    실제 확인한 내용: https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp
+#    페이지 하나 요청하면 "선석/선사/모선항차/선사항차/.../모선명/ROUTE/.../접안(예정)일시/출항(예정)일시/..." 표가
+#    그대로 HTML 안에 있음. 날짜 범위를 직접 지정하는 폼 파라미터가 안 보여서, 일단은
+#    "기본으로 보여주는 기간"을 그대로 받아옴 (보통 최근~향후 스케줄이 기본으로 뜨는 편).
+# ============================================================
+def fetch_pnit():
+    url = "https://www.pnitl.com/infoservice/vessel/vslScheduleList.jsp"
+    resp = requests.get(url, headers=HEADERS_COMMON, timeout=30)
+    resp.raise_for_status()
+    resp.encoding = "utf-8"
+    html = resp.text
+
+    # 표의 각 행(<tr>...</tr>)에서 셀(<td>...</td>) 내용을 뽑아냄.
+    # 페이지 구조가 살짝 바뀌어도 견디게, "각 줄에 셀이 15개 안팎"인 것만 데이터 행으로 취급.
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    entries = []
+    for row_html in rows:
+        cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
+        cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in cells]
+        # PNIT 표 컬럼 순서(실제 확인함):
+        # 0선석 1선사 2모선항차 3선사항차 4Head(Bridge)Stern 5선명 6ROUTE
+        # 7반입마감시한 8접안(예정)일시 9출항(예정)일시 10양하 11적하 12Shift 13AMP 14상태
+        if len(cells) < 10:
+            continue
+        vessel_name = clean_vessel_name(cells[5]) if len(cells) > 5 else ""
+        if not vessel_name:
+            continue
+        # "모선항차" 컬럼(예: "MBEI002")에서 앞 3~4글자가 보통 선사+코드 조합이라 코드 추출이 애매해서,
+        # PNIT는 vesselCode를 "모선항차" 그대로 두고, voyage는 "선사항차"(예: HR632R)를 씀.
+        entries.append({
+            "vesselName": vessel_name,
+            "vesselCode": cells[2].strip() if len(cells) > 2 else "",
+            "voyage": cells[3].strip() if len(cells) > 3 else "",
+            "arrivalDate": parse_date_loose(cells[8]) if len(cells) > 8 else "",
+            "departureDate": parse_date_loose(cells[9]) if len(cells) > 9 else "",
+            "terminal": "PNIT",
+            "line": cells[1].strip() if len(cells) > 1 else "",
+        })
+    return entries
+
+
+# ============================================================
+# 2. BPT - POST, v_time=week 로 최근 1주일치를 받아옴 (사장님이 확인해주신 옵션)
+#    실제 확인한 내용:
+#      URL: https://info.bptc.co.kr/Berth_status_text_servlet_sw_kr
+#      Method: POST
+#      Body: v_time=week&ROCD=ALL&v_oper_cd=&ORDER=item1&v_gu=A
+#    응답이 EUC-KR 인코딩이라 디코딩을 맞춰줘야 함.
+# ============================================================
+def fetch_bpt():
+    url = "https://info.bptc.co.kr/Berth_status_text_servlet_sw_kr"
+    payload = "v_time=week&ROCD=ALL&v_oper_cd=&ORDER=item1&v_gu=A"
+    headers = dict(HEADERS_COMMON)
+    headers["Content-Type"] = "application/x-www-form-urlencoded"
+    resp = requests.post(url, data=payload.encode("euc-kr"), headers=headers, timeout=30)
+    resp.raise_for_status()
+    resp.encoding = "euc-kr"
+    html = resp.text
+
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    entries = []
+    for row_html in rows:
+        cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
+        cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in cells]
+        if len(cells) < 8:
+            continue
+        # ⚠️ 실제 컬럼 순서는 F12로 데이터 행을 직접 한 번 봐야 정확해요 (지금은 페이지 폼만 확인된 상태).
+        #    아래는 BPT/신선대 계열 사이트에서 흔한 순서(선석/선사/모선항차/입항/출항/터미널/양하/적하)로
+        #    가정한 것이라, 실제로 돌려보고 컬럼이 밀려있으면 이 인덱스만 조정하면 돼요.
+        vessel_name = clean_vessel_name(cells[2]) if len(cells) > 2 else ""
+        if not vessel_name:
+            continue
+        entries.append({
+            "vesselName": vessel_name,
+            "vesselCode": cells[2].strip() if len(cells) > 2 else "",
+            "voyage": cells[3].strip() if len(cells) > 3 else "",
+            "arrivalDate": parse_date_loose(cells[4]) if len(cells) > 4 else "",
+            "departureDate": parse_date_loose(cells[5]) if len(cells) > 5 else "",
+            "terminal": "BPT",
+            "line": cells[1].strip() if len(cells) > 1 else "",
+        })
+    return entries
+
+
+# ============================================================
+# 3. HPNT - POST + CSRF 토큰 필요
+#    실제 확인한 내용:
+#      1) GET https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp 로 먼저 접속해서
+#         페이지 안에 숨어있는 CSRF_TOKEN 값을 찾음
+#      2) POST 같은 주소로 아래 값들을 담아서 요청:
+#         isSearch=Y&page=1&URI=&userID=&groupID=U999&tmnCod=H&
+#         strdStDate=2026-08-26&strdEdDate=2026-09-01&route=&CSRF_TOKEN=...
+# ============================================================
+def fetch_hpnt():
+    url = "https://www.hpnt.co.kr/infoservice/vessel/vslScheduleList.jsp"
+    session = requests.Session()
+    session.headers.update(HEADERS_COMMON)
+
+    # 1단계: 페이지 열어서 CSRF 토큰 획득
+    resp1 = session.get(url, timeout=30)
+    resp1.raise_for_status()
+    resp1.encoding = "utf-8"
+    m = re.search(r'CSRF_TOKEN["\']?\s*[:=]\s*["\']([a-f0-9-]{20,})["\']', resp1.text, re.I)
+    if not m:
+        # 흔한 위치(hidden input)도 한 번 더 찾아봄
+        m = re.search(r'name=["\']CSRF_TOKEN["\']\s+value=["\']([a-f0-9-]{20,})["\']', resp1.text, re.I)
+    if not m:
+        raise RuntimeError("HPNT 페이지에서 CSRF_TOKEN을 못 찾았어요 (사이트 구조가 바뀌었을 수 있어요).")
+    csrf_token = m.group(1)
+
+    # 2단계: 실제 조회 요청
+    payload = {
+        "isSearch": "Y",
+        "page": "1",
+        "URI": "",
+        "userID": "",
+        "groupID": "U999",
+        "tmnCod": "H",
+        "strdStDate": FROM_DATE.strftime("%Y-%m-%d"),
+        "strdEdDate": TO_DATE.strftime("%Y-%m-%d"),
+        "route": "",
+        "CSRF_TOKEN": csrf_token,
+    }
+    resp2 = session.post(url, data=payload, timeout=30)
+    resp2.raise_for_status()
+    resp2.encoding = "utf-8"
+    html = resp2.text
+
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    entries = []
+    for row_html in rows:
+        cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
+        cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
+        cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in cells]
+        if len(cells) < 8:
+            continue
+        # PNIT와 형제 사이트(같은 회사 계열)라 컬럼 구조가 비슷할 가능성이 높음 - 실제 돌려보고 확인 필요.
+        vessel_name = clean_vessel_name(cells[5]) if len(cells) > 5 else ""
+        if not vessel_name:
+            continue
+        entries.append({
+            "vesselName": vessel_name,
+            "vesselCode": cells[2].strip() if len(cells) > 2 else "",
+            "voyage": cells[3].strip() if len(cells) > 3 else "",
+            "arrivalDate": parse_date_loose(cells[8]) if len(cells) > 8 else "",
+            "departureDate": parse_date_loose(cells[9]) if len(cells) > 9 else "",
+            "terminal": "HPNT",
+            "line": cells[1].strip() if len(cells) > 1 else "",
+        })
+    return entries
+
+
+# ============================================================
+# 4. BCT - POST, XML 요청 → Nexacro 자체 포맷 응답 (일반 JSON/XML 아님!)
+#    실제 확인한 내용:
+#      URL: https://info.bct2-4.com/nxCtr.do?version=1.0.0
+#      Method: POST, Content-Type: text/xml
+#      Body(XML): sqlId=ist_010Qry.selectVslVoyList, istFrdate=YYYYMMDD, istTodate=YYYYMMDD
+#
+#    응답은 "Dataset:CELL_RowType_Column0:...N1style...(S)style6MSC..." 같은 독자 포맷이라
+#    일반 파서가 없음. 실제 확인해보니 데이터가 이런 패턴으로 나열됨:
+#      style<번호>[상태태그](선석) style6[값] ... (컬럼 18개가 이어붙어 있고 style로 구분)
+#    이 스크립트는 "style숫자" 뒤에 오는 텍스트를 순서대로 잘라내는 방식으로 파싱함.
+#    ⚠️ 이 부분이 5개 중 실패 가능성이 제일 높아요 - 안 되면 로그(원본 응답 앞부분)를 같이
+#       보여주시면 파싱 규칙을 다시 맞춰드릴게요.
+# ============================================================
+def fetch_bct():
+    url = "https://info.bct2-4.com/nxCtr.do?version=1.0.0"
+    xml_body = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="http://www.nexacroplatform.com/platform/dataset">
+    <Parameters>
+        <Parameter id="method">getList</Parameter>
+        <Parameter id="sqlId">ist_010Qry.selectVslVoyList</Parameter>
+    </Parameters>
+    <Dataset id="input1">
+        <ColumnInfo>
+            <Column id="istFrdate" type="STRING" size="256" />
+            <Column id="istTodate" type="STRING" size="256" />
+            <Column id="istRoute" type="STRING" size="256" />
+            <Column id="istOper" type="STRING" size="256" />
+        </ColumnInfo>
+        <Rows>
+            <Row>
+                <Col id="istFrdate">{FROM_DATE.strftime('%Y%m%d')}</Col>
+                <Col id="istTodate">{TO_DATE.strftime('%Y%m%d')}</Col>
+            </Row>
+        </Rows>
+    </Dataset>
+</Root>"""
+    headers = dict(HEADERS_COMMON)
+    headers["Content-Type"] = "text/xml; charset=UTF-8"
+    resp = requests.post(url, data=xml_body.encode("utf-8"), headers=headers, timeout=30)
+    resp.raise_for_status()
+    resp.encoding = "utf-8"
+    text = resp.text
+
+    # "Body" 섹션 이후, 실제 데이터가 "N<행번호>style<서식번호><값>style<서식번호><값>..." 패턴으로 반복됨.
+    # 한 행 = 18개 컬럼(맨 앞은 항상 빈 값, 그다음 선석/선사/모선항차/입항/출항/CCT/ETB/ETD/양하/적하/이적/
+    #        모선명/ROUTE/전배TML/검역/줄잡이업체/상태)
+    #
+    # ⚠️ 여기서 함정이 두 개 있었어요, 실제 데이터로 검증하면서 둘 다 잡았어요:
+    #  1) "style\d+"로 그냥 숫자면 다 서식번호로 잘라내면, 값 자체가 숫자로 시작할 때(날짜 "2026-08-25",
+    #     수량 "1050" 등) 그 앞자리 숫자까지 서식번호로 같이 먹혀서 값이 깨짐. 응답 앞부분 STYLE
+    #     정의부에 서식번호가 1~10까지만 있는 걸 확인했으니, "10"을 먼저 시도하고 9~1 순서로 시도해서
+    #     서식번호 자릿수만 정확히 떼어내게 함.
+    #  2) <Body> 태그 앞의 긴 전처리 텍스트(컬럼 정의 등)를 먼저 잘라내지 않으면, 첫 번째 행(N1)의
+    #     "N1"이 그 전처리 텍스트 끝에 붙어버려서 "N숫자로 시작하는 토큰"으로 인식이 안 되고 첫 행
+    #     전체가 통째로 누락됨. 그래서 <Body> 태그 뒤부터만 잘라서 쓰도록 함.
+    STYLE_PATTERN = r"style(?:10|9|8|7|6|5|4|3|2|1)"
+
+    body_marker = "<Body>"
+    body_idx = text.find(body_marker)
+    if body_idx < 0:
+        raise RuntimeError(f"BCT 응답에서 <Body> 태그를 못 찾았어요. 응답 앞부분: {text[:300]}")
+    body_text = text[body_idx + len(body_marker):]
+
+    tokens = re.split(STYLE_PATTERN, body_text)
+    # 각 행 시작에 "N<행번호>"가 붙어있는데, split 결과 토큰 맨 앞에 그 잔여물이 남으므로 지워줌
+    # (지우고 나면 각 행의 첫 컬럼 자리는 항상 빈 문자열이 되고, 실제 데이터는 1번 인덱스부터 시작)
+    data_tokens = [re.sub(r"^N\d+", "", t.strip()) for t in tokens]
+
+    # 18개 컬럼씩 묶어서 한 척(row)으로 재구성
+    # 0(빈값) 1선석 2선사 3모선/항차 4입항 5출항 6CCT 7ETB(접안예정) 8ETD(출항예정)
+    # 9양하 10적하 11이적 12모선명 13ROUTE 14전배TML 15검역 16줄잡이업체 17상태
+    COLS_PER_ROW = 18
+    entries = []
+    for i in range(0, len(data_tokens) - COLS_PER_ROW + 1, COLS_PER_ROW):
+        chunk = data_tokens[i:i + COLS_PER_ROW]
+        if len(chunk) < COLS_PER_ROW:
+            break
+        vessel_name = clean_vessel_name(chunk[12]) if len(chunk) > 12 else ""
+        if not vessel_name:
+            continue
+        entries.append({
+            "vesselName": vessel_name,
+            "vesselCode": chunk[3].strip() if len(chunk) > 3 else "",   # 모선/항차
+            "voyage": chunk[4].strip() if len(chunk) > 4 else "",        # 입항 항차
+            "arrivalDate": parse_date_loose(chunk[7]) if len(chunk) > 7 else "",   # ETB(접안예정시간)
+            "departureDate": parse_date_loose(chunk[8]) if len(chunk) > 8 else "", # ETD(출항예정시간)
+            "terminal": "BCT",
+            "line": chunk[2].strip() if len(chunk) > 2 else "",
+        })
+    return entries
+
+
+# ============================================================
+# 5. 한진인천 - POST + CSRF 토큰 필요 (JSON 응답)
+#    실제 확인한 내용:
+#      1) GET https://esvc2.hjit.co.kr/HJIT/esvc/vessel/berthScheduleT 로 먼저 접속해서
+#         페이지 meta 태그 안 _csrf 값을 찾음 (meta-_csrf, meta-_csrf_header: X-CSRF-TOKEN)
+#      2) POST https://esvc2.hjit.co.kr/HJIT/berth/vesselSchedule 로 JSON 요청:
+#         {"fromDate": "YYYYMMDD", "toDate": "YYYYMMDD", "vessel": "", "voyage": ""}
+#         헤더에 X-CSRF-TOKEN: <위에서 받은 값> 을 실어서 보내야 함
+# ============================================================
+def fetch_hanjin_incheon():
+    page_url = "https://esvc2.hjit.co.kr/HJIT/esvc/vessel/berthScheduleT"
+    api_url = "https://esvc2.hjit.co.kr/HJIT/berth/vesselSchedule"
+
+    session = requests.Session()
+    session.headers.update(HEADERS_COMMON)
+
+    resp1 = session.get(page_url, timeout=30)
+    resp1.raise_for_status()
+    resp1.encoding = "utf-8"
+
+    m = re.search(r'name=["\']_csrf["\']\s+content=["\']([a-f0-9-]{20,})["\']', resp1.text, re.I)
+    if not m:
+        m = re.search(r'_csrf["\']?\s*[:=]\s*["\']([a-f0-9-]{20,})["\']', resp1.text, re.I)
+    if not m:
+        raise RuntimeError("한진인천 페이지에서 _csrf 토큰을 못 찾았어요 (사이트 구조가 바뀌었을 수 있어요).")
+    csrf_token = m.group(1)
+
+    payload = {
+        "fromDate": FROM_DATE.strftime("%Y%m%d"),
+        "toDate": TO_DATE.strftime("%Y%m%d"),
+        "vessel": "",
+        "voyage": "",
+    }
+    headers = {"X-CSRF-TOKEN": csrf_token, "Content-Type": "application/json"}
+    resp2 = session.post(api_url, json=payload, headers=headers, timeout=30)
+    resp2.raise_for_status()
+
+    try:
+        data = resp2.json()
+    except ValueError:
+        raise RuntimeError(f"한진인천 응답이 JSON이 아니에요: {resp2.text[:300]}")
+
+    # 실제 응답 구조를 몰라서(우리가 요청 방식만 확인함), 흔한 패턴 몇 가지를 다 시도해봄.
+    rows = None
+    if isinstance(data, list):
+        rows = data
+    elif isinstance(data, dict):
+        for key in ("list", "data", "rows", "resultList", "items"):
+            if key in data and isinstance(data[key], list):
+                rows = data[key]
+                break
+    if rows is None:
+        raise RuntimeError(f"한진인천 응답 구조를 못 알아봤어요. 응답 앞부분: {json.dumps(data, ensure_ascii=False)[:500]}")
+
+    entries = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        # 실제 필드명을 몰라서, 흔히 쓰일 법한 이름 후보를 다 확인함 (될 때까지 하나씩 시도)
+        def pick(*keys):
+            for k in keys:
+                if k in row and row[k]:
+                    return str(row[k]).strip()
+            return ""
+
+        vessel_name = clean_vessel_name(pick("vesselName", "vslNm", "vsl_nm", "shipName"))
+        if not vessel_name:
+            continue
+        entries.append({
+            "vesselName": vessel_name,
+            "vesselCode": pick("vesselCode", "vslCd", "vsl_cd"),
+            "voyage": pick("voyage", "voyNo", "voy_no"),
+            "arrivalDate": parse_date_loose(pick("arrivalDate", "etb", "berthDate")),
+            "departureDate": parse_date_loose(pick("departureDate", "etd", "unberthDate")),
+            "terminal": "한진인천",
+            "line": pick("line", "opCd", "carrier"),
+        })
+    return entries
+
+
+# ============================================================
+# 실행부 - 5개 터미널을 하나씩 시도하고, 하나가 실패해도 나머지는 계속 진행
+# ============================================================
+
+TERMINAL_FETCHERS = {
+    "PNIT": fetch_pnit,
+    "BPT": fetch_bpt,
+    "HPNT": fetch_hpnt,
+    "BCT": fetch_bct,
+    "한진인천": fetch_hanjin_incheon,
+}
+
+
+def run_all():
+    for name, fn in TERMINAL_FETCHERS.items():
+        log(f"[{name}] 수집 시작...")
+        try:
+            entries = fn()
+            if not entries:
+                log(f"[{name}] ⚠️ 응답은 받았는데 파싱된 데이터가 0건이에요 - 사이트 구조가 바뀌었을 수 있어요.")
+                ERRORS[name] = "0건 파싱됨 (구조 변경 의심)"
+            else:
+                log(f"[{name}] ✅ {len(entries)}건 수집 완료")
+                RESULTS[name] = entries
+        except Exception as e:
+            log(f"[{name}] ❌ 실패: {e}")
+            traceback.print_exc()
+            ERRORS[name] = str(e)
+        time.sleep(1)  # 터미널 서버에 너무 빠르게 연달아 요청 안 하려고 살짝 텀을 둠
+
+
+def save_raw_json():
+    """디버깅용 - 이번 수집 결과를 그대로 파일로 남겨서, 실패 시 GitHub Actions 로그/아티팩트에서
+    바로 확인할 수 있게 함."""
+    out = {
+        "collectedAt": datetime.datetime.now().isoformat(),
+        "results": RESULTS,
+        "errors": ERRORS,
+    }
+    with open("terminal_data.json", "w", encoding="utf-8") as f:
+        json.dump(out, f, ensure_ascii=False, indent=2)
+    log("terminal_data.json 저장 완료")
+
+
+if __name__ == "__main__":
+    run_all()
+    save_raw_json()
+
+    total = sum(len(v) for v in RESULTS.values())
+    log(f"=== 전체 결과: 성공 {len(RESULTS)}개 터미널, 실패 {len(ERRORS)}개 터미널, 총 {total}건 수집 ===")
+    if ERRORS:
+        log(f"실패한 터미널: {list(ERRORS.keys())}")
+
+    # 하나라도 성공했으면 종료 코드 0(성공)으로 끝내서, 다음 단계(Firestore 반영)가 이어서 실행되게 함.
+    # 5개 다 실패한 경우에만 실패로 처리해서 GitHub Actions가 "실패"로 표시하게 함.
+    if not RESULTS:
+        log("모든 터미널 수집에 실패했어요.")
+        sys.exit(1)
+    sys.exit(0)
