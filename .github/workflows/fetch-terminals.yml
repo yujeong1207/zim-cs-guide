@@ -29,6 +29,12 @@ jobs:
       - name: 필요한 패키지 설치
         run: pip install -r scripts/requirements.txt
 
+      # BCT만 실제 브라우저(Playwright)로 세션 쿠키를 얻어와야 해서, 가상 브라우저(크로미움)를
+      # 이 단계에서 미리 설치해둠. --with-deps는 리눅스 환경에서 브라우저 실행에 필요한
+      # 시스템 라이브러리까지 같이 설치해줘요 (이게 없으면 브라우저 자체가 안 켜질 수 있어요).
+      - name: 가상 브라우저(Playwright) 설치
+        run: python -m playwright install --with-deps chromium
+
       - name: 터미널 5곳에서 데이터 수집
         run: python scripts/fetch_terminals.py
         working-directory: .
