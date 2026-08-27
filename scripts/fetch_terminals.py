@@ -146,28 +146,59 @@ def fetch_bpt():
     resp.encoding = "euc-kr"
     html = resp.text
 
-    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    # ⚠️ 2026-08-27 사고 원인: 이전 버전은 컬럼 순서를 실제로 확인 안 하고 추측으로
+    #    (선석/선사/모선항차/입항/출항 순서일 거라고) 짜뒀는데, 실제로는 순서가 달라서
+    #    항차 코드 같은 게 선명 자리에 들어가며 잘못된 데이터가 대량으로 쌓였어요.
+    #    다시는 이런 일이 없도록, 이제 헤더 행(<th> 또는 첫 <tr>)에서 "선명"이 몇 번째
+    #    칸인지 실제로 찾아서 그 위치의 값만 신뢰하는 방식으로 바꿨어요. 헤더를 못 찾으면
+    #    (즉 뭘 기준으로 뽑아야 할지 모르면) 추측하지 않고 그냥 에러로 멈춰요 - 틀린 데이터를
+    #    쌓느니 아무것도 안 쌓는 게 안전하니까요.
+    header_row = re.search(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    if not header_row:
+        raise RuntimeError("BPT 응답에서 표(<tr>)를 하나도 못 찾았어요.")
+
+    header_cells_raw = re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", header_row.group(1), re.S)
+    header_cells = [re.sub(r"<[^>]+>", "", c).strip() for c in header_cells_raw]
+    header_cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in header_cells]
+
+    def find_col(*keywords):
+        for i, h in enumerate(header_cells):
+            if any(k in h for k in keywords):
+                return i
+        return -1
+
+    idx_vessel = find_col("선명", "모선명", "Vessel")
+    idx_voyage = find_col("항차", "Voyage")
+    idx_line = find_col("선사", "Line")
+    idx_arrival = find_col("접안", "입항", "ETB", "ATB")
+    idx_departure = find_col("출항", "ETD", "ATD")
+
+    if idx_vessel < 0:
+        raise RuntimeError(
+            f"BPT 표에서 '선명' 컬럼을 못 찾았어요 - 잘못된 자리에서 값을 뽑을 위험이 있어서 멈춰요. "
+            f"실제 헤더: {header_cells}"
+        )
+
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)[1:]  # 첫 줄(헤더)은 건너뜀
     entries = []
     for row_html in rows:
         cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
         cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
         cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in cells]
-        if len(cells) < 8:
+        if len(cells) <= idx_vessel:
             continue
-        # ⚠️ 실제 컬럼 순서는 F12로 데이터 행을 직접 한 번 봐야 정확해요 (지금은 페이지 폼만 확인된 상태).
-        #    아래는 BPT/신선대 계열 사이트에서 흔한 순서(선석/선사/모선항차/입항/출항/터미널/양하/적하)로
-        #    가정한 것이라, 실제로 돌려보고 컬럼이 밀려있으면 이 인덱스만 조정하면 돼요.
-        vessel_name = clean_vessel_name(cells[2]) if len(cells) > 2 else ""
+
+        vessel_name = clean_vessel_name(cells[idx_vessel])
         if not vessel_name:
             continue
         entries.append({
             "vesselName": vessel_name,
-            "vesselCode": cells[2].strip() if len(cells) > 2 else "",
-            "voyage": cells[3].strip() if len(cells) > 3 else "",
-            "arrivalDate": parse_date_loose(cells[4]) if len(cells) > 4 else "",
-            "departureDate": parse_date_loose(cells[5]) if len(cells) > 5 else "",
+            "vesselCode": "",  # BPT 표에 선박코드가 별도로 안 보여서 일단 비워둠 (선명으로만 식별)
+            "voyage": cells[idx_voyage].strip() if idx_voyage >= 0 and len(cells) > idx_voyage else "",
+            "arrivalDate": parse_date_loose(cells[idx_arrival]) if idx_arrival >= 0 and len(cells) > idx_arrival else "",
+            "departureDate": parse_date_loose(cells[idx_departure]) if idx_departure >= 0 and len(cells) > idx_departure else "",
             "terminal": "BPT",
-            "line": cells[1].strip() if len(cells) > 1 else "",
+            "line": cells[idx_line].strip() if idx_line >= 0 and len(cells) > idx_line else "",
         })
     return entries
 
@@ -239,26 +270,57 @@ def fetch_hpnt():
     resp2.encoding = "utf-8"
     html = resp2.text
 
-    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    # ⚠️ 2026-08-27 사고 원인: BPT와 마찬가지로 이 함수도 컬럼 순서를 실제로 검증 안 하고
+    #    "PNIT랑 비슷할 것"이라고 추측만 하고 넘어갔었는데, 실제로는 안 맞아서 잘못된 데이터가
+    #    쌓였어요. 이제 헤더 행에서 "선명" 컬럼 위치를 직접 찾아서 그 자리 값만 신뢰하고,
+    #    못 찾으면 추측하지 않고 에러로 멈추도록 바꿨어요.
+    header_row = re.search(r"<tr[^>]*>(.*?)</tr>", html, re.S)
+    if not header_row:
+        raise RuntimeError("HPNT 응답에서 표(<tr>)를 하나도 못 찾았어요.")
+
+    header_cells_raw = re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", header_row.group(1), re.S)
+    header_cells = [re.sub(r"<[^>]+>", "", c).strip() for c in header_cells_raw]
+    header_cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in header_cells]
+
+    def find_col(*keywords):
+        for i, h in enumerate(header_cells):
+            if any(k in h for k in keywords):
+                return i
+        return -1
+
+    idx_vessel = find_col("선명", "모선명", "Vessel")
+    idx_code = find_col("모선항차", "선박코드", "코드")
+    idx_voyage = find_col("항차", "Voyage")
+    idx_line = find_col("선사", "Line")
+    idx_arrival = find_col("접안", "입항", "ETB", "ATB")
+    idx_departure = find_col("출항", "ETD", "ATD")
+
+    if idx_vessel < 0:
+        raise RuntimeError(
+            f"HPNT 표에서 '선명' 컬럼을 못 찾았어요 - 잘못된 자리에서 값을 뽑을 위험이 있어서 멈춰요. "
+            f"실제 헤더: {header_cells}"
+        )
+
+    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)[1:]  # 첫 줄(헤더)은 건너뜀
     entries = []
     for row_html in rows:
         cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
         cells = [re.sub(r"<[^>]+>", "", c).strip() for c in cells]
         cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in cells]
-        if len(cells) < 8:
+        if len(cells) <= idx_vessel:
             continue
-        # PNIT와 형제 사이트(같은 회사 계열)라 컬럼 구조가 비슷할 가능성이 높음 - 실제 돌려보고 확인 필요.
-        vessel_name = clean_vessel_name(cells[5]) if len(cells) > 5 else ""
+
+        vessel_name = clean_vessel_name(cells[idx_vessel])
         if not vessel_name:
             continue
         entries.append({
             "vesselName": vessel_name,
-            "vesselCode": cells[2].strip() if len(cells) > 2 else "",
-            "voyage": cells[3].strip() if len(cells) > 3 else "",
-            "arrivalDate": parse_date_loose(cells[8]) if len(cells) > 8 else "",
-            "departureDate": parse_date_loose(cells[9]) if len(cells) > 9 else "",
+            "vesselCode": cells[idx_code].strip() if idx_code >= 0 and len(cells) > idx_code else "",
+            "voyage": cells[idx_voyage].strip() if idx_voyage >= 0 and len(cells) > idx_voyage else "",
+            "arrivalDate": parse_date_loose(cells[idx_arrival]) if idx_arrival >= 0 and len(cells) > idx_arrival else "",
+            "departureDate": parse_date_loose(cells[idx_departure]) if idx_departure >= 0 and len(cells) > idx_departure else "",
             "terminal": "HPNT",
-            "line": cells[1].strip() if len(cells) > 1 else "",
+            "line": cells[idx_line].strip() if idx_line >= 0 and len(cells) > idx_line else "",
         })
     return entries
 
