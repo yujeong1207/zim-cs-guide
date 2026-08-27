@@ -181,13 +181,28 @@ def fetch_hpnt():
     resp1 = session.get(url, timeout=30)
     resp1.raise_for_status()
     resp1.encoding = "utf-8"
-    m = re.search(r'CSRF_TOKEN["\']?\s*[:=]\s*["\']([a-f0-9-]{20,})["\']', resp1.text, re.I)
-    if not m:
-        # 흔한 위치(hidden input)도 한 번 더 찾아봄
-        m = re.search(r'name=["\']CSRF_TOKEN["\']\s+value=["\']([a-f0-9-]{20,})["\']', resp1.text, re.I)
-    if not m:
-        raise RuntimeError("HPNT 페이지에서 CSRF_TOKEN을 못 찾았어요 (사이트 구조가 바뀌었을 수 있어요).")
-    csrf_token = m.group(1)
+
+    # ⚠️ 실패 원인 추정: 이전 정규식이 "name=... value=..."가 바로 붙어있는 경우만 잡았는데,
+    #    실제로는 그 사이에 type="hidden" 같은 다른 속성이 끼어있거나(id, type 등),
+    #    <input value="..." name="CSRF_TOKEN"> 처럼 순서가 반대로 되어있을 수 있어요.
+    #    그래서 순서에 안 얽매이고, "CSRF_TOKEN"이 들어간 태그 하나를 통째로 찾은 다음
+    #    그 안에서 value 속성만 따로 뽑아내는 방식으로 더 느슨하게 고쳤어요.
+    csrf_token = None
+    tag_match = re.search(r'<input\b[^>]*\bCSRF_TOKEN\b[^>]*>', resp1.text, re.I)
+    if tag_match:
+        value_match = re.search(r'value=["\']([^"\']+)["\']', tag_match.group(0), re.I)
+        if value_match:
+            csrf_token = value_match.group(1)
+    if not csrf_token:
+        # meta 태그 형식(예: <meta name="CSRF_TOKEN" content="...">)도 시도
+        m = re.search(r'CSRF_TOKEN["\']?\s*(?:content|value)?\s*[:=]\s*["\']([a-zA-Z0-9-]{10,})["\']', resp1.text, re.I)
+        if m:
+            csrf_token = m.group(1)
+    if not csrf_token:
+        raise RuntimeError(
+            "HPNT 페이지에서 CSRF_TOKEN을 못 찾았어요 (사이트 구조가 바뀌었을 수 있어요). "
+            f"페이지에 'CSRF_TOKEN' 문자열이 있긴 한지: {'CSRF_TOKEN' in resp1.text}"
+        )
 
     # 2단계: 실제 조회 요청
     payload = {
@@ -246,12 +261,37 @@ def fetch_hpnt():
 #       보여주시면 파싱 규칙을 다시 맞춰드릴게요.
 # ============================================================
 def fetch_bct():
-    url = "https://info.bct2-4.com/nxCtr.do?version=1.0.0"
+    base_url = "https://info.bct2-4.com/"
+    api_url = "https://info.bct2-4.com/nxCtr.do?version=1.0.0"
+
+    # ⚠️ 실패 원인 파악됨(GitHub Actions 로그로 확인): 서버가 "ErrorCode: -600"으로 거부했음.
+    #    처음 사장님이 캡처해주신 실제 요청 XML을 다시 보니, 우리가 빼먹은 파라미터가 있었어요:
+    #      - WMONID: 세션을 구분하는 값 (Nexacro 서버가 페이지 첫 접속 시 쿠키로 내려줌)
+    #      - styZoncd: 화면(그리드) 식별 코드 - 캡처하신 값(1510SP)이 고정값인지 확인 안 됐지만
+    #        일단 그 값을 그대로 사용
+    #      - useIudSql, dao: 빈 파라미터지만 태그 자체는 있어야 하는 것 같음
+    #    그래서 먼저 메인 페이지에 한 번 접속해서 세션(WMONID 쿠키)을 받아온 다음, 그 값을 그대로
+    #    요청에 실어 보내도록 수정함.
+    session = requests.Session()
+    session.headers.update(HEADERS_COMMON)
+
+    resp0 = session.get(base_url, timeout=30)
+    resp0.raise_for_status()
+    wmonid = session.cookies.get("WMONID", "")
+    if not wmonid:
+        # 쿠키에 없으면 응답 본문 안에 박혀있는 경우도 있어서 한 번 더 찾아봄
+        m = re.search(r"WMONID=([A-Za-z0-9]+)", resp0.text)
+        wmonid = m.group(1) if m else ""
+
     xml_body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Root xmlns="http://www.nexacroplatform.com/platform/dataset">
     <Parameters>
+        <Parameter id="WMONID">{wmonid}</Parameter>
+        <Parameter id="styZoncd">1510SP</Parameter>
         <Parameter id="method">getList</Parameter>
         <Parameter id="sqlId">ist_010Qry.selectVslVoyList</Parameter>
+        <Parameter id="useIudSql" />
+        <Parameter id="dao" />
     </Parameters>
     <Dataset id="input1">
         <ColumnInfo>
@@ -268,12 +308,15 @@ def fetch_bct():
         </Rows>
     </Dataset>
 </Root>"""
-    headers = dict(HEADERS_COMMON)
-    headers["Content-Type"] = "text/xml; charset=UTF-8"
-    resp = requests.post(url, data=xml_body.encode("utf-8"), headers=headers, timeout=30)
+    headers = {"Content-Type": "text/xml; charset=UTF-8"}
+    resp = session.post(api_url, data=xml_body.encode("utf-8"), headers=headers, timeout=30)
     resp.raise_for_status()
     resp.encoding = "utf-8"
     text = resp.text
+
+    # 그래도 에러가 오면(ErrorCode가 찍히면), 원인을 바로 알 수 있게 명확히 에러를 냄
+    if "ErrorCode" in text and "<Body>" not in text:
+        raise RuntimeError(f"BCT가 에러를 응답했어요 (WMONID='{wmonid}'로 시도함). 응답: {text[:400]}")
 
     # "Body" 섹션 이후, 실제 데이터가 "N<행번호>style<서식번호><값>style<서식번호><값>..." 패턴으로 반복됨.
     # 한 행 = 18개 컬럼(맨 앞은 항상 빈 값, 그다음 선석/선사/모선항차/입항/출항/CCT/ETB/ETD/양하/적하/이적/
@@ -366,12 +409,18 @@ def fetch_hanjin_incheon():
     except ValueError:
         raise RuntimeError(f"한진인천 응답이 JSON이 아니에요: {resp2.text[:300]}")
 
-    # 실제 응답 구조를 몰라서(우리가 요청 방식만 확인함), 흔한 패턴 몇 가지를 다 시도해봄.
+    # 실제 응답 구조 확인됨 (GitHub Actions 로그로 확인): { "requestId": ..., "searchedCount": 57,
+    #   "vesselSchedules": [ { "vesselCode": "MMTT", "voyageYear": "2026", "voyageSeq": "002",
+    #     "eta": "2026-08-26 11:00:00", "etb": "2026-08-26 13:00:00", "etd": "2026-08-27 04:00:00",
+    #     "status": "Departured", ... }, ... ] }
+    # ⚠️ "vesselName"에 해당하는 필드가 안 보였는데, 대신 vesselCode만 있음 - 한진인천은 선사코드
+    #    기준으로만 응답을 주는 것 같아서, vesselName 대신 vesselCode를 그대로 이름 자리에도 써둠
+    #    (나중에 실제 선명이 필요하면 vesselCode→선명 매핑표를 따로 만들어야 할 수도 있어요).
     rows = None
     if isinstance(data, list):
         rows = data
     elif isinstance(data, dict):
-        for key in ("list", "data", "rows", "resultList", "items"):
+        for key in ("vesselSchedules", "list", "data", "rows", "resultList", "items"):
             if key in data and isinstance(data[key], list):
                 rows = data[key]
                 break
@@ -382,22 +431,27 @@ def fetch_hanjin_incheon():
     for row in rows:
         if not isinstance(row, dict):
             continue
-        # 실제 필드명을 몰라서, 흔히 쓰일 법한 이름 후보를 다 확인함 (될 때까지 하나씩 시도)
+
         def pick(*keys):
             for k in keys:
                 if k in row and row[k]:
                     return str(row[k]).strip()
             return ""
 
-        vessel_name = clean_vessel_name(pick("vesselName", "vslNm", "vsl_nm", "shipName"))
+        vessel_code = pick("vesselCode", "vslCd", "vsl_cd")
+        vessel_name = clean_vessel_name(pick("vesselName", "vslNm", "vsl_nm", "shipName")) or vessel_code
         if not vessel_name:
             continue
+        # voyage는 "voyageYear" + "voyageSeq"를 합쳐서 하나의 항차 표기로 만듦 (예: "2026" + "002" → "2026-002")
+        voyage_year = pick("voyageYear")
+        voyage_seq = pick("voyageSeq")
+        voyage = f"{voyage_year}-{voyage_seq}" if voyage_year and voyage_seq else pick("voyage", "voyNo", "voy_no")
         entries.append({
             "vesselName": vessel_name,
-            "vesselCode": pick("vesselCode", "vslCd", "vsl_cd"),
-            "voyage": pick("voyage", "voyNo", "voy_no"),
-            "arrivalDate": parse_date_loose(pick("arrivalDate", "etb", "berthDate")),
-            "departureDate": parse_date_loose(pick("departureDate", "etd", "unberthDate")),
+            "vesselCode": vessel_code,
+            "voyage": voyage,
+            "arrivalDate": parse_date_loose(pick("etb", "eta", "arrivalDate", "berthDate")),
+            "departureDate": parse_date_loose(pick("etd", "departureDate", "unberthDate")),
             "terminal": "한진인천",
             "line": pick("line", "opCd", "carrier"),
         })
