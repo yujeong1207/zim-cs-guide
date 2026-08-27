@@ -23,6 +23,7 @@ import json
 
 import firebase_admin
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 
 def init_firestore():
@@ -44,7 +45,7 @@ def main():
     # updatedBy == "auto_fetch" 이면서 terminal이 BPT 또는 HPNT인 문서만 대상으로 함
     target_docs = []
     for terminal in ["BPT", "HPNT"]:
-        query = collection.where("terminal", "==", terminal).where("updatedBy", "==", "auto_fetch")
+        query = collection.where(filter=FieldFilter("terminal", "==", terminal)).where(filter=FieldFilter("updatedBy", "==", "auto_fetch"))
         for doc in query.stream():
             target_docs.append(doc)
 
@@ -52,7 +53,7 @@ def main():
     print()
     print("=== 미리보기 (최대 20건) ===")
     for doc in target_docs[:20]:
-        d = doc.data()
+        d = doc.to_dict()
         print(f"  - {d.get('vesselName')} | 코드:{d.get('vesselCode')} | 항차:{d.get('voyage')} | 터미널:{d.get('terminal')}")
     if len(target_docs) > 20:
         print(f"  ... 외 {len(target_docs) - 20}건 더")
