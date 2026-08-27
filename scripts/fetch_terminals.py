@@ -392,54 +392,47 @@ def fetch_bct():
     if error_code_match and error_code_match.group(1) != "0":
         raise RuntimeError(f"BCT가 에러코드 {error_code_match.group(1)}을 응답했어요. 응답: {text[:400]}")
 
-    # 진단용 - 나중에 또 구조가 바뀌면 바로 알아볼 수 있게, 응답 앞부분을 넉넉히 로그로 남겨둠
-    log(f"[BCT 진단] 응답 길이: {len(text)}자, 앞부분 2000자:\n{text[:2000]}")
-
-    # "Body" 섹션 이후, 실제 데이터가 "N<행번호>style<서식번호><값>style<서식번호><값>..." 패턴으로 반복됨.
-    # 한 행 = 18개 컬럼(맨 앞은 항상 빈 값, 그다음 선석/선사/모선항차/입항/출항/CCT/ETB/ETD/양하/적하/이적/
-    #        모선명/ROUTE/전배TML/검역/줄잡이업체/상태)
+    # ✅ 실제 확인 완료(GitHub Actions 로그로 확인): 표준 XML로 옴!
+    #    <Dataset id="output1"><Rows><Row><Col id="컬럼이름">값</Col>...</Row>...</Rows></Dataset>
+    #    이 형태면 굳이 직접 문자열을 쪼갤 필요 없이, 파이썬 표준 XML 파서로 안전하게 읽을 수 있어요.
+    #    (예전엔 "style숫자" 문자열을 직접 쪼개는 방식이었는데, 그건 다른 요청 방식(엑셀 내보내기용)
+    #    응답이었고, 지금 이 조회 요청은 이렇게 훨씬 다루기 쉬운 표준 XML로 와요.)
     #
-    # ⚠️ 여기서 함정이 두 개 있었어요, 실제 데이터로 검증하면서 둘 다 잡았어요:
-    #  1) "style\d+"로 그냥 숫자면 다 서식번호로 잘라내면, 값 자체가 숫자로 시작할 때(날짜 "2026-08-25",
-    #     수량 "1050" 등) 그 앞자리 숫자까지 서식번호로 같이 먹혀서 값이 깨짐. 응답 앞부분 STYLE
-    #     정의부에 서식번호가 1~10까지만 있는 걸 확인했으니, "10"을 먼저 시도하고 9~1 순서로 시도해서
-    #     서식번호 자릿수만 정확히 떼어내게 함.
-    #  2) <Body> 태그 앞의 긴 전처리 텍스트(컬럼 정의 등)를 먼저 잘라내지 않으면, 첫 번째 행(N1)의
-    #     "N1"이 그 전처리 텍스트 끝에 붙어버려서 "N숫자로 시작하는 토큰"으로 인식이 안 되고 첫 행
-    #     전체가 통째로 누락됨. 그래서 <Body> 태그 뒤부터만 잘라서 쓰도록 함.
-    STYLE_PATTERN = r"style(?:10|9|8|7|6|5|4|3|2|1)"
+    #    확인된 컬럼: plvVsl(선명 앞부분 코드) plvVslvoy(모선/항차 전체) plvEvoyin(입항항차)
+    #    plvEvoyout(출항항차) plvAtb(접안예정/ATB) plvAtd(출항예정/ATD) cdvName(선명) cdvOperator(선사)
+    #    plvStatus(상태) 등
+    import xml.etree.ElementTree as ElementTree
 
-    body_marker = "<Body>"
-    body_idx = text.find(body_marker)
-    if body_idx < 0:
-        raise RuntimeError(f"BCT 응답에서 <Body> 태그를 못 찾았어요. 응답 앞부분: {text[:300]}")
-    body_text = text[body_idx + len(body_marker):]
+    try:
+        root = ElementTree.fromstring(text)
+    except ElementTree.ParseError as e:
+        raise RuntimeError(f"BCT 응답이 XML로 안 읽혀요: {e}. 응답 앞부분: {text[:500]}")
 
-    tokens = re.split(STYLE_PATTERN, body_text)
-    # 각 행 시작에 "N<행번호>"가 붙어있는데, split 결과 토큰 맨 앞에 그 잔여물이 남으므로 지워줌
-    # (지우고 나면 각 행의 첫 컬럼 자리는 항상 빈 문자열이 되고, 실제 데이터는 1번 인덱스부터 시작)
-    data_tokens = [re.sub(r"^N\d+", "", t.strip()) for t in tokens]
+    ns = {"ds": "http://www.nexacroplatform.com/platform/dataset"}
+    rows = root.findall(".//ds:Dataset[@id='output1']/ds:Rows/ds:Row", ns)
+    if not rows:
+        # 네임스페이스 없이 올 수도 있어서 한 번 더 시도
+        rows = root.findall(".//Dataset[@id='output1']/Rows/Row")
 
-    # 18개 컬럼씩 묶어서 한 척(row)으로 재구성
-    # 0(빈값) 1선석 2선사 3모선/항차 4입항 5출항 6CCT 7ETB(접안예정) 8ETD(출항예정)
-    # 9양하 10적하 11이적 12모선명 13ROUTE 14전배TML 15검역 16줄잡이업체 17상태
-    COLS_PER_ROW = 18
     entries = []
-    for i in range(0, len(data_tokens) - COLS_PER_ROW + 1, COLS_PER_ROW):
-        chunk = data_tokens[i:i + COLS_PER_ROW]
-        if len(chunk) < COLS_PER_ROW:
-            break
-        vessel_name = clean_vessel_name(chunk[12]) if len(chunk) > 12 else ""
+    for row in rows:
+        cols = {}
+        for col in row:
+            tag = col.tag.split("}")[-1]  # 네임스페이스 붙어있으면 떼어냄 ({...}Col → Col)
+            if tag == "Col":
+                cols[col.get("id")] = (col.text or "").strip()
+
+        vessel_name = clean_vessel_name(cols.get("cdvName", ""))
         if not vessel_name:
             continue
         entries.append({
             "vesselName": vessel_name,
-            "vesselCode": chunk[3].strip() if len(chunk) > 3 else "",   # 모선/항차
-            "voyage": chunk[4].strip() if len(chunk) > 4 else "",        # 입항 항차
-            "arrivalDate": parse_date_loose(chunk[7]) if len(chunk) > 7 else "",   # ETB(접안예정시간)
-            "departureDate": parse_date_loose(chunk[8]) if len(chunk) > 8 else "", # ETD(출항예정시간)
+            "vesselCode": cols.get("plvVsl", ""),
+            "voyage": cols.get("plvEvoyin", "") or cols.get("plvVslvoy", ""),
+            "arrivalDate": parse_date_loose(cols.get("plvAtb", "")),
+            "departureDate": parse_date_loose(cols.get("plvAtd", "")),
             "terminal": "BCT",
-            "line": chunk[2].strip() if len(chunk) > 2 else "",
+            "line": cols.get("cdvOperator", ""),
         })
     return entries
 
