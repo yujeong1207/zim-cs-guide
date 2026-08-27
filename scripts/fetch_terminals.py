@@ -584,7 +584,7 @@ def fetch_hanjin_incheon():
             "voyage": voyage,
             "arrivalDate": parse_date_loose(pick("etb", "eta", "arrivalDate", "berthDate")),
             "departureDate": parse_date_loose(pick("etd", "departureDate", "unberthDate")),
-            "terminal": "한진인천",
+            "terminal": "HJIT",
             "line": pick("line", "opCd", "carrier"),
         })
     return entries
