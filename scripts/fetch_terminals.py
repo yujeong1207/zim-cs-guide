@@ -30,6 +30,15 @@ import traceback
 
 import requests
 
+# BCT만 자바스크립트를 실제로 실행해야 세션이 생기는 구조라, 이 터미널만 가상 브라우저(Playwright)를
+# 써요. 혹시 playwright 설치가 안 됐거나 실패해도 나머지 4개 터미널은 정상 진행되도록,
+# import 자체를 try로 감싸고 fetch_bct() 안에서 없으면 명확한 에러를 냄.
+try:
+    from playwright.sync_api import sync_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+
 # ============================================================
 # 공통 설정
 # ============================================================
@@ -268,44 +277,72 @@ def fetch_hpnt():
 #    ⚠️ 이 부분이 5개 중 실패 가능성이 제일 높아요 - 안 되면 로그(원본 응답 앞부분)를 같이
 #       보여주시면 파싱 규칙을 다시 맞춰드릴게요.
 # ============================================================
+def get_bct_session_cookies():
+    """가상 브라우저(Playwright)로 BCT 페이지를 실제로 한 번 열어서, 자바스크립트가 실행되며
+    생기는 세션 쿠키(WMONID 등)를 낚아채옴. 데이터 자체는 여기서 안 긁고, 쿠키만 챙겨서
+    가벼운 requests 요청에 그대로 실어 쓰는 방식 - 매번 브라우저를 띄우는 것보다 훨씬 빠르고
+    안정적이에요."""
+    if not PLAYWRIGHT_AVAILABLE:
+        raise RuntimeError(
+            "playwright가 설치되어 있지 않아요. requirements.txt에 playwright를 추가하고, "
+            "GitHub Actions 워크플로에 'playwright install --with-deps chromium' 단계가 있는지 확인해주세요."
+        )
+
+    captured_urls = []
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(user_agent=HEADERS_COMMON["User-Agent"])
+        page = context.new_page()
+        page.on("request", lambda req: captured_urls.append(req.url))
+
+        page.goto("https://info.bct2-4.com/infoservice/index.html", wait_until="networkidle", timeout=30000)
+        # Nexacro 프레임워크가 자체적으로 초기화하면서 세션을 만드는 데 시간이 좀 걸릴 수 있어서,
+        # networkidle 이후에도 약간 더 기다려줌
+        page.wait_for_timeout(3000)
+
+        cookies = context.cookies()
+        browser.close()
+
+    wmonid = ""
+    for c in cookies:
+        if c.get("name") == "WMONID":
+            wmonid = c.get("value", "")
+            break
+
+    if not wmonid:
+        # 쿠키에 없으면, 로딩 중에 실제로 오간 요청 URL들 중에 WMONID=값 형태가 있는지 찾아봄
+        for url in captured_urls:
+            m = re.search(r"WMONID=([A-Za-z0-9]+)", url)
+            if m:
+                wmonid = m.group(1)
+                break
+
+    if not wmonid:
+        raise RuntimeError(
+            f"가상 브라우저로 접속했는데도 WMONID를 못 찾았어요. "
+            f"받은 쿠키 이름들: {[c.get('name') for c in cookies]} / "
+            f"로딩 중 관찰된 요청 수: {len(captured_urls)}건"
+        )
+
+    return wmonid, cookies
+
+
 def fetch_bct():
-    # ⚠️ 실제 확인된 구조(GitHub Actions 로그로 확인): "https://info.bct2-4.com/"에 접속하면
-    #    실제 내용은 하나도 없고 자바스크립트로 "./infoservice/index.html"로 이동시키기만 하는
-    #    빈 껍데기 페이지가 응답으로 옴 (그래서 쿠키도 전혀 안 내려줌). 세션(WMONID)은 실제
-    #    데이터 화면이 있는 그 진짜 페이지에 접속해야 발급되는 것 같아서, base_url을
-    #    "infoservice/index.html"로 바로 바꿈.
-    base_url = "https://info.bct2-4.com/infoservice/index.html"
+    # ⚠️ 실제 확인된 구조(GitHub Actions 로그 + 페이지 소스로 확인):
+    #    "https://info.bct2-4.com/infoservice/index.html"는 Nexacro 프레임워크 자바스크립트
+    #    라이브러리를 잔뜩 불러오기만 하는 "틀"이고, 실제 화면(및 세션 발급)은 그 안에서
+    #    자바스크립트가 실행되면서 "infoservice.xadl.js" 앱을 구동시켜야 만들어짐.
+    #    이건 단순 HTTP 요청(requests)만으로는 못 따라가는 부분이라, 이 터미널만 예외적으로
+    #    가상 브라우저(Playwright)를 한 번 띄워서 세션 쿠키(WMONID)만 얻어온 다음,
+    #    실제 데이터 요청은 기존처럼 가벼운 requests로 처리함.
     api_url = "https://info.bct2-4.com/nxCtr.do?version=1.0.0"
 
-    # ⚠️ 실패 원인 파악됨(GitHub Actions 로그로 확인): 서버가 "ErrorCode: -600"으로 거부했음.
-    #    처음 사장님이 캡처해주신 실제 요청 XML을 다시 보니, 우리가 빼먹은 파라미터가 있었어요:
-    #      - WMONID: 세션을 구분하는 값 (Nexacro 서버가 페이지 첫 접속 시 쿠키로 내려줌)
-    #      - styZoncd: 화면(그리드) 식별 코드 - 캡처하신 값(1510SP)이 고정값인지 확인 안 됐지만
-    #        일단 그 값을 그대로 사용
-    #      - useIudSql, dao: 빈 파라미터지만 태그 자체는 있어야 하는 것 같음
-    #    그래서 먼저 메인 페이지에 한 번 접속해서 세션(WMONID 쿠키)을 받아온 다음, 그 값을 그대로
-    #    요청에 실어 보내도록 수정함.
+    wmonid, browser_cookies = get_bct_session_cookies()
+
     session = requests.Session()
     session.headers.update(HEADERS_COMMON)
-
-    resp0 = session.get(base_url, timeout=30)
-    resp0.raise_for_status()
-    wmonid = session.cookies.get("WMONID", "")
-    if not wmonid:
-        # 쿠키에 없으면 응답 본문 안에 박혀있는 경우도 있어서 한 번 더 찾아봄
-        m = re.search(r"WMONID=([A-Za-z0-9]+)", resp0.text)
-        wmonid = m.group(1) if m else ""
-
-    if not wmonid:
-        # ⚠️ 그래도 못 찾으면, 이번엔 응답 헤더의 Set-Cookie까지 통째로 로그에 남겨서
-        #    정확히 뭐가 오고 있는지(쿠키 자체가 아예 안 오는지, 이름이 다른지) 확인함.
-        cookie_names = list(session.cookies.keys())
-        set_cookie_header = resp0.headers.get("Set-Cookie", "(없음)")
-        raise RuntimeError(
-            f"BCT에서 WMONID를 못 찾았어요. 접속한 URL: {resp0.url} / "
-            f"받은 쿠키 목록: {cookie_names} / Set-Cookie 헤더: {set_cookie_header} / "
-            f"응답 앞부분(300자): {resp0.text[:300]}"
-        )
+    for c in browser_cookies:
+        session.cookies.set(c.get("name"), c.get("value"), domain=c.get("domain", "").lstrip("."))
 
     xml_body = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Root xmlns="http://www.nexacroplatform.com/platform/dataset">
