@@ -698,11 +698,27 @@ function processPortScheduleTerminalFile(file, terminalName) {
         // 이름만으로 좁히면 1년치 데이터 중에 계속 여러 건이 걸려요.
         // 그래서 터미널 파일의 입항월과 같은 달인 것만 후보로 좁혀요.
         const targetMonth = arrivalDate ? arrivalDate.slice(0, 7) : "";
-        const matches = PORT_SCHEDULE_LIST.filter((p) => {
+        let matches = PORT_SCHEDULE_LIST.filter((p) => {
           if (p.vesselName.trim().toUpperCase() !== vesselName.toUpperCase()) return false;
           if (!targetMonth) return true; // 터미널 파일에 입항일 자체가 없으면 달로 못 좁히니 이름만으로 판단
           return (p.arrivalDate || "").slice(0, 7) === targetMonth;
         });
+
+        // ⚠️ 같은 달에 같은 배가 여러 번(예: 8/9, 8/28) 있으면, 예전엔 "애매함" 처리해서 매번 직접
+        //    골라주셔야 했어요. 이제는 오늘 날짜 기준으로 "아직 지나지 않은 일정 중 가장 가까운 것"을
+        //    자동으로 골라요 - 이미 지나간(예정일이 오늘보다 과거인) 일정은 어차피 갱신 대상이 아닐
+        //    가능성이 높고, 다가올 일정 중 제일 가까운 게 지금 갱신하려는 그 항차일 확률이 높거든요.
+        if (matches.length > 1) {
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const upcoming = matches
+            .filter((p) => (p.arrivalDate || "") >= todayStr)
+            .sort((a, b) => (a.arrivalDate || "").localeCompare(b.arrivalDate || ""));
+          if (upcoming.length > 0) {
+            matches = [upcoming[0]];
+          }
+          // upcoming이 0건이면(전부 이미 지난 일정) 그대로 두어서 아래 "여러 건" 분기로 빠지게 함 -
+          // 이 경우엔 자동으로 판단하기 애매하니 예전처럼 직접 확인해달라고 알려드려요.
+        }
 
         if (matches.length === 0) {
           notFound.push(vesselName);
