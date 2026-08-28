@@ -4,26 +4,26 @@
 fetch_terminals.py가 만들어둔 terminal_data.json을 읽어서, Firestore의 port_schedule
 컬렉션에 반영하는 스크립트예요.
 
-⚠️⚠️⚠️ 2026-08-27 설계 수정 ⚠️⚠️⚠️
-처음 버전은 "터미널에서 받아온 배는 다 Firestore에 올린다"는 방식이었는데, 이게 완전히
-잘못된 설계였어요. 실제 운영 방식은 이래요:
-
+⚠️⚠️⚠️ 2026-08-27 설계 수정 (2차) ⚠️⚠️⚠️
+실제 운영 방식:
   - port_schedule 컬렉션 = "이번 달에 실제로 관리하기로 확정한 배 목록" (노션에 그대로 나가는 최종본)
   - 이 목록은 매달 말에 사람이 직접 터미널 사이트에서 골라서 만들어두는 것
-  - 중간에 배가 추가/제외되는 것도 사람이 직접 결정해서 처리
-  - 자동화가 할 일은 딱 하나: "이미 이 목록에 있는 배"의 입항일/출항일이 바뀌었으면
-    그것만 최신으로 갱신하는 것 (그 이상도 이하도 아님)
+  - 자동화가 할 일은 딱 하나: 이미 이 목록에 있는 배의 입항일/출항일이 바뀌었으면 갱신하는 것
 
-그래서 이 스크립트는 절대로:
-  - 새 배를 추가하지 않아요 (raw에 없는 배는 터미널에서 나왔어도 그냥 무시)
+  - ⚠️ 매칭 기준은 "선박코드+항차+터미널"이 아니라 "선명(vesselName)"이에요.
+    회사에서 raw에 적어두는 "코드"·"항차"는 터미널이 매번 새로 붙이는 임시 항차번호라
+    조회할 때마다 달라지고(예: 어떤 조회에선 코드 YVE/항차 11E, 다른 조회에선 코드
+    MKUE/항차 GE633E), 터미널마다 표기 방식도 다 달라요. 유일하게 안정적인 건 선명뿐이라,
+    "선명이 같으면 같은 배"로 보고 매칭해요.
+
+이 스크립트는 절대로:
+  - 새 배를 추가하지 않아요 (raw에 없는 선명은 터미널에서 나왔어도 그냥 무시)
   - 배를 삭제하지 않아요
   - vesselName/vesselCode/voyage/terminal/line 같은 "정체성" 필드를 건드리지 않아요
-    (이것도 사람이 정한 값이니까요)
 
-오직 이미 존재하는 문서를 찾아서, arrivalDate/departureDate 두 필드만 갱신해요.
-매칭은 "선박코드 + 항차 + 터미널"이 정확히 같은 문서를 찾는 방식이고 (기존 문서 ID
-규칙과 동일), 못 찾으면 그냥 건너뛰어요 (터미널 스케줄에서 사라졌거나 아직 안 나온 것일
-수 있어서 - 이것도 사람이 확인할 일이지 자동화가 판단할 일이 아니에요).
+오직 이미 존재하는 문서(선명으로 매칭)를 찾아서, arrivalDate/departureDate 두 필드만
+갱신해요. 그리고 이번에 뭐가 바뀌었는지 별도 "오늘 갱신 내역" 문서에도 남겨서, 가이드
+페이지에서 팀원들이 볼 수 있게 해요.
 """
 
 import os
@@ -40,17 +40,6 @@ def log(msg):
     print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] {msg}", flush=True)
 
 
-def make_doc_id(vessel_code, voyage, terminal):
-    """guide_desks_portschedule.js의 portScheduleDocId()와 동일한 규칙."""
-    def clean(s):
-        return re.sub(r"[^A-Za-z0-9]", "_", str(s or "").strip().upper())
-
-    safe_code = clean(vessel_code) or "CODE"
-    safe_voyage = clean(voyage) or "VOY"
-    safe_terminal = clean(terminal) or "TERM"
-    return f"{safe_code}__{safe_voyage}__{safe_terminal}"
-
-
 def init_firestore():
     key_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT_KEY")
     if not key_json:
@@ -62,6 +51,11 @@ def init_firestore():
     cred = credentials.Certificate(key_dict)
     firebase_admin.initialize_app(cred)
     return firestore.client()
+
+
+def normalize_name(name):
+    """선명 비교용 - 앞뒤 공백 지우고 대문자로 통일 (터미널마다 대소문자/공백이 다를 수 있어서)."""
+    return re.sub(r"\s+", " ", str(name or "").strip()).upper()
 
 
 def main():
@@ -83,39 +77,63 @@ def main():
     db = init_firestore()
     collection = db.collection("port_schedule")
 
-    # 이번에 터미널에서 받아온 항목들을 doc_id 기준으로 정리
-    fetched_by_doc_id = {}
+    # ⚠️ raw 전체를 한 번 읽어서, 선명(정규화한 값) 기준으로 딕셔너리를 만들어둠.
+    #    문서 ID로 바로 찾을 수가 없어서(코드/항차가 raw 저장 시점과 터미널 조회 시점에
+    #    서로 다르게 나올 수 있어서) 어쩔 수 없이 전체를 한 번 읽어야 해요. raw 자체가
+    #    "이번 달 확정 목록"이라 몇백 건 수준일 거라 이 정도는 Firestore 읽기 비용 부담이
+    #    크지 않아요.
+    raw_docs = list(collection.stream())
+    raw_by_name = {}
+    for doc in raw_docs:
+        d = doc.to_dict() or {}
+        key = normalize_name(d.get("vesselName"))
+        if not key:
+            continue
+        raw_by_name.setdefault(key, []).append((doc.reference, d))
+
+    log(f"raw에 등록된 배: {len(raw_docs)}건 (선명 기준 {len(raw_by_name)}종)")
+
+    # 터미널에서 받아온 항목도 선명 기준으로 정리 (같은 배가 여러 터미널 결과에 겹칠 수 있어서 마지막 것으로 덮어씀)
+    fetched_by_name = {}
     for terminal_name, entries in results.items():
         for entry in entries:
             vessel_name = (entry.get("vesselName") or "").strip()
             if not vessel_name:
                 continue
-            doc_id = make_doc_id(entry.get("vesselCode"), entry.get("voyage"), entry.get("terminal") or terminal_name)
-            fetched_by_doc_id[doc_id] = entry
+            key = normalize_name(vessel_name)
+            fetched_by_name[key] = entry
 
-    log(f"터미널에서 받아온 항목: {len(fetched_by_doc_id)}건 (이 중 이미 raw에 등록된 것만 갱신 대상)")
+    log(f"터미널에서 받아온 배: {len(fetched_by_name)}종 (이 중 raw에 이미 있는 선명만 갱신 대상)")
 
     updated = 0
     skipped_not_in_raw = 0
+    skipped_ambiguous = 0  # 같은 선명이 raw에 여러 건이면(예: 같은 배가 다른 항차로 두 번) 자동 판단 안 함
     unchanged = 0
+    changes_for_today = []  # "오늘 갱신 내역"에 남길 목록
+
     batch = db.batch()
     batch_count = 0
 
-    for doc_id, entry in fetched_by_doc_id.items():
-        doc_ref = collection.document(doc_id)
-        existing = doc_ref.get()
-
-        if not existing.exists:
-            # ⚠️ 핵심 - raw에 없는 배는 절대 새로 만들지 않고 그냥 건너뜀
+    for name_key, entry in fetched_by_name.items():
+        matches = raw_by_name.get(name_key)
+        if not matches:
+            # ⚠️ 핵심 - raw에 없는 선명은 절대 새로 만들지 않고 그냥 건너뜀
             skipped_not_in_raw += 1
             continue
 
-        existing_data = existing.to_dict() or {}
+        if len(matches) > 1:
+            # 같은 선명이 raw에 여러 건 있으면(같은 배가 이번 달에 두 번 입항 등) 자동으로
+            # 어느 쪽 날짜를 갱신해야 할지 확신할 수 없어서 건너뜀 - 사람이 직접 확인해야 함
+            skipped_ambiguous += 1
+            continue
+
+        doc_ref, existing_data = matches[0]
         new_arrival = entry.get("arrivalDate") or ""
         new_departure = entry.get("departureDate") or ""
+        old_arrival = existing_data.get("arrivalDate") or ""
+        old_departure = existing_data.get("departureDate") or ""
 
-        # 날짜가 실제로 달라졌을 때만 갱신 (같으면 굳이 쓰기 요청을 안 보내서 Firestore 쓰기 비용도 아낌)
-        if existing_data.get("arrivalDate") == new_arrival and existing_data.get("departureDate") == new_departure:
+        if old_arrival == new_arrival and old_departure == new_departure:
             unchanged += 1
             continue
 
@@ -128,11 +146,21 @@ def main():
         if new_departure:
             fields["departureDate"] = new_departure
 
+        change_record = {
+            "vesselName": existing_data.get("vesselName", ""),
+            "terminal": existing_data.get("terminal", ""),
+            "oldArrivalDate": old_arrival,
+            "newArrivalDate": new_arrival or old_arrival,
+            "oldDepartureDate": old_departure,
+            "newDepartureDate": new_departure or old_departure,
+        }
+        changes_for_today.append(change_record)
+
         if dry_run:
             log(
-                f"  [미리보기] {existing_data.get('vesselName')} ({doc_id}): "
-                f"입항 {existing_data.get('arrivalDate')} → {new_arrival or '(변경없음)'}, "
-                f"출항 {existing_data.get('departureDate')} → {new_departure or '(변경없음)'}"
+                f"  [미리보기] {existing_data.get('vesselName')}: "
+                f"입항 {old_arrival} → {new_arrival or '(변경없음)'}, "
+                f"출항 {old_departure} → {new_departure or '(변경없음)'}"
             )
         else:
             batch.update(doc_ref, fields)
@@ -151,10 +179,23 @@ def main():
 
     log(
         f"✅ 완료: 날짜 갱신 {updated}건 / 변경사항 없음 {unchanged}건 / "
-        f"raw에 없어서 건너뜀(신규 추가 안 함) {skipped_not_in_raw}건"
+        f"raw에 없어서 건너뜀(신규 추가 안 함) {skipped_not_in_raw}건 / "
+        f"같은 선명이 raw에 여러 건이라 건너뜀 {skipped_ambiguous}건"
     )
-    if dry_run:
-        log("⚠️ --dry-run 모드라 실제로는 아무것도 안 바뀌었어요. 실제 반영하려면 --dry-run 없이 실행하세요.")
+
+    # "오늘 자동 갱신 내역"을 별도 문서(port_schedule_updates/latest)에 저장 -
+    # 가이드 페이지가 이 문서 하나만 보고 배너로 보여줄 수 있게 함
+    if not dry_run:
+        summary_ref = db.collection("port_schedule_updates").document("latest")
+        summary_ref.set({
+            "ranAt": firestore.SERVER_TIMESTAMP,
+            "ranAtIso": datetime.datetime.now().isoformat(),
+            "totalUpdated": updated,
+            "changes": changes_for_today,
+        })
+        log(f"'오늘 자동 갱신 내역' 기록 완료 (port_schedule_updates/latest, {len(changes_for_today)}건)")
+    else:
+        log("⚠️ --dry-run 모드라 실제로는 아무것도 안 바뀌었고, 갱신 내역도 기록 안 됨.")
 
 
 if __name__ == "__main__":
