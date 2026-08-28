@@ -162,20 +162,33 @@ def fetch_bpt():
     header_cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in header_cells]
 
     def find_col(*keywords):
-        for i, h in enumerate(header_cells):
-            if any(k in h for k in keywords):
-                return i
+        # ⚠️ 키워드를 "더 정확한 것부터" 순서대로 넘겨준 거라, 그 순서를 지켜야 해요.
+        # (헤더를 그냥 처음부터 훑으면 "접안"처럼 덜 정확한 키워드가 "입항일시"보다 먼저
+        # 매칭되어버리는 문제가 있었어요.)
+        for kw in keywords:
+            for i, h in enumerate(header_cells):
+                if h == kw:
+                    return i
+        for kw in keywords:
+            for i, h in enumerate(header_cells):
+                if kw in h:
+                    return i
         return -1
 
-    idx_vessel = find_col("선명", "모선명", "Vessel")
-    idx_voyage = find_col("항차", "Voyage")
+    # ⚠️ 실제 헤더(GitHub Actions 로그로 확인됨):
+    #   ['구분','선석','모선항차','선박명','접안','선사','입항 예정일시','입항일시',
+    #    '작업완료일시','출항일시','반입 마감일시','양하','선적','S/H','전배','항로','검역']
+    # "선명"이 아니라 "선박명"이라서 못 찾고 있었어요. 그리고 "입항"이 여러 컬럼(입항 예정일시,
+    # 입항일시)에 다 걸릴 수 있어서, 더 구체적인 키워드를 먼저 확인하는 순서로 둠.
+    idx_vessel = find_col("선박명", "선명", "모선명", "Vessel")
+    idx_voyage = find_col("모선항차", "항차", "Voyage")
     idx_line = find_col("선사", "Line")
-    idx_arrival = find_col("접안", "입항", "ETB", "ATB")
-    idx_departure = find_col("출항", "ETD", "ATD")
+    idx_arrival = find_col("입항일시", "접안", "ETB", "ATB")
+    idx_departure = find_col("출항일시", "ETD", "ATD")
 
     if idx_vessel < 0:
         raise RuntimeError(
-            f"BPT 표에서 '선명' 컬럼을 못 찾았어요 - 잘못된 자리에서 값을 뽑을 위험이 있어서 멈춰요. "
+            f"BPT 표에서 '선박명' 컬럼을 못 찾았어요 - 잘못된 자리에서 값을 뽑을 위험이 있어서 멈춰요. "
             f"실제 헤더: {header_cells}"
         )
 
@@ -274,26 +287,58 @@ def fetch_hpnt():
     #    "PNIT랑 비슷할 것"이라고 추측만 하고 넘어갔었는데, 실제로는 안 맞아서 잘못된 데이터가
     #    쌓였어요. 이제 헤더 행에서 "선명" 컬럼 위치를 직접 찾아서 그 자리 값만 신뢰하고,
     #    못 찾으면 추측하지 않고 에러로 멈추도록 바꿨어요.
-    header_row = re.search(r"<tr[^>]*>(.*?)</tr>", html, re.S)
-    if not header_row:
-        raise RuntimeError("HPNT 응답에서 표(<tr>)를 하나도 못 찾았어요.")
+    #
+    # ⚠️ 추가로 발견된 문제: 페이지 맨 위 <tr>가 항상 진짜 데이터 표의 헤더는 아니었어요
+    #    (실제로 HPNT는 첫 표가 ['아이디', ''] 같은 전혀 다른 표였음 - 아마 로그인/검색 폼
+    #    쪽 표를 먼저 잡은 것 같아요). 그래서 이제 페이지 안의 "모든" <tr>를 하나씩 살펴보면서
+    #    "선명"이나 "선박명" 같은 단어가 들어있는 진짜 헤더 행을 찾아내는 방식으로 바꿨어요.
+    all_trs = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)
 
-    header_cells_raw = re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", header_row.group(1), re.S)
-    header_cells = [re.sub(r"<[^>]+>", "", c).strip() for c in header_cells_raw]
-    header_cells = [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in header_cells]
+    def cells_of(tr_html):
+        raw = re.findall(r"<t[hd][^>]*>(.*?)</t[hd]>", tr_html, re.S)
+        cleaned = [re.sub(r"<[^>]+>", "", c).strip() for c in raw]
+        return [re.sub(r"&nbsp;|\xa0", " ", c).strip() for c in cleaned]
 
-    def find_col(*keywords):
-        for i, h in enumerate(header_cells):
-            if any(k in h for k in keywords):
-                return i
+    def find_col(cells, *keywords):
+        # ⚠️ 키워드는 "더 정확한 것부터" 순서대로 넘겨준 거라, 그 순서를 지켜야 해요.
+        # 예전엔 "헤더를 처음부터 훑으면서 keywords 중 아무거나 걸리면 채택"하는 방식이라,
+        # 어쩌다 헤더 앞쪽에 있는 덜 정확한 키워드(예: "접안")가 뒤쪽에 있는 더 정확한
+        # 키워드("입항일시")보다 먼저 매칭되는 문제가 있었어요. 이제 키워드 순서대로 먼저
+        # "정확히 일치하는" 컬럼이 있는지 다 확인한 다음, 그래도 없으면 "포함되는" 컬럼을
+        # 키워드 순서대로 찾아요.
+        for kw in keywords:
+            for i, h in enumerate(cells):
+                if h == kw:
+                    return i
+        for kw in keywords:
+            for i, h in enumerate(cells):
+                if kw in h:
+                    return i
         return -1
 
-    idx_vessel = find_col("선명", "모선명", "Vessel")
-    idx_code = find_col("모선항차", "선박코드", "코드")
-    idx_voyage = find_col("항차", "Voyage")
-    idx_line = find_col("선사", "Line")
-    idx_arrival = find_col("접안", "입항", "ETB", "ATB")
-    idx_departure = find_col("출항", "ETD", "ATD")
+    header_cells = None
+    header_row_index = -1
+    for idx, tr_html in enumerate(all_trs):
+        cells = cells_of(tr_html)
+        if find_col(cells, "선명", "선박명", "모선명", "Vessel") >= 0:
+            header_cells = cells
+            header_row_index = idx
+            break
+
+    if header_cells is None:
+        # 참고용으로 실제로 어떤 표들이 있었는지 앞의 몇 개만 보여줌 (다음에 또 구조 바뀌면 바로 확인 가능하게)
+        sample = [cells_of(tr) for tr in all_trs[:5]]
+        raise RuntimeError(
+            f"HPNT 페이지 안에서 '선명' 관련 헤더가 있는 표를 못 찾았어요. "
+            f"페이지에 있던 표들(앞 5개) 헤더 후보: {sample}"
+        )
+
+    idx_vessel = find_col(header_cells, "선박명", "선명", "모선명", "Vessel")
+    idx_code = find_col(header_cells, "모선항차", "선박코드", "코드")
+    idx_voyage = find_col(header_cells, "항차", "Voyage")
+    idx_line = find_col(header_cells, "선사", "Line")
+    idx_arrival = find_col(header_cells, "접안", "입항", "ETB", "ATB")
+    idx_departure = find_col(header_cells, "출항", "ETD", "ATD")
 
     if idx_vessel < 0:
         raise RuntimeError(
@@ -301,7 +346,8 @@ def fetch_hpnt():
             f"실제 헤더: {header_cells}"
         )
 
-    rows = re.findall(r"<tr[^>]*>(.*?)</tr>", html, re.S)[1:]  # 첫 줄(헤더)은 건너뜀
+    # 실제로 찾은 헤더 행(header_row_index) 바로 다음 줄부터가 데이터 행
+    rows = all_trs[header_row_index + 1:]
     entries = []
     for row_html in rows:
         cells = re.findall(r"<td[^>]*>(.*?)</td>", row_html, re.S)
