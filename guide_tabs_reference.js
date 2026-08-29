@@ -964,7 +964,7 @@ function renderVesselEditorBody(month, existingId) {
   const usageGuide = document.createElement("div");
   usageGuide.className = "hint";
   usageGuide.style.margin = "6px 0 4px";
-  usageGuide.textContent = "💡 PNIT·HPNT·BPT·E1은 위 \"🔄 자동조회\" 버튼 누르면 바로 불러와져요. BCT나 한진인천 스케줄을 볼 땐 아래 트레드링스를 참고해주세요.";
+  usageGuide.textContent = "💡 PNIT·HPNT·BPT·한진인천·E1·BCT는 위 \"🔄 자동조회\" 버튼 누르면 바로 불러와져요. 혹시 안 나오면 아래 트레드링스에서 직접 찾아 붙여넣기 해주세요.";
   body.appendChild(usageGuide);
 
   const manualLinksRow = document.createElement("div");
@@ -1152,6 +1152,7 @@ const VESSEL_AUTO_FETCH_TERMINALS = [
   { source: "bpt", label: "BPT" },
   { source: "hanjin_incheon", label: "한진인천" },
   { source: "e1", label: "E1" },
+  { source: "bct", label: "BCT" },
 ];
 
 /* 자동조회가 안 되는 터미널 - 트레드링스 하나로 통일해서 바로가기 제공 */
