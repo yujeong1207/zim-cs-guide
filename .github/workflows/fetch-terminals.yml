@@ -5,14 +5,24 @@ on:
   # BPT/HPNT 파싱 컬럼이 실제와 안 맞아서(검증 없이 추측으로 넣은 인덱스였음), 항차 코드 같은
   # 엉뚱한 값이 선명 자리에 들어가며 노션 입항 스케줄에 잘못된 데이터가 대량으로 쌓였어요.
   # 정확한 컬럼을 다시 확인하고, 오염된 데이터도 다 정리하기 전까지는 자동 스케줄을 켜면 안 돼요.
-  # 아래 schedule을 다시 켜려면, 문제 다 해결한 다음 주석(#) 없애고 workflow_dispatch만 있는 상태를
-  # 원상복구하면 돼요.
+  # 아래 schedule을 다시 켜려면, 문제 다 해결한 다음 주석(#) 없애고 원상복구하면 돼요.
   # schedule:
   #   - cron: "10 0 * * *"
 
-  # 매일 자동 실행 말고도, GitHub 웹사이트에서 "Run workflow" 버튼 눌러서 언제든 수동으로도
-  # 실행해볼 수 있게 해둠 (테스트하거나, 아침에 실패했을 때 바로 재시도하고 싶을 때 유용해요)
-  workflow_dispatch: {}
+  # ⚠️ 2026-08-29 수정: 예전엔 "미리보기" 단계 다음에 바로 "실제 반영" 단계가 자동으로 이어져서,
+  # 미리보기가 사실상 의미가 없었어요(어차피 그대로 실제 반영까지 실행됨). 이제 실행할 때마다
+  # "미리보기만 할지 / 실제로 반영할지"를 사람이 직접 골라야 하고, 실제 반영은 미리보기 로그를
+  # 사람이 보고 확인한 다음 별도로 다시 실행해야만 진행돼요.
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: '"preview"면 미리보기만(아무것도 안 바뀜), "apply"면 실제로 Firestore에 반영'
+        required: true
+        default: "preview"
+        type: choice
+        options:
+          - preview
+          - apply
 
 jobs:
   fetch-and-push:
@@ -39,7 +49,17 @@ jobs:
         run: python scripts/fetch_terminals.py
         working-directory: .
 
-      - name: Firestore에 반영
+      # 스케줄(매일 자동 실행)로 돌 때는 항상 미리보기 없이 바로 반영하는 게 자동화의 목적에
+      # 맞으니 preview 모드가 아니게(=apply)로 취급함. 반면 사람이 직접 workflow_dispatch로
+      # 실행할 때만 "preview"를 고를 수 있고, 그때는 아래 반영 단계가 실행되지 않아요.
+      - name: 미리보기 (실제로는 아무것도 안 바뀜)
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.apply == 'preview' }}
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        run: python scripts/push_to_firestore.py --dry-run
+
+      - name: Firestore에 반영 (이미 raw에 있는 배의 입항일/출항일만 갱신, 신규 추가 절대 안 함)
+        if: ${{ github.event_name != 'workflow_dispatch' || github.event.inputs.apply == 'apply' }}
         env:
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
         run: python scripts/push_to_firestore.py
