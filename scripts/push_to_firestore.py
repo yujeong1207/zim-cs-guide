@@ -77,21 +77,44 @@ def main():
     db = init_firestore()
     collection = db.collection("port_schedule")
 
-    # ⚠️ raw 전체를 한 번 읽어서, 선명(정규화한 값) 기준으로 딕셔너리를 만들어둠.
+    # ⚠️⚠️⚠️ 2026-08-29 추가 수정 ⚠️⚠️⚠️
+    # 선명만으로 매칭하다 보니, raw에 남아있는 "작년/지난달 같은 배의 예전 항차 기록"까지
+    # 걸려서 오늘 날짜로 덮어써버리는 사고가 있었어요 (예: Msc Juliette 2025-07-11 →
+    # 2026-08-28로 잘못 갱신됨). 입항 캘린더가 "오늘 기준 2주치"만 관리하는 거니까,
+    # 갱신 대상도 딱 그 범위 근처(여유 있게 오늘 기준 앞뒤 14일)에 있는 항차로만 한정해야 해요.
+    # 그 범위를 벗어난 낡은 기록은 애초에 매칭 후보에도 안 넣어서, 다시는 안 건드리게 함.
+    today = datetime.date.today()
+    window_start = (today - datetime.timedelta(days=14)).isoformat()
+    window_end = (today + datetime.timedelta(days=14)).isoformat()
+
+    def in_active_window(arrival_date):
+        if not arrival_date:
+            return False  # 입항일 자체가 비어있으면 "최근 항차인지" 판단이 안 되니 안전하게 제외
+        return window_start <= arrival_date <= window_end
+
+    # raw 전체를 한 번 읽어서, 선명(정규화한 값) 기준으로 딕셔너리를 만들어둠.
     #    문서 ID로 바로 찾을 수가 없어서(코드/항차가 raw 저장 시점과 터미널 조회 시점에
     #    서로 다르게 나올 수 있어서) 어쩔 수 없이 전체를 한 번 읽어야 해요. raw 자체가
     #    "이번 달 확정 목록"이라 몇백 건 수준일 거라 이 정도는 Firestore 읽기 비용 부담이
     #    크지 않아요.
     raw_docs = list(collection.stream())
     raw_by_name = {}
+    skipped_old_record = 0
     for doc in raw_docs:
         d = doc.to_dict() or {}
         key = normalize_name(d.get("vesselName"))
         if not key:
             continue
+        if not in_active_window(d.get("arrivalDate")):
+            # 오늘 기준 ±14일 범위 밖의 낡은 기록은 매칭 후보에서 아예 제외 (다시는 안 건드림)
+            skipped_old_record += 1
+            continue
         raw_by_name.setdefault(key, []).append((doc.reference, d))
 
-    log(f"raw에 등록된 배: {len(raw_docs)}건 (선명 기준 {len(raw_by_name)}종)")
+    log(
+        f"raw에 등록된 배: {len(raw_docs)}건 / 그중 최근 항차(±14일) {len(raw_docs) - skipped_old_record}건, "
+        f"낡은 기록이라 제외 {skipped_old_record}건 (선명 기준 {len(raw_by_name)}종)"
+    )
 
     # 터미널에서 받아온 항목도 선명 기준으로 정리 (같은 배가 여러 터미널 결과에 겹칠 수 있어서 마지막 것으로 덮어씀)
     fetched_by_name = {}
