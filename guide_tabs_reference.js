@@ -964,7 +964,7 @@ function renderVesselEditorBody(month, existingId) {
   const usageGuide = document.createElement("div");
   usageGuide.className = "hint";
   usageGuide.style.margin = "6px 0 4px";
-  usageGuide.textContent = "💡 PNIT·HPNT·BPT·한진인천·E1·BCT는 위 \"🔄 자동조회\" 버튼 누르면 바로 불러와져요. 혹시 안 나오면 아래 트레드링스에서 직접 찾아 붙여넣기 해주세요.";
+  usageGuide.textContent = "💡 PNIT·HPNT·BPT·한진인천·E1·BCT는 위 \"🔄 자동조회\" 버튼 누르면 바로 불러와져요 (BCT는 하루 4번 갱신되는 캐시 기준이라 최대 몇 시간 전 정보일 수 있어요). 혹시 안 나오면 아래 트레드링스에서 직접 찾아 붙여넣기 해주세요.";
   body.appendChild(usageGuide);
 
   const manualLinksRow = document.createElement("div");
@@ -1145,14 +1145,16 @@ function renderVesselEditorBody(month, existingId) {
   body.appendChild(actions);
 }
 
-/* 자동조회 지원 터미널 목록 - 하나씩 검증되는 대로 여기에 추가 */
+/* 자동조회 지원 터미널 목록 - Apps Script(CITI_FX_PROXY_URL) 경유. 하나씩 검증되는 대로 여기에 추가.
+   ⚠️ BCT는 여기 없어요! BCT 사이트는 진짜 브라우저(자바스크립트 실행)가 있어야만 접속되는 걸 확인해서,
+   Apps Script(서버 요청만 가능)로는 안 돼요. 그래서 BCT는 GitHub Actions가 하루 4번(9/12/14/16시)
+   미리 긁어서 Firestore에 저장해둔 캐시를 대신 조회해요 (아래 fetchBctFromCache 참고). */
 const VESSEL_AUTO_FETCH_TERMINALS = [
   { source: "pnit", label: "PNIT" },
   { source: "hpnt", label: "HPNT" },
   { source: "bpt", label: "BPT" },
   { source: "hanjin_incheon", label: "한진인천" },
   { source: "e1", label: "E1" },
-  { source: "bct", label: "BCT" },
 ];
 
 /* 자동조회가 안 되는 터미널 - 트레드링스 하나로 통일해서 바로가기 제공 */
@@ -1160,10 +1162,42 @@ const MANUAL_TERMINAL_LINKS = [
   { label: "트레드링스(전체 터미널)", url: "https://www.tradlinx.com/ko/container-terminal-schedule" },
 ];
 
+/* BCT는 Apps Script를 안 거치고, GitHub Actions가 하루 4번 미리 긁어둔 Firestore 캐시
+   (bct_schedule_cache/latest)를 직접 읽어서 그 안에서 선명을 찾음. 캐시라서 최대 2~3시간 전
+   기준일 수 있지만, 조회 자체는 즉시(빠름) 이뤄져요. */
+async function fetchBctFromCache(vesselName) {
+  try {
+    await window.fbReady;
+    const doc = await window.fbDb.collection("bct_schedule_cache").doc("latest").get();
+    if (!doc.exists) return [];
+    const data = doc.data();
+    const entries = data.entries || [];
+    const target = vesselName.trim().toUpperCase();
+
+    const toResult = (entry) => ({
+      terminal: "BCT",
+      vessel: entry.vesselName || "",
+      voyage: entry.voyage || "",
+      eta: entry.arrivalDate || "",
+      etd: entry.departureDate || "",
+      line: entry.line || "",
+    });
+
+    // 정확히 일치하는 게 있으면 그것만, 없으면 포함되는 것까지 넓혀서 (Apps Script 쪽 filterVesselMatches와 동일한 규칙)
+    const exact = entries.filter((r) => (r.vesselName || "").trim().toUpperCase() === target);
+    if (exact.length > 0) return exact.map(toResult);
+    return entries.filter((r) => (r.vesselName || "").toUpperCase().includes(target)).map(toResult);
+  } catch (e) {
+    console.warn("[자동조회] BCT(캐시) 조회 실패:", e && e.message ? e.message : e);
+    return [];
+  }
+}
+
 async function fetchVesselScheduleAuto(vesselName, statusEl, resultsEl, onPick) {
   resultsEl.innerHTML = "";
   if (!vesselName) { statusEl.textContent = "⚠️ 선명을 먼저 입력해주세요."; return; }
-  statusEl.textContent = "🔄 조회 중... (" + VESSEL_AUTO_FETCH_TERMINALS.map((t) => t.label).join(", ") + ")";
+  const allLabels = VESSEL_AUTO_FETCH_TERMINALS.map((t) => t.label).concat(["BCT"]);
+  statusEl.textContent = "🔄 조회 중... (" + allLabels.join(", ") + ")";
 
   const fetchOne = async (term) => {
     const controller = new AbortController();
@@ -1197,10 +1231,13 @@ async function fetchVesselScheduleAuto(vesselName, statusEl, resultsEl, onPick) 
     const chunkResults = await Promise.all(chunk.map(fetchOne));
     resultsByTerminal.push(...chunkResults);
   }
+  // BCT는 Apps Script가 아니라 Firestore 캐시에서 - 다른 터미널 조회랑 동시에 진행해도 되니 따로 await
+  const bctResults = await fetchBctFromCache(vesselName);
+  resultsByTerminal.push(bctResults);
   let allMatches = resultsByTerminal.flat();
 
   if (allMatches.length === 0) {
-    statusEl.textContent = "⚠️ 등록된 터미널(" + VESSEL_AUTO_FETCH_TERMINALS.map((t) => t.label).join(", ") + ")에서 못 찾았어요. 아래 'BCT/HJIT 직접 확인' 링크를 써보세요.";
+    statusEl.textContent = "⚠️ 등록된 터미널(" + allLabels.join(", ") + ")에서 못 찾았어요. 아래 트레드링스 링크를 써보세요.";
     return;
   }
 
