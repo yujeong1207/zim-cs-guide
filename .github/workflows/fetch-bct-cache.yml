@@ -1,0 +1,40 @@
+name: BCT 스케줄 캐시 갱신 (하루 4번)
+
+on:
+  # 한국시간 9시/12시/14시/16시에 자동 실행. cron은 UTC 기준이라 9시간 빼서 적음.
+  #   한국 9시  = UTC 0시   → "0 0 * * *"
+  #   한국 12시 = UTC 3시   → "0 3 * * *"
+  #   한국 14시 = UTC 5시   → "0 5 * * *"
+  #   한국 16시 = UTC 7시   → "0 7 * * *"
+  schedule:
+    - cron: "0 0 * * *"
+    - cron: "0 3 * * *"
+    - cron: "0 5 * * *"
+    - cron: "0 7 * * *"
+
+  # 언제든 수동으로도 갱신해볼 수 있게
+  workflow_dispatch: {}
+
+jobs:
+  fetch-bct:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 저장소 코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 파이썬 설치
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: 필요한 패키지 설치
+        run: pip install -r scripts/requirements.txt
+
+      - name: 가상 브라우저(Playwright) 설치
+        run: python -m playwright install --with-deps chromium
+
+      - name: BCT 스케줄 긁어서 Firestore 캐시에 저장
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+        working-directory: scripts
+        run: python fetch_bct_cache.py
