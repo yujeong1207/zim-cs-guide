@@ -2046,3 +2046,12 @@ input, select, textarea {
   /* 요약 숫자 박스(팔로우업보드) - 2개씩 두 줄로 */
   .followup-summary-row { display: grid; grid-template-columns: 1fr 1fr; }
 }
+
+/* ===== 🔄 노션 입항 스케줄 - 오늘 자동 갱신 내역 배너 ===== */
+.port-schedule-update-banner {
+  background: #eff8ff; border: 1px solid #bfdbfe; border-radius: 10px;
+  padding: 12px 16px; margin: 10px 0; font-size: 14px;
+}
+.port-schedule-update-banner.none { background: #f9fafb; border-color: #e5e7eb; color: #6b7280; }
+.port-schedule-update-header { cursor: pointer; user-select: none; }
+.port-schedule-update-old { color: #9ca3af; text-decoration: line-through; }

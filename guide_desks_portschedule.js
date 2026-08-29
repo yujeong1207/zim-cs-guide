@@ -114,9 +114,87 @@ function renderPortScheduleSubTabButtons() {
   `;
 }
 
+let portScheduleAutoUpdateLoaded = false; // 탭 열릴 때마다 다시 안 읽어오게(Firestore 읽기 비용 절약), 딱 한 번만
+
+/* 매일 아침 자동화(fetch_terminals.py + push_to_firestore.py)가 실행되고 나면,
+   port_schedule_updates/latest 문서에 "오늘 뭐가 바뀌었는지" 기록을 남겨줘요.
+   이 함수는 그 문서를 읽어서 화면 위에 배너로 보여줘요. */
+async function loadPortScheduleAutoUpdateBanner() {
+  if (portScheduleAutoUpdateLoaded) return; // 이미 한 번 불러왔으면 다시 안 읽음
+  portScheduleAutoUpdateLoaded = true;
+  try {
+    await window.fbReady;
+    const doc = await window.fbDb.collection("port_schedule_updates").doc("latest").get();
+    if (!doc.exists) return; // 자동화가 아직 한 번도 안 돌았으면 배너 자체를 안 보여줌
+    renderPortScheduleAutoUpdateBanner(doc.data());
+  } catch (err) {
+    console.error("자동 갱신 내역 불러오기 실패:", err);
+  }
+}
+
+function renderPortScheduleAutoUpdateBanner(data) {
+  const wrap = document.getElementById("portScheduleAutoUpdateBanner");
+  if (!wrap) return;
+
+  const changes = data.changes || [];
+  const ranAtIso = data.ranAtIso || "";
+  let ranAtLabel = "";
+  if (ranAtIso) {
+    const d = new Date(ranAtIso);
+    if (!isNaN(d.getTime())) {
+      ranAtLabel = `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+  }
+
+  // 오늘 실행된 게 아니면(예: 어제 마지막으로 돈 채로 며칠 지남) "오늘"이라고 하면 헷갈리니 날짜를 같이 보여줌
+  if (changes.length === 0) {
+    wrap.innerHTML = `
+      <div class="port-schedule-update-banner none">
+        ℹ️ 마지막 자동 갱신(${escapeHtml(ranAtLabel)}) 때는 raw에 등록된 배 중 날짜가 바뀐 게 없었어요.
+      </div>`;
+    return;
+  }
+
+  const rows = changes.map((c) => {
+    const arrivalChanged = c.oldArrivalDate !== c.newArrivalDate;
+    const departureChanged = c.oldDepartureDate !== c.newDepartureDate;
+    return `
+      <tr>
+        <td>${escapeHtml(c.vesselName || "-")}</td>
+        <td>${escapeHtml(c.terminal || "-")}</td>
+        <td>${arrivalChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldArrivalDate || "-")}</span> → <b>${escapeHtml(c.newArrivalDate || "-")}</b>` : escapeHtml(c.newArrivalDate || "-")}</td>
+        <td>${departureChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldDepartureDate || "-")}</span> → <b>${escapeHtml(c.newDepartureDate || "-")}</b>` : escapeHtml(c.newDepartureDate || "-")}</td>
+      </tr>`;
+  }).join("");
+
+  wrap.innerHTML = `
+    <div class="port-schedule-update-banner">
+      <div class="port-schedule-update-header" onclick="togglePortScheduleUpdateDetail()">
+        🔄 자동 갱신(${escapeHtml(ranAtLabel)}) — <b>${changes.length}건</b> 일정 변경됨 <span id="portScheduleUpdateCaret">▾ 펼쳐보기</span>
+      </div>
+      <div id="portScheduleUpdateDetail" style="display:none;">
+        <table class="contacts-table" style="margin-top:8px;">
+          <tr><th>선명</th><th>터미널</th><th>입항일</th><th>출항일</th></tr>
+          ${rows}
+        </table>
+      </div>
+    </div>`;
+}
+
+function togglePortScheduleUpdateDetail() {
+  const detail = document.getElementById("portScheduleUpdateDetail");
+  const caret = document.getElementById("portScheduleUpdateCaret");
+  if (!detail) return;
+  const isOpen = detail.style.display !== "none";
+  detail.style.display = isOpen ? "none" : "block";
+  if (caret) caret.textContent = isOpen ? "▾ 펼쳐보기" : "▴ 접기";
+}
+
 function loadPortScheduleTab() {
   const wrap = document.getElementById("portScheduleWrap");
   if (!wrap) return;
+
+  loadPortScheduleAutoUpdateBanner(); // 탭 처음 열릴 때든 재방문이든, 아직 안 읽어왔으면 항상 시도
 
   // ⚠️ 예전엔 이 탭에 들어올 때마다 화면(wrap.innerHTML)을 통째로 새로 그렸는데, 정작 데이터 구독은
   //    "처음 한 번만" 하도록 되어있어서 - 두 번째 방문부터는 화면만 텅 비워지고 아무도 다시 채워주질
@@ -130,6 +208,8 @@ function loadPortScheduleTab() {
 
   wrap.innerHTML = `
     <div id="portScheduleSubTabButtons" class="sub-tab-buttons"></div>
+
+    <div id="portScheduleAutoUpdateBanner"></div>
 
     <div id="portScheduleRawSection">
       <div class="desk-search-row">
@@ -146,7 +226,7 @@ function loadPortScheduleTab() {
             <option value="PNIT">PNIT</option>
             <option value="HPNT">HPNT</option>
             <option value="BPT">BPT (신선대/감만)</option>
-            <option value="한진인천">한진인천</option>
+            <option value="HJIT">한진인천 (HJIT)</option>
           </select>
           <label class="excel-upload-box" id="portScheduleTerminalUploadBox" style="padding:18px 14px; display:block;">
             <input type="file" id="portScheduleTerminalFileInput" accept=".xlsx,.xls" onchange="handlePortScheduleTerminalFile(event)">
@@ -671,7 +751,7 @@ function processPortScheduleTerminalFile(file, terminalName) {
       const aoa = parseTerminalFileToAOA(e.target.result);
 
       // 한진인천만 헤더가 2줄로 꼬여있어서 전용 로직을 씀, 나머지는 일반 방식
-      const headerInfo = terminalName === "한진인천" ? findHanjinIncheonHeaderRow(aoa) : findTerminalUpdateHeaderRow(aoa);
+      const headerInfo = terminalName === "HJIT" ? findHanjinIncheonHeaderRow(aoa) : findTerminalUpdateHeaderRow(aoa);
       if (!headerInfo) {
         throw new Error('선명("모선명"/"선박명"/"선명")과 입항 관련 컬럼을 못 찾았어요. 파일 형식을 확인해주세요.');
       }
