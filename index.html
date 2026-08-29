@@ -109,6 +109,7 @@
     <div class="tab-group-dropdown" id="tabGroupDropdown-reference">
       <button class="main-tab-btn" data-tab="resources" onclick="switchMainTab('resources')">🔗 자료 모음</button>
       <button class="main-tab-btn" data-tab="vessels" onclick="switchMainTab('vessels')">🚢 모선 일정</button>
+      <button class="main-tab-btn" data-tab="panamaTransit" onclick="switchMainTab('panamaTransit')">🛳️ 파나마 통과 현황</button>
       <button class="main-tab-btn" data-tab="contacts" onclick="switchMainTab('contacts')">📞 연락처</button>
       <button class="main-tab-btn" data-tab="news" onclick="switchMainTab('news')">📰 오늘의 물류뉴스</button>
     </div>
@@ -182,6 +183,16 @@
     <button class="btn secondary-btn" onclick="openAddVesselMonth()">＋ 새 달 추가</button>
     <button class="btn secondary-btn" onclick="openVesselEditor(null, null)">＋ 배 추가</button>
     <button class="btn secondary-btn" onclick="loadVesselTab()">🔄 새로고침</button>
+  </div>
+</div>
+
+<!-- ===== 🛳️ 파나마 통과 현황 탭 ===== -->
+<div class="tab-page" id="page-panamaTransit">
+  <div class="hint" style="margin-bottom:14px;">💡 부산 출항일 기준으로 월별로 정리돼요. 소요일 25일 이상은 빨간 배지로 강조되고, 이미 통과한 항차는 흐리게 표시돼요 (오늘 날짜 기준 자동 계산).<br>🔴 <b>실시간 공유돼요</b> — 한 명이 항차를 등록·수정·삭제하면 팀원 전체 화면에 바로 반영되니, 같은 항차를 여러 명이 각자 입력할 필요 없어요.</div>
+  <div id="panamaTransitMonthsWrap"></div>
+  <div class="vessel-bottom-actions">
+    <button class="btn secondary-btn" onclick="openPanamaTransitEditor(null)">＋ 항차 추가</button>
+    <button class="btn secondary-btn" onclick="loadPanamaTransitTab(true)">🔄 새로고침</button>
   </div>
 </div>
 
@@ -733,6 +744,16 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="panamaEditOverlay" style="display:none;" onclick="if(event.target===this) closePanamaTransitEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="panamaEditTitle">🛳️ 파나마 통과 현황</div>
+      <button class="close-btn" onclick="closePanamaTransitEditor()">✕ 닫기</button>
+    </div>
+    <div id="panamaEditBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="followupEditOverlay" style="display:none;" onclick="if(event.target===this) closeFollowupEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -782,6 +803,7 @@
 <script src="guide_core_ui.js"></script>
 <script src="guide_desks_portschedule.js"></script>
 <script src="guide_tabs_reference.js"></script>
+<script src="panama_transit_script.js"></script>
 <script src="guide_tabs_mail.js"></script>
 <script src="guide_admin.js"></script>
 <script src="guide_import_convert.js"></script>

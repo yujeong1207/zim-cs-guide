@@ -1027,6 +1027,9 @@ input, select, textarea {
 .vessel-td-arr { font-weight: bold; color: #1d4ed8; background: #eff6ff; }
 .vessel-td-dep { font-weight: bold; color: #15803d; background: #f0fdf4; }
 .vessel-code { color: #9ca3af; font-size: 12px; }
+.panama-row-done { opacity: 0.5; }
+.panama-days-badge { background: #fee2e2; color: #991b1b; font-weight: bold; padding: 2px 8px; border-radius: 6px; font-size: 12px; }
+.panama-unconfirmed-badge { background: #fef3c7; color: #92400e; font-size: 11px; padding: 1px 6px; border-radius: 5px; }
 .vessel-actions { display: flex; gap: 4px; }
 .icon-btn {
   border: none; background: transparent; cursor: pointer; font-size: 14px;
