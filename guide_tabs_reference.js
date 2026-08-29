@@ -1221,46 +1221,68 @@ async function fetchVesselScheduleAuto(vesselName, statusEl, resultsEl, onPick) 
     return [];
   };
 
-  // 앱스스크립트 하나에 한꺼번에 너무 많은 요청이 몰리지 않게, 2개씩 묶어서 순차 실행
-  const chunks = [];
-  for (let i = 0; i < VESSEL_AUTO_FETCH_TERMINALS.length; i += 2) {
-    chunks.push(VESSEL_AUTO_FETCH_TERMINALS.slice(i, i + 2));
-  }
-  const resultsByTerminal = [];
-  for (const chunk of chunks) {
-    const chunkResults = await Promise.all(chunk.map(fetchOne));
-    resultsByTerminal.push(...chunkResults);
-  }
-  // BCT는 Apps Script가 아니라 Firestore 캐시에서 - 다른 터미널 조회랑 동시에 진행해도 되니 따로 await
-  const bctResults = await fetchBctFromCache(vesselName);
-  resultsByTerminal.push(bctResults);
-  let allMatches = resultsByTerminal.flat();
+  // ⚠️ 예전엔 "2개씩 묶어서 순서대로" 실행해서, 느린 터미널(특히 한진인천/E1 - iCON 사이트를
+  // 최대 20페이지까지 긁어와야 할 때가 있음) 하나 때문에 전체가 오래 걸렸어요. 이제 6곳(5개
+  // Apps Script + BCT 캐시)을 전부 동시에 시작하고, 응답이 오는 대로 화면에 바로바로 추가해요 -
+  // PNIT처럼 빠른 곳은 1초 안에 뜨고, 느린 곳은 나중에 추가로 붙는 식이라 체감 속도가 훨씬 빨라요.
+  let allMatches = [];
+  let pendingCount = VESSEL_AUTO_FETCH_TERMINALS.length + 1; // +1은 BCT 캐시
+  let finished = false;
 
-  if (allMatches.length === 0) {
-    statusEl.textContent = "⚠️ 등록된 터미널(" + allLabels.join(", ") + ")에서 못 찾았어요. 아래 트레드링스 링크를 써보세요.";
-    return;
-  }
+  const handleIncoming = (newMatches) => {
+    pendingCount--;
+    if (finished) return; // 이미 1건 찾아서 자동으로 채우고 끝난 뒤라면, 늦게 온 결과는 무시
+    if (newMatches.length > 0) allMatches.push(...newMatches);
+    renderProgress();
+  };
 
-  if (allMatches.length === 1) {
-    onPick(allMatches[0]);
-    statusEl.textContent = "✅ " + allMatches[0].terminal + "에서 자동으로 채워졌어요 (항차 " + (allMatches[0].voyage || "-") + "). 필요하면 직접 수정하세요.";
-    return;
-  }
+  const renderProgress = () => {
+    if (finished) return;
 
-  statusEl.textContent = "🔎 " + allMatches.length + "건 찾았어요. 맞는 항차를 골라주세요:";
-  allMatches.forEach((m) => {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "btn secondary-btn";
-    btn.style.cssText = "display:block;width:100%;text-align:left;margin-top:6px;";
-    btn.textContent = "[" + m.terminal + "] " + m.vessel + " · 항차 " + (m.voyage || "-") + " · 접안 " + (m.eta || "-") + " · 출항 " + (m.etd || "-");
-    btn.onclick = () => {
-      onPick(m);
-      statusEl.textContent = "✅ " + m.terminal + " " + (m.voyage || "") + " 기준으로 채워졌어요.";
-      resultsEl.innerHTML = "";
-    };
-    resultsEl.appendChild(btn);
+    if (allMatches.length === 0) {
+      if (pendingCount === 0) {
+        statusEl.textContent = "⚠️ 등록된 터미널(" + allLabels.join(", ") + ")에서 못 찾았어요. 아래 트레드링스 링크를 써보세요.";
+      } else {
+        statusEl.textContent = "🔄 조회 중... (" + pendingCount + "곳 응답 대기중)";
+      }
+      return;
+    }
+
+    if (allMatches.length === 1 && pendingCount === 0) {
+      // 딱 1건뿐이고 더 기다릴 곳도 없으면 바로 자동으로 채워줌
+      finished = true;
+      onPick(allMatches[0]);
+      statusEl.textContent = "✅ " + allMatches[0].terminal + "에서 자동으로 채워졌어요 (항차 " + (allMatches[0].voyage || "-") + "). 필요하면 직접 수정하세요.";
+      return;
+    }
+
+    // 2건 이상이거나, 아직 다른 터미널 응답을 더 기다리는 중이면 - 지금까지 찾은 것들을 목록으로 보여줌
+    // (뒤에 더 찾아지면 목록에 계속 이어붙음)
+    statusEl.textContent = pendingCount > 0
+      ? "🔎 " + allMatches.length + "건 찾았어요 (" + pendingCount + "곳 더 확인중)... 맞는 항차를 골라주세요:"
+      : "🔎 " + allMatches.length + "건 찾았어요. 맞는 항차를 골라주세요:";
+
+    resultsEl.innerHTML = "";
+    allMatches.forEach((m) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "btn secondary-btn";
+      btn.style.cssText = "display:block;width:100%;text-align:left;margin-top:6px;";
+      btn.textContent = "[" + m.terminal + "] " + m.vessel + " · 항차 " + (m.voyage || "-") + " · 접안 " + (m.eta || "-") + " · 출항 " + (m.etd || "-");
+      btn.onclick = () => {
+        finished = true;
+        onPick(m);
+        statusEl.textContent = "✅ " + m.terminal + " " + (m.voyage || "") + " 기준으로 채워졌어요.";
+        resultsEl.innerHTML = "";
+      };
+      resultsEl.appendChild(btn);
+    });
+  };
+
+  VESSEL_AUTO_FETCH_TERMINALS.forEach((term) => {
+    fetchOne(term).then(handleIncoming);
   });
+  fetchBctFromCache(vesselName).then(handleIncoming);
 }
 
 /* 트레드링스 등 터미널스케줄 표에서 한 줄을 드래그해 복사 → 붙여넣기 했을 때 파싱.
