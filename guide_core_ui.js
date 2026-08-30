@@ -529,9 +529,16 @@ function cancelEditDoDeskPayment() {
 function refreshDoDeskPaymentEmbed() {
   const iframe = document.getElementById("doDeskPaymentEmbed");
   if (!iframe) return;
+  const scrollX = window.scrollX;
+  const scrollY = window.scrollY;
   const lastRow = getDoDeskPaymentLastKnownRow();
   const targetCell = lastRow ? ("C" + lastRow) : "A1";
   iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#수입!" + targetCell;
+  // 임베드 안에서 셀 위치로 이동하면서, 브라우저가 우리 페이지 전체까지 같이 스크롤시키는 경우가 있어서
+  // 새로고침 직전 위치로 강제로 되돌려놓음 (여러 번 시도 - 임베드 로딩이 늦게 끝나는 경우 대비)
+  [0, 100, 300, 600, 1000].forEach((delay) => {
+    setTimeout(() => window.scrollTo(scrollX, scrollY), delay);
+  });
 }
 
 function loadDoDeskTab() {
