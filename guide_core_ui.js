@@ -534,11 +534,9 @@ function refreshDoDeskPaymentEmbed() {
   const lastRow = getDoDeskPaymentLastKnownRow();
   const targetCell = lastRow ? ("C" + lastRow) : "A1";
   iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#수입!" + targetCell;
-  // 임베드 안에서 셀 위치로 이동하면서, 브라우저가 우리 페이지 전체까지 같이 스크롤시키는 경우가 있어서
-  // 새로고침 직전 위치로 강제로 되돌려놓음 (여러 번 시도 - 임베드 로딩이 늦게 끝나는 경우 대비)
-  [0, 100, 300, 600, 1000].forEach((delay) => {
-    setTimeout(() => window.scrollTo(scrollX, scrollY), delay);
-  });
+  // 임베드가 셀 위치로 다 이동하고 자리잡을 시간을 충분히 준 다음에만,
+  // 그 사이 바깥 페이지가 같이 스크롤됐으면 한 번만 되돌려놓음 (너무 빨리 되돌리면 임베드의 셀 이동 자체를 방해함)
+  setTimeout(() => window.scrollTo(scrollX, scrollY), 2000);
 }
 
 function loadDoDeskTab() {
