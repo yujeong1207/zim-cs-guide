@@ -310,6 +310,9 @@ const DO_DESK_PAYMENT_ADD_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.1
 const DO_DESK_PAYMENT_UPDATE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/e8179eb32e734ab789e6ccbf2848a8bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mTs3NcguQ4uJBCjuC1CUrJgQ4l7rXXQc3b1lQFbGMu8";
 const DO_DESK_PAYMENT_MERGE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/a1f91acff2184f9898a9f48bffe8b9a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lKXS0ah9whsEpFBCO3eNXGGZztRNsaoC92JBwGOZKo0";
 const DO_DESK_PAYMENT_EMBED_BASE_URL = "https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True";
+// ⚠️ 실제 시트 탭 이름은 "수입" 뒤에 눈에 안 보이는 공백이 하나 있음 (Office Script 만들 때 발견한 것과 동일).
+// URL로 특정 셀에 점프시키려면 이 공백까지 정확히 일치해야 해서, 반드시 이 상수를 통해서만 시트 이름을 써야 함.
+const DO_DESK_PAYMENT_SHEET_NAME = "수입 ";
 const DO_DESK_PAYMENT_LAST_ROW_KEY = "do_desk_payment_last_known_row";
 
 /* 이 브라우저에서 마지막으로 확인한(추가/병합한) 행 번호를 기억해뒀다가,
@@ -533,7 +536,7 @@ function refreshDoDeskPaymentEmbed() {
   const scrollY = window.scrollY;
   const lastRow = getDoDeskPaymentLastKnownRow();
   const targetCell = lastRow ? ("C" + lastRow) : "A1";
-  iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#수입!" + targetCell;
+  iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#" + encodeURIComponent(DO_DESK_PAYMENT_SHEET_NAME) + "!" + targetCell;
   // 임베드가 셀 위치로 다 이동하고 자리잡을 시간을 충분히 준 다음에만,
   // 그 사이 바깥 페이지가 같이 스크롤됐으면 한 번만 되돌려놓음 (너무 빨리 되돌리면 임베드의 셀 이동 자체를 방해함)
   setTimeout(() => window.scrollTo(scrollX, scrollY), 2000);
@@ -601,7 +604,7 @@ function loadDoDeskTab() {
     <div class="payment-embed-wrap">
       <iframe
         id="doDeskPaymentEmbed"
-        src="${DO_DESK_PAYMENT_EMBED_BASE_URL}#수입!A1"
+        src="${DO_DESK_PAYMENT_EMBED_BASE_URL}#${encodeURIComponent(DO_DESK_PAYMENT_SHEET_NAME)}!A1"
         width="100%" height="800" frameborder="0" scrolling="yes"
         title="입금현황 - 수입 (BLCONFIRM.xlsx)">
       </iframe>
