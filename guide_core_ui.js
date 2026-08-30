@@ -509,6 +509,37 @@ function refreshDoDeskPaymentEmbed() {
   iframe.src = base + "&_r=" + Date.now();
 }
 
+let doDeskPaymentAutoRefreshInterval = null;
+
+function startDoDeskPaymentAutoRefresh() {
+  stopDoDeskPaymentAutoRefresh();
+  doDeskPaymentAutoRefreshInterval = setInterval(() => {
+    // D/O 데스크 탭을 벗어났으면(다른 탭 보는 중) 자동으로 멈춤 - 안 보이는 화면을 계속 새로고침할 필요 없으니까
+    const page = document.getElementById("page-doDesk");
+    if (!page || !page.classList.contains("active")) {
+      stopDoDeskPaymentAutoRefresh();
+      return;
+    }
+    refreshDoDeskPaymentEmbed();
+  }, 10000);
+}
+
+function stopDoDeskPaymentAutoRefresh() {
+  if (doDeskPaymentAutoRefreshInterval) {
+    clearInterval(doDeskPaymentAutoRefreshInterval);
+    doDeskPaymentAutoRefreshInterval = null;
+  }
+}
+
+function toggleDoDeskPaymentAutoRefresh() {
+  const cb = document.getElementById("doDeskPaymentAutoRefreshToggle");
+  if (cb && cb.checked) {
+    startDoDeskPaymentAutoRefresh();
+  } else {
+    stopDoDeskPaymentAutoRefresh();
+  }
+}
+
 function loadDoDeskTab() {
   const wrap = document.getElementById("doDeskWrap");
   if (!wrap) return;
@@ -568,8 +599,12 @@ function loadDoDeskTab() {
     <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
     <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 아래 화면에 바로 안 보이면 "🔄 새로고침"을 눌러주세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요.</div>
     <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
-    <div style="margin-bottom:10px;">
-      <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 새로고침</button>
+    <div class="hint" style="margin-bottom:10px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+      <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 지금 새로고침</button>
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="doDeskPaymentAutoRefreshToggle" checked onchange="toggleDoDeskPaymentAutoRefresh()">
+        ⏱ 10초마다 자동 새로고침
+      </label>
     </div>
     <div class="payment-embed-wrap">
       <iframe
@@ -587,6 +622,7 @@ function loadDoDeskTab() {
   renderDoCalculator("doDeskCalcBody");
   loadDeskMemo("doDeskMemo");
   renderDoDeskPaymentRecentList();
+  startDoDeskPaymentAutoRefresh();
 
   // 모선 일정/위임장 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
   loadVesselTab();
