@@ -309,6 +309,28 @@ function loadDeskMemo(textareaId) {
 const DO_DESK_PAYMENT_ADD_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/244b7cf038514e9485e01f7871c3d42c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=L3iB11PYxyeHxcJq7_V55ncbMCWQ7AYxu-1BQnb2YVs";
 const DO_DESK_PAYMENT_UPDATE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/e8179eb32e734ab789e6ccbf2848a8bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mTs3NcguQ4uJBCjuC1CUrJgQ4l7rXXQc3b1lQFbGMu8";
 const DO_DESK_PAYMENT_MERGE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/a1f91acff2184f9898a9f48bffe8b9a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lKXS0ah9whsEpFBCO3eNXGGZztRNsaoC92JBwGOZKo0";
+const DO_DESK_PAYMENT_EMBED_BASE_URL = "https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True";
+const DO_DESK_PAYMENT_LAST_ROW_KEY = "do_desk_payment_last_known_row";
+
+/* 이 브라우저에서 마지막으로 확인한(추가/병합한) 행 번호를 기억해뒀다가,
+   새로고침할 때 그 근처 셀을 열어달라고 요청함 - 완벽하게 "맨 아래로 스크롤"은 아니지만
+   매번 맨 위부터 다시 스크롤하는 것보단 나음. 다른 사람이 넣은 행은 알 수 없어서 근사치임. */
+function getDoDeskPaymentLastKnownRow() {
+  try {
+    const v = localStorage.getItem(DO_DESK_PAYMENT_LAST_ROW_KEY);
+    return v ? Number(v) : null;
+  } catch (e) { return null; }
+}
+
+function setDoDeskPaymentLastKnownRow(rowNumber) {
+  if (!rowNumber) return;
+  try {
+    const current = getDoDeskPaymentLastKnownRow();
+    if (!current || rowNumber > current) {
+      localStorage.setItem(DO_DESK_PAYMENT_LAST_ROW_KEY, String(rowNumber));
+    }
+  } catch (e) { /* 무시 */ }
+}
 const DO_DESK_PAYMENT_RECENT_KEY = "do_desk_recent_payments";
 let doDeskPaymentEditingRow = null; // null이면 추가 모드, 숫자면 그 행 번호를 수정 중
 
@@ -396,6 +418,7 @@ function mergeDoDeskSelectedPayments() {
       list = list.filter((item) => sorted.indexOf(item.rowNumber) === -1);
       saveDoDeskPaymentRecent(list);
       renderDoDeskPaymentRecentList();
+      setDoDeskPaymentLastKnownRow(sorted[sorted.length - 1]);
       if (statusEl) { statusEl.textContent = "병합 완료했어요."; statusEl.style.color = "#6b7280"; }
     })
     .catch((err) => {
@@ -458,6 +481,7 @@ function submitDoDeskPayment() {
         saveDoDeskPaymentRecent(list);
         renderDoDeskPaymentRecentList();
         cancelEditDoDeskPayment();
+        setDoDeskPaymentLastKnownRow(rowNumber);
         setDoDeskPaymentStatus(rowNumber ? `${rowNumber}행에 추가했어요.` : "추가했어요.");
       }
     })
@@ -505,8 +529,9 @@ function cancelEditDoDeskPayment() {
 function refreshDoDeskPaymentEmbed() {
   const iframe = document.getElementById("doDeskPaymentEmbed");
   if (!iframe) return;
-  const base = iframe.src.split("&_r=")[0];
-  iframe.src = base + "&_r=" + Date.now();
+  const lastRow = getDoDeskPaymentLastKnownRow();
+  const targetCell = lastRow ? ("C" + lastRow) : "A1";
+  iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#수입!" + targetCell;
 }
 
 let doDeskPaymentAutoRefreshInterval = null;
@@ -521,7 +546,7 @@ function startDoDeskPaymentAutoRefresh() {
       return;
     }
     refreshDoDeskPaymentEmbed();
-  }, 10000);
+  }, 60000);
 }
 
 function stopDoDeskPaymentAutoRefresh() {
@@ -603,13 +628,13 @@ function loadDoDeskTab() {
       <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 지금 새로고침</button>
       <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
         <input type="checkbox" id="doDeskPaymentAutoRefreshToggle" checked onchange="toggleDoDeskPaymentAutoRefresh()">
-        ⏱ 10초마다 자동 새로고침
+        ⏱ 1분마다 자동 새로고침
       </label>
     </div>
     <div class="payment-embed-wrap">
       <iframe
         id="doDeskPaymentEmbed"
-        src="https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True#수입!A1"
+        src="${DO_DESK_PAYMENT_EMBED_BASE_URL}#수입!A1"
         width="100%" height="800" frameborder="0" scrolling="yes"
         title="입금현황 - 수입 (BLCONFIRM.xlsx)">
       </iframe>
