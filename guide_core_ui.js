@@ -534,37 +534,6 @@ function refreshDoDeskPaymentEmbed() {
   iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#수입!" + targetCell;
 }
 
-let doDeskPaymentAutoRefreshInterval = null;
-
-function startDoDeskPaymentAutoRefresh() {
-  stopDoDeskPaymentAutoRefresh();
-  doDeskPaymentAutoRefreshInterval = setInterval(() => {
-    // D/O 데스크 탭을 벗어났으면(다른 탭 보는 중) 자동으로 멈춤 - 안 보이는 화면을 계속 새로고침할 필요 없으니까
-    const page = document.getElementById("page-doDesk");
-    if (!page || !page.classList.contains("active")) {
-      stopDoDeskPaymentAutoRefresh();
-      return;
-    }
-    refreshDoDeskPaymentEmbed();
-  }, 60000);
-}
-
-function stopDoDeskPaymentAutoRefresh() {
-  if (doDeskPaymentAutoRefreshInterval) {
-    clearInterval(doDeskPaymentAutoRefreshInterval);
-    doDeskPaymentAutoRefreshInterval = null;
-  }
-}
-
-function toggleDoDeskPaymentAutoRefresh() {
-  const cb = document.getElementById("doDeskPaymentAutoRefreshToggle");
-  if (cb && cb.checked) {
-    startDoDeskPaymentAutoRefresh();
-  } else {
-    stopDoDeskPaymentAutoRefresh();
-  }
-}
-
 function loadDoDeskTab() {
   const wrap = document.getElementById("doDeskWrap");
   if (!wrap) return;
@@ -581,55 +550,48 @@ function loadDoDeskTab() {
         <div id="doDeskPoaResult" class="desk-result-box"></div>
       </div>
     </div>
-    <div class="label" style="margin:20px 0 8px;">🧮 DO 비용 계산기</div>
-    <div id="doDeskCalcBody"></div>
-
-    <div class="label" style="margin:20px 0 8px;">💳 입금현황 등록 (재무팀 "수입" 탭)</div>
-    <div class="hint" style="margin:0 0 8px;">BL NO / CUCC / 비고를 입력하면 재무팀 입금현황 엑셀 맨 아래 빈 줄에 자동으로 들어가요. 나머지 항목(입금일·금액 등)은 재무팀이 채워요.</div>
-    <div class="desk-search-row" style="grid-template-columns: 1fr 1fr 1fr;">
+    <div class="desk-search-row" style="grid-template-columns: 1fr 1fr; align-items:start;">
       <div class="desk-search-col">
+        <div class="label" style="margin:0 0 8px;">🧮 DO 비용 계산기</div>
+        <div id="doDeskCalcBody"></div>
+      </div>
+      <div class="desk-search-col">
+        <div class="label" style="margin:0 0 8px;">💳 입금현황 등록 (재무팀 "수입" 탭)</div>
+        <div class="hint" style="margin:0 0 8px;">BL NO / CUCC / 비고를 입력하면 재무팀 입금현황 엑셀 맨 아래 빈 줄에 자동으로 들어가요. 나머지 항목(입금일·금액 등)은 재무팀이 채워요.</div>
         <label class="label">BL NO</label>
         <input type="text" id="doDeskPaymentBlNo" placeholder="예: ZIMU1234567">
-      </div>
-      <div class="desk-search-col">
         <label class="label">CUCC</label>
         <input type="text" id="doDeskPaymentCucc" placeholder="예: KRSELDOWCE">
-      </div>
-      <div class="desk-search-col">
         <label class="label">비고</label>
         <input type="text" id="doDeskPaymentNote" placeholder="예: 합송금">
-      </div>
-    </div>
-    <div class="io-row">
-      <button type="button" class="btn generate-btn" id="doDeskPaymentSubmitBtn" onclick="submitDoDeskPayment()">➕ 추가</button>
-      <button type="button" class="btn secondary-btn" id="doDeskPaymentCancelBtn" onclick="cancelEditDoDeskPayment()" style="display:none;">취소</button>
-    </div>
-    <div id="doDeskPaymentStatus" class="hint" style="margin-top:6px;"></div>
+        <div class="io-row">
+          <button type="button" class="btn generate-btn" id="doDeskPaymentSubmitBtn" onclick="submitDoDeskPayment()">➕ 추가</button>
+          <button type="button" class="btn secondary-btn" id="doDeskPaymentCancelBtn" onclick="cancelEditDoDeskPayment()" style="display:none;">취소</button>
+        </div>
+        <div id="doDeskPaymentStatus" class="hint" style="margin-top:6px;"></div>
 
-    <div class="label" style="margin:16px 0 8px;">🕓 최근 추가한 항목 (이 브라우저 기준)</div>
-    <div class="hint" style="margin:0 0 8px;">여기 목록에 있는 것만 수정할 수 있어요. 합송금 처리할 건들은 체크박스로 2개 이상 선택하면 병합 버튼이 나타나요.</div>
-    <div id="doDeskPaymentRecentList" class="desk-result-box"></div>
+        <div class="label" style="margin:16px 0 8px;">🕓 최근 추가한 항목 (이 브라우저 기준)</div>
+        <div class="hint" style="margin:0 0 8px;">여기 목록에 있는 것만 수정할 수 있어요. 합송금 처리할 건들은 체크박스로 2개 이상 선택하면 병합 버튼이 나타나요.</div>
+        <div id="doDeskPaymentRecentList" class="desk-result-box"></div>
 
-    <div id="doDeskPaymentMergeBox" style="display:none; margin-top:10px; padding:12px; border:1px dashed #d1d5db; border-radius:10px;">
-      <div class="label" style="margin:0 0 8px;">🔗 선택한 항목 합송금으로 병합</div>
-      <div class="hint" style="margin:0 0 8px;">체크한 행들은 표에서 서로 붙어있는(연속된) 행이어야 해요. CUCC 칸엔 아래 입력한 공통 CUCC가, 비고 칸엔 자동으로 "합송금"이 들어가요.</div>
-      <label class="label">공통 CUCC</label>
-      <input type="text" id="doDeskPaymentMergeCucc" placeholder="예: KRSELDOWCE">
-      <div class="io-row">
-        <button type="button" class="btn generate-btn" onclick="mergeDoDeskSelectedPayments()">🔗 합송금으로 병합</button>
+        <div id="doDeskPaymentMergeBox" style="display:none; margin-top:10px; padding:12px; border:1px dashed #d1d5db; border-radius:10px;">
+          <div class="label" style="margin:0 0 8px;">🔗 선택한 항목 합송금으로 병합</div>
+          <div class="hint" style="margin:0 0 8px;">체크한 행들은 표에서 서로 붙어있는(연속된) 행이어야 해요. CUCC 칸엔 아래 입력한 공통 CUCC가, 비고 칸엔 자동으로 "합송금"이 들어가요.</div>
+          <label class="label">공통 CUCC</label>
+          <input type="text" id="doDeskPaymentMergeCucc" placeholder="예: KRSELDOWCE">
+          <div class="io-row">
+            <button type="button" class="btn generate-btn" onclick="mergeDoDeskSelectedPayments()">🔗 합송금으로 병합</button>
+          </div>
+          <div id="doDeskPaymentMergeStatus" class="hint" style="margin-top:6px;"></div>
+        </div>
       </div>
-      <div id="doDeskPaymentMergeStatus" class="hint" style="margin-top:6px;"></div>
     </div>
 
     <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
-    <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 아래 화면에 바로 안 보이면 "🔄 새로고침"을 눌러주세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요.</div>
+    <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 아래 화면에 바로 안 보이면 "🔄 새로고침"을 눌러주세요. 새로고침하면 자동으로 방금 넣은 행 근처가 맨 위에 오도록 열려요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수도 있어요.</div>
     <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
-    <div class="hint" style="margin-bottom:10px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-      <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 지금 새로고침</button>
-      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
-        <input type="checkbox" id="doDeskPaymentAutoRefreshToggle" checked onchange="toggleDoDeskPaymentAutoRefresh()">
-        ⏱ 1분마다 자동 새로고침
-      </label>
+    <div style="margin-bottom:10px;">
+      <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 새로고침</button>
     </div>
     <div class="payment-embed-wrap">
       <iframe
@@ -647,7 +609,6 @@ function loadDoDeskTab() {
   renderDoCalculator("doDeskCalcBody");
   loadDeskMemo("doDeskMemo");
   renderDoDeskPaymentRecentList();
-  startDoDeskPaymentAutoRefresh();
 
   // 모선 일정/위임장 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
   loadVesselTab();
