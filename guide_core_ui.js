@@ -308,6 +308,7 @@ function loadDeskMemo(textareaId) {
    ============================================================ */
 const DO_DESK_PAYMENT_ADD_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/244b7cf038514e9485e01f7871c3d42c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=L3iB11PYxyeHxcJq7_V55ncbMCWQ7AYxu-1BQnb2YVs";
 const DO_DESK_PAYMENT_UPDATE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/e8179eb32e734ab789e6ccbf2848a8bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mTs3NcguQ4uJBCjuC1CUrJgQ4l7rXXQc3b1lQFbGMu8";
+const DO_DESK_PAYMENT_MERGE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/a1f91acff2184f9898a9f48bffe8b9a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lKXS0ah9whsEpFBCO3eNXGGZztRNsaoC92JBwGOZKo0";
 const DO_DESK_PAYMENT_RECENT_KEY = "do_desk_recent_payments";
 let doDeskPaymentEditingRow = null; // null이면 추가 모드, 숫자면 그 행 번호를 수정 중
 
@@ -328,17 +329,79 @@ function renderDoDeskPaymentRecentList() {
   const list = loadDoDeskPaymentRecent();
   if (list.length === 0) {
     box.innerHTML = '<div class="hint">아직 이 브라우저에서 추가한 항목이 없어요.</div>';
+  } else {
+    box.innerHTML = list.slice().reverse().map((item) => `
+      <div class="desk-result-row">
+        <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+          <input type="checkbox" class="do-desk-payment-merge-check" value="${item.rowNumber}" data-cucc="${escapeHtml(item.cucc || "")}" onchange="updateDoDeskPaymentMergeUI()">
+          <b>${escapeHtml(item.blNo || "-")}</b>
+        </label>
+        <div>CUCC: ${escapeHtml(item.cucc || "-")} / 비고: ${escapeHtml(item.note || "-")} / 행: ${item.rowNumber}</div>
+        <div style="margin-top:6px;">
+          <button type="button" class="btn secondary-btn" style="padding:4px 10px; font-size:12px;" onclick="startEditDoDeskPayment(${item.rowNumber})">✏️ 수정</button>
+        </div>
+      </div>
+    `).join("");
+  }
+  updateDoDeskPaymentMergeUI();
+}
+
+function updateDoDeskPaymentMergeUI() {
+  const box = document.getElementById("doDeskPaymentMergeBox");
+  if (!box) return;
+  const checks = document.querySelectorAll(".do-desk-payment-merge-check:checked");
+  if (checks.length >= 2) {
+    box.style.display = "";
+    const cuccInput = document.getElementById("doDeskPaymentMergeCucc");
+    if (cuccInput && !cuccInput.value) {
+      cuccInput.value = checks[0].dataset.cucc || "";
+    }
+  } else {
+    box.style.display = "none";
+  }
+}
+
+function mergeDoDeskSelectedPayments() {
+  const checks = document.querySelectorAll(".do-desk-payment-merge-check:checked");
+  const rowNumbers = Array.from(checks).map((el) => Number(el.value));
+  const cuccInput = document.getElementById("doDeskPaymentMergeCucc");
+  const cucc = cuccInput ? cuccInput.value.trim() : "";
+  const statusEl = document.getElementById("doDeskPaymentMergeStatus");
+
+  if (rowNumbers.length < 2) return;
+  if (!cucc) {
+    if (statusEl) { statusEl.textContent = "공통 CUCC를 입력해주세요."; statusEl.style.color = "#dc2626"; }
     return;
   }
-  box.innerHTML = list.slice().reverse().map((item) => `
-    <div class="desk-result-row">
-      <b>${escapeHtml(item.blNo || "-")}</b>
-      <div>CUCC: ${escapeHtml(item.cucc || "-")} / 비고: ${escapeHtml(item.note || "-")}</div>
-      <div style="margin-top:6px;">
-        <button type="button" class="btn secondary-btn" style="padding:4px 10px; font-size:12px;" onclick="startEditDoDeskPayment(${item.rowNumber})">✏️ 수정</button>
-      </div>
-    </div>
-  `).join("");
+
+  const sorted = rowNumbers.slice().sort((a, b) => a - b);
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i] !== sorted[i - 1] + 1) {
+      if (statusEl) { statusEl.textContent = "선택한 행이 서로 연속되어 있지 않아요. 표에서 붙어있는 행만 병합할 수 있어요."; statusEl.style.color = "#dc2626"; }
+      return;
+    }
+  }
+
+  if (statusEl) { statusEl.textContent = "병합 중..."; statusEl.style.color = "#6b7280"; }
+
+  fetch(DO_DESK_PAYMENT_MERGE_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ rowNumbers: sorted, cucc }),
+  })
+    .then((res) => res.json())
+    .then(() => {
+      // 병합된 행들은 더 이상 개별 수정 대상이 아니므로 "최근 추가한 항목" 목록에서 제거
+      let list = loadDoDeskPaymentRecent();
+      list = list.filter((item) => sorted.indexOf(item.rowNumber) === -1);
+      saveDoDeskPaymentRecent(list);
+      renderDoDeskPaymentRecentList();
+      if (statusEl) { statusEl.textContent = "병합 완료했어요."; statusEl.style.color = "#6b7280"; }
+    })
+    .catch((err) => {
+      console.error(err);
+      if (statusEl) { statusEl.textContent = "병합 실패했어요. 다시 시도해주세요."; statusEl.style.color = "#dc2626"; }
+    });
 }
 
 function setDoDeskPaymentStatus(msg, isError) {
@@ -488,8 +551,19 @@ function loadDoDeskTab() {
     <div id="doDeskPaymentStatus" class="hint" style="margin-top:6px;"></div>
 
     <div class="label" style="margin:16px 0 8px;">🕓 최근 추가한 항목 (이 브라우저 기준)</div>
-    <div class="hint" style="margin:0 0 8px;">여기 목록에 있는 것만 수정할 수 있어요. 다른 사람이 넣었거나 예전에 처리된 항목은 원본 파일에서 직접 고쳐야 해요.</div>
+    <div class="hint" style="margin:0 0 8px;">여기 목록에 있는 것만 수정할 수 있어요. 합송금 처리할 건들은 체크박스로 2개 이상 선택하면 병합 버튼이 나타나요.</div>
     <div id="doDeskPaymentRecentList" class="desk-result-box"></div>
+
+    <div id="doDeskPaymentMergeBox" style="display:none; margin-top:10px; padding:12px; border:1px dashed #d1d5db; border-radius:10px;">
+      <div class="label" style="margin:0 0 8px;">🔗 선택한 항목 합송금으로 병합</div>
+      <div class="hint" style="margin:0 0 8px;">체크한 행들은 표에서 서로 붙어있는(연속된) 행이어야 해요. CUCC 칸엔 아래 입력한 공통 CUCC가, 비고 칸엔 자동으로 "합송금"이 들어가요.</div>
+      <label class="label">공통 CUCC</label>
+      <input type="text" id="doDeskPaymentMergeCucc" placeholder="예: KRSELDOWCE">
+      <div class="io-row">
+        <button type="button" class="btn generate-btn" onclick="mergeDoDeskSelectedPayments()">🔗 합송금으로 병합</button>
+      </div>
+      <div id="doDeskPaymentMergeStatus" class="hint" style="margin-top:6px;"></div>
+    </div>
 
     <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
     <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 아래 화면에 바로 안 보이면 "🔄 새로고침"을 눌러주세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요.</div>
