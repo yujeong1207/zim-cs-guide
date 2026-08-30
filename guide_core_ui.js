@@ -299,6 +299,153 @@ function loadDeskMemo(textareaId) {
   } catch (e) { /* 무시 */ }
 }
 
+/* ============================================================
+   💳 D/O 데스크 - 입금현황(재무팀 BLCONFIRM.xlsx "수입" 시트) 등록/수정
+   Power Automate 플로우 2개(추가/수정)를 호출해서 실제 파일에 바로 씀.
+   "최근 추가한 항목" 목록은 이 브라우저에만 저장되는 개인 기록이고,
+   수정은 그 목록에 있는(=자기가 방금 넣은) 항목만 가능하게 해서
+   BL NO가 중복될 때 엉뚱한 행을 덮어쓰는 걸 방지함.
+   ============================================================ */
+const DO_DESK_PAYMENT_ADD_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/22/workflows/244b7cf038514e9485e01f7871c3d42c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=L3iB11PYxyeHxcJq7_V55ncbMCWQ7AYxu-1BQnb2YVs";
+const DO_DESK_PAYMENT_UPDATE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/e8179eb32e734ab789e6ccbf2848a8bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mTs3NcguQ4uJBCjuC1CUrJgQ4l7rXXQc3b1lQFbGMu8";
+const DO_DESK_PAYMENT_RECENT_KEY = "do_desk_recent_payments";
+let doDeskPaymentEditingRow = null; // null이면 추가 모드, 숫자면 그 행 번호를 수정 중
+
+function loadDoDeskPaymentRecent() {
+  try {
+    const raw = localStorage.getItem(DO_DESK_PAYMENT_RECENT_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+
+function saveDoDeskPaymentRecent(list) {
+  try { localStorage.setItem(DO_DESK_PAYMENT_RECENT_KEY, JSON.stringify(list)); } catch (e) { /* 저장 실패해도 이번 세션은 그대로 유지되니 무시 */ }
+}
+
+function renderDoDeskPaymentRecentList() {
+  const box = document.getElementById("doDeskPaymentRecentList");
+  if (!box) return;
+  const list = loadDoDeskPaymentRecent();
+  if (list.length === 0) {
+    box.innerHTML = '<div class="hint">아직 이 브라우저에서 추가한 항목이 없어요.</div>';
+    return;
+  }
+  box.innerHTML = list.slice().reverse().map((item) => `
+    <div class="desk-result-row">
+      <b>${escapeHtml(item.blNo || "-")}</b>
+      <div>CUCC: ${escapeHtml(item.cucc || "-")} / 비고: ${escapeHtml(item.note || "-")}</div>
+      <div style="margin-top:6px;">
+        <button type="button" class="btn secondary-btn" style="padding:4px 10px; font-size:12px;" onclick="startEditDoDeskPayment(${item.rowNumber})">✏️ 수정</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function setDoDeskPaymentStatus(msg, isError) {
+  const el = document.getElementById("doDeskPaymentStatus");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = isError ? "#dc2626" : "#6b7280";
+}
+
+function submitDoDeskPayment() {
+  const blNoEl = document.getElementById("doDeskPaymentBlNo");
+  const cuccEl = document.getElementById("doDeskPaymentCucc");
+  const noteEl = document.getElementById("doDeskPaymentNote");
+  if (!blNoEl || !cuccEl || !noteEl) return;
+
+  const blNo = blNoEl.value.trim();
+  const cucc = cuccEl.value.trim();
+  const note = noteEl.value.trim();
+
+  if (!blNo) {
+    setDoDeskPaymentStatus("BL NO는 꼭 입력해주세요.", true);
+    return;
+  }
+
+  const submitBtn = document.getElementById("doDeskPaymentSubmitBtn");
+  if (submitBtn) submitBtn.disabled = true;
+  setDoDeskPaymentStatus(doDeskPaymentEditingRow ? "수정 중..." : "추가 중...");
+
+  const isEditing = doDeskPaymentEditingRow !== null;
+  const url = isEditing ? DO_DESK_PAYMENT_UPDATE_URL : DO_DESK_PAYMENT_ADD_URL;
+  const body = isEditing
+    ? { rowNumber: doDeskPaymentEditingRow, blNo, cucc, note }
+    : { blNo, cucc, note };
+
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
+    .then((res) => res.json())
+    .then((data) => {
+      const list = loadDoDeskPaymentRecent();
+      const editedRow = doDeskPaymentEditingRow;
+      if (editedRow !== null) {
+        const idx = list.findIndex((item) => item.rowNumber === editedRow);
+        if (idx !== -1) list[idx] = { rowNumber: editedRow, blNo, cucc, note };
+        saveDoDeskPaymentRecent(list);
+        renderDoDeskPaymentRecentList();
+        cancelEditDoDeskPayment();
+        setDoDeskPaymentStatus(`${editedRow}행을 수정했어요.`);
+      } else {
+        const rowNumber = data && data.rowNumber;
+        list.push({ rowNumber, blNo, cucc, note });
+        saveDoDeskPaymentRecent(list);
+        renderDoDeskPaymentRecentList();
+        cancelEditDoDeskPayment();
+        setDoDeskPaymentStatus(rowNumber ? `${rowNumber}행에 추가했어요.` : "추가했어요.");
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      setDoDeskPaymentStatus("실패했어요. 네트워크 상태 확인 후 다시 시도해주세요.", true);
+    })
+    .finally(() => {
+      if (submitBtn) submitBtn.disabled = false;
+    });
+}
+
+function startEditDoDeskPayment(rowNumber) {
+  const list = loadDoDeskPaymentRecent();
+  const item = list.find((it) => it.rowNumber === rowNumber);
+  if (!item) return;
+
+  doDeskPaymentEditingRow = rowNumber;
+  document.getElementById("doDeskPaymentBlNo").value = item.blNo || "";
+  document.getElementById("doDeskPaymentCucc").value = item.cucc || "";
+  document.getElementById("doDeskPaymentNote").value = item.note || "";
+
+  const submitBtn = document.getElementById("doDeskPaymentSubmitBtn");
+  const cancelBtn = document.getElementById("doDeskPaymentCancelBtn");
+  if (submitBtn) submitBtn.textContent = "✏️ 수정 저장";
+  if (cancelBtn) cancelBtn.style.display = "";
+  setDoDeskPaymentStatus(`${rowNumber}행 수정 중이에요.`);
+}
+
+function cancelEditDoDeskPayment() {
+  doDeskPaymentEditingRow = null;
+  const blNoEl = document.getElementById("doDeskPaymentBlNo");
+  const cuccEl = document.getElementById("doDeskPaymentCucc");
+  const noteEl = document.getElementById("doDeskPaymentNote");
+  if (blNoEl) blNoEl.value = "";
+  if (cuccEl) cuccEl.value = "";
+  if (noteEl) noteEl.value = "";
+
+  const submitBtn = document.getElementById("doDeskPaymentSubmitBtn");
+  const cancelBtn = document.getElementById("doDeskPaymentCancelBtn");
+  if (submitBtn) submitBtn.textContent = "➕ 추가";
+  if (cancelBtn) cancelBtn.style.display = "none";
+}
+
+function refreshDoDeskPaymentEmbed() {
+  const iframe = document.getElementById("doDeskPaymentEmbed");
+  if (!iframe) return;
+  const base = iframe.src.split("&_r=")[0];
+  iframe.src = base + "&_r=" + Date.now();
+}
+
 function loadDoDeskTab() {
   const wrap = document.getElementById("doDeskWrap");
   if (!wrap) return;
@@ -318,12 +465,54 @@ function loadDoDeskTab() {
     <div class="label" style="margin:20px 0 8px;">🧮 DO 비용 계산기</div>
     <div id="doDeskCalcBody"></div>
 
+    <div class="label" style="margin:20px 0 8px;">💳 입금현황 등록 (재무팀 "수입" 탭)</div>
+    <div class="hint" style="margin:0 0 8px;">BL NO / CUCC / 비고를 입력하면 재무팀 입금현황 엑셀 맨 아래 빈 줄에 자동으로 들어가요. 나머지 항목(입금일·금액 등)은 재무팀이 채워요.</div>
+    <div class="desk-search-row" style="grid-template-columns: 1fr 1fr 1fr;">
+      <div class="desk-search-col">
+        <label class="label">BL NO</label>
+        <input type="text" id="doDeskPaymentBlNo" placeholder="예: ZIMU1234567">
+      </div>
+      <div class="desk-search-col">
+        <label class="label">CUCC</label>
+        <input type="text" id="doDeskPaymentCucc" placeholder="예: KRSELDOWCE">
+      </div>
+      <div class="desk-search-col">
+        <label class="label">비고</label>
+        <input type="text" id="doDeskPaymentNote" placeholder="예: 합송금">
+      </div>
+    </div>
+    <div class="io-row">
+      <button type="button" class="btn generate-btn" id="doDeskPaymentSubmitBtn" onclick="submitDoDeskPayment()">➕ 추가</button>
+      <button type="button" class="btn secondary-btn" id="doDeskPaymentCancelBtn" onclick="cancelEditDoDeskPayment()" style="display:none;">취소</button>
+    </div>
+    <div id="doDeskPaymentStatus" class="hint" style="margin-top:6px;"></div>
+
+    <div class="label" style="margin:16px 0 8px;">🕓 최근 추가한 항목 (이 브라우저 기준)</div>
+    <div class="hint" style="margin:0 0 8px;">여기 목록에 있는 것만 수정할 수 있어요. 다른 사람이 넣었거나 예전에 처리된 항목은 원본 파일에서 직접 고쳐야 해요.</div>
+    <div id="doDeskPaymentRecentList" class="desk-result-box"></div>
+
+    <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
+    <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 아래 화면에 바로 안 보이면 "🔄 새로고침"을 눌러주세요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수 있어요.</div>
+    <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
+    <div style="margin-bottom:10px;">
+      <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 새로고침</button>
+    </div>
+    <div class="payment-embed-wrap">
+      <iframe
+        id="doDeskPaymentEmbed"
+        src="https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True#수입!A1"
+        width="100%" height="800" frameborder="0" scrolling="yes"
+        title="입금현황 - 수입 (BLCONFIRM.xlsx)">
+      </iframe>
+    </div>
+
     <div class="label" style="margin:20px 0 8px;">📝 메모</div>
     <div class="hint" style="margin:0 0 8px;">시스템 코드, 처리 순서 등 자유롭게 적어두세요. 이 브라우저에만 저장돼요(다른 팀원한텐 안 보여요).</div>
     <textarea id="doDeskMemo" rows="6" placeholder="예: TDO101 - Freight Note 확인 - PLISM 발급 순서로" style="width:100%; box-sizing:border-box;" oninput="saveDeskMemo('doDeskMemo')"></textarea>
   `;
   renderDoCalculator("doDeskCalcBody");
   loadDeskMemo("doDeskMemo");
+  renderDoDeskPaymentRecentList();
 
   // 모선 일정/위임장 탭을 따로 안 열어봐도 데스크에서 바로 검색되게, 여기서도 실시간 구독을 시작함
   loadVesselTab();
