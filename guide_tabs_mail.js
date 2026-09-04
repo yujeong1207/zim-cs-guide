@@ -1377,12 +1377,26 @@ function generateNtf() {
       : "본문 영역을 직접 클릭하면 문구를 바로 수정할 수 있어요 (볼드·정렬 서식은 유지돼요).";
     block.appendChild(editHint);
 
+    const copyBodyBtn = document.createElement("button");
+    copyBodyBtn.className = "btn generate-btn full";
+    copyBodyBtn.style.marginTop = "8px";
+    copyBodyBtn.textContent = "📋 본문 복사하기 (서식 포함)";
+    copyBodyBtn.onclick = () => copyNtfText(idx);
+    block.appendChild(copyBodyBtn);
+
     const saveHtmlBtn = document.createElement("button");
-    saveHtmlBtn.className = "btn generate-btn full";
+    saveHtmlBtn.className = "btn secondary-btn full";
     saveHtmlBtn.style.marginTop = "8px";
     saveHtmlBtn.textContent = "💾 HTML 파일로 저장";
     saveHtmlBtn.onclick = () => saveNtfAsHtml(idx);
     block.appendChild(saveHtmlBtn);
+
+    const saveDocBtn = document.createElement("button");
+    saveDocBtn.className = "btn secondary-btn full";
+    saveDocBtn.style.marginTop = "8px";
+    saveDocBtn.textContent = "📄 Word 파일로 저장 (.doc, 서식 동일)";
+    saveDocBtn.onclick = () => saveNtfAsDoc(idx);
+    block.appendChild(saveDocBtn);
 
     outputsWrap.appendChild(block);
   });
@@ -1424,9 +1438,11 @@ function darkModeSafeCss(bg, fg) {
     + "</style>";
 }
 
-function saveNtfAsHtml(idx) {
+/* saveNtfAsHtml / saveNtfAsDoc이 공유하는 본문 조립 로직. 서식(레터헤드+본문)은 완전히
+   동일하고, 마지막에 어떤 확장자·MIME으로 내보내느냐만 다르다. */
+function buildNtfDocumentHtml(idx) {
   const info = generatedNtfOutputs[idx];
-  if (!info) return;
+  if (!info) return null;
   const titleInput = document.getElementById("ntf_title_" + idx);
   const title = (titleInput ? titleInput.value : (info.subject || "")).trim() || "공문";
   const dateEl = document.getElementById("ntf_date_" + idx);
@@ -1453,11 +1469,39 @@ function saveNtfAsHtml(idx) {
     + "<title>" + escapeHtml(title) + "</title></head><body style=\"" + bodyStyle + "\">"
     + letterheadHtml + bodyHtml + "</body></html>";
 
+  return { htm, title };
+}
+
+function saveNtfAsHtml(idx) {
+  const built = buildNtfDocumentHtml(idx);
+  if (!built) return;
+  const { htm, title } = built;
+
   const blob = new Blob([htm], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".htm";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* Word는 확장자가 .doc여도 내용이 HTML이면 그대로 열어서 서식 있는 문서로 인식한다
+   (Word의 오래된 "필터링된 HTML" 저장 방식과 동일한 원리). 그래서 지금 만드는 HTML을
+   그대로 재사용하고 확장자·MIME 타입만 .doc/msword로 바꿔서 내려주면, 위 HTML 저장
+   버튼과 완전히 같은 서식의 워드 문서가 만들어진다. */
+function saveNtfAsDoc(idx) {
+  const built = buildNtfDocumentHtml(idx);
+  if (!built) return;
+  const { htm, title } = built;
+
+  const blob = new Blob([htm], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".doc";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
