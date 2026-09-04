@@ -48,6 +48,12 @@ if (!DATA.ntfSeedsMigratedV2) {
   saveData();
 }
 
+if (!DATA.ntfSeedsMigratedV3) {
+  migrateNtfSeedsV3();
+  DATA.ntfSeedsMigratedV3 = true;
+  saveData();
+}
+
 if (!DATA.workManualImportedV1) {
   migrateWorkManualProcedures();
   DATA.workManualImportedV1 = true;
@@ -145,6 +151,19 @@ function migrateNtfSeedsV2() {
     if (idx !== -1) NTF_TEMPLATES[idx] = copy;
     else NTF_TEMPLATES.push(copy);
   }
+}
+
+/* v3: localStorage에 저장된 공문 유형 목록에는 없지만 코드 기본값(DEFAULT_NTF_TEMPLATES)에는
+   있는 유형을 자동으로 채워 넣는다. (예: 관리자가 코드 기본값에 새 공문 유형을 추가해서
+   배포했는데, 팀원 브라우저에는 예전 목록이 이미 저장되어 있어서 새 유형이 안 보이던 문제 해결)
+   이미 브라우저에 있는 유형(관리자가 직접 만든 것 포함)은 절대 건드리지 않고, id 기준으로
+   "없는 것만" 뒤에 추가한다. */
+function migrateNtfSeedsV3() {
+  DEFAULT_NTF_TEMPLATES.forEach((def) => {
+    if (!NTF_TEMPLATES.some((t) => t.id === def.id)) {
+      NTF_TEMPLATES.push(JSON.parse(JSON.stringify(def)));
+    }
+  });
 }
 
 /* 예전에 저장된 기본 메일 템플릿들(스케줄 확인 이스탄불 / ETA 확인 OMIT·PHASE OUT / ERS 요청 안내)에
