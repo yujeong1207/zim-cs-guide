@@ -1092,6 +1092,13 @@ input, select, textarea {
   width: 30px; height: 30px; cursor: pointer; font-size: 13px;
 }
 .calc-item-del:hover { background: #fecaca; }
+.calc-item-sign {
+  flex-shrink: 0; border: none; background: #e0f2fe; color: #0369a1; border-radius: 8px;
+  width: 30px; height: 30px; cursor: pointer; font-size: 15px; font-weight: bold;
+}
+.calc-item-sign:hover { background: #bae6fd; }
+.calc-item-sign-minus { background: #fef3c7; color: #b45309; }
+.calc-item-sign-minus:hover { background: #fde68a; }
 .calc-item-add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 
 /* ===== D/O 계산기 - 저장된 지난 환율 ===== */

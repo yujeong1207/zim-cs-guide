@@ -1398,6 +1398,13 @@ function generateNtf() {
     saveDocBtn.onclick = () => saveNtfAsDoc(idx);
     block.appendChild(saveDocBtn);
 
+    const savePdfBtn = document.createElement("button");
+    savePdfBtn.className = "btn secondary-btn full";
+    savePdfBtn.style.marginTop = "8px";
+    savePdfBtn.textContent = "📕 PDF로 저장 (상단 로고 헤더 포함)";
+    savePdfBtn.onclick = () => saveNtfAsPdf(idx);
+    block.appendChild(savePdfBtn);
+
     outputsWrap.appendChild(block);
   });
 }
@@ -1506,6 +1513,75 @@ function saveNtfAsDoc(idx) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+/* 발송 시스템이 자동으로 붙여주는 상단 ZIM 로고 배너를, 시스템을 거치지 않는 PDF 파일에는
+   똑같이 안 붙기 때문에 여기서만 별도로 재현해서 넣어준다. 실제 로고 이미지(NTF_HEADER_LOGO_BASE64,
+   guide_ntf_header_logo.js)를 그대로 사용한다. */
+function buildNtfHeaderBannerHtml() {
+  if (typeof NTF_HEADER_LOGO_BASE64 !== "undefined" && NTF_HEADER_LOGO_BASE64) {
+    return `<div style="margin-bottom:18px;"><img src="${NTF_HEADER_LOGO_BASE64}" alt="ZIM" style="display:block;width:100%;height:auto;"></div>`;
+  }
+  // 로고 파일을 못 불러온 경우를 대비한 대체용 배너 (CSS로 색상만 재현)
+  return `
+  <div style="display:flex;align-items:stretch;border:2px solid #7ab547;border-radius:10px;overflow:hidden;height:78px;margin-bottom:18px;font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;">
+    <div style="background:#0b2f6b;color:#ffffff;width:88px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <div style="letter-spacing:2px;font-size:9px;line-height:1.3;">★★★★</div>
+      <div style="font-weight:800;font-size:20px;letter-spacing:1px;">ZIM</div>
+      <div style="font-size:7px;letter-spacing:0.5px;">The Z Factor</div>
+    </div>
+    <div style="background:#7ab547;color:#ffffff;flex:1;display:flex;align-items:center;justify-content:center;padding:0 14px;text-align:center;">
+      <div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.5px;">DELIVERING SERVICE</div>
+        <div style="font-size:17px;font-weight:800;">The ZIM WAY</div>
+      </div>
+    </div>
+    <div style="background:#ffffff;flex:1.7;display:flex;align-items:center;justify-content:center;padding:0 18px;border-left:3px solid #7ab547;">
+      <div style="color:#0b2f6b;font-weight:800;font-size:15px;line-height:1.35;text-align:left;">Customer Notification<br>General Update</div>
+    </div>
+  </div>`;
+}
+
+/* PDF는 시스템 폰트/렌더링에 좌우되기 쉬워서, html2pdf(내부적으로 html2canvas+jsPDF)가
+   화면 밖(고정폭 A4 비율 컨테이너)에 그린 뒤 이미지처럼 캡처해서 PDF로 떨어뜨리는 방식.
+   그래서 buildNtfDocumentHtml과 같은 본문 HTML을 재사용하되, 최상단에 로고 배너만 추가한다. */
+function saveNtfAsPdf(idx) {
+  const built = buildNtfDocumentHtml(idx);
+  if (!built) return;
+  const { htm, title } = built;
+
+  if (typeof html2pdf === "undefined") {
+    alert("PDF 생성 라이브러리를 아직 불러오지 못했어요. 페이지를 새로고침한 뒤 다시 시도해주세요.");
+    return;
+  }
+
+  // htm은 완전한 <html> 문서이므로, <body> 안쪽 내용만 꺼내서 배너와 함께 감싼다.
+  const bodyMatch = htm.match(/<body[^>]*style="([^"]*)"[^>]*>([\s\S]*)<\/body>/i);
+  const bodyStyle = bodyMatch ? bodyMatch[1] : "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;background:#ffffff;";
+  const bodyInner = bodyMatch ? bodyMatch[2] : htm;
+
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = bodyStyle + "width:700px;padding:24px;";
+  wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
+  document.body.appendChild(wrapper);
+
+  const filename = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".pdf";
+
+  html2pdf()
+    .set({
+      margin: 10,
+      filename: filename,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+    })
+    .from(wrapper)
+    .save()
+    .then(() => document.body.removeChild(wrapper))
+    .catch((err) => {
+      document.body.removeChild(wrapper);
+      alert("PDF 생성 중 문제가 발생했어요: " + err.message);
+    });
 }
 
 function appendNtfToRow(block, idx, toResolved, subjectResolved) {

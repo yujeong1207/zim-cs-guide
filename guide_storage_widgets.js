@@ -1316,8 +1316,8 @@ function renderLapResult() {
 
 /* ---- 💱 D/O 비용(환율) 계산기 - 항목을 자유롭게 추가/삭제하며 합산하는 진짜 계산기 ---- */
 let DO_CALC_ITEMS = [
-  { id: "d1", type: "foreign", amount: "" },
-  { id: "d2", type: "krw", amount: "" },
+  { id: "d1", type: "foreign", amount: "", sign: 1 },
+  { id: "d2", type: "krw", amount: "", sign: 1 },
 ];
 
 /* 씨티은행 환율 워커에서 "오늘 환율"을 가져와 숫자만 뽑아온다.
@@ -1374,11 +1374,11 @@ function renderDoCalculator(containerId) {
   };
   document.getElementById("doSaveRateBtn").onclick = saveDoRateForSelectedDate;
   document.getElementById("doAddForeignBtn").onclick = () => {
-    DO_CALC_ITEMS.push({ id: genId("d"), type: "foreign", amount: "" });
+    DO_CALC_ITEMS.push({ id: genId("d"), type: "foreign", amount: "", sign: 1 });
     renderDoItemsList();
   };
   document.getElementById("doAddKrwBtn").onclick = () => {
-    DO_CALC_ITEMS.push({ id: genId("d"), type: "krw", amount: "" });
+    DO_CALC_ITEMS.push({ id: genId("d"), type: "krw", amount: "", sign: 1 });
     renderDoItemsList();
   };
 
@@ -1490,6 +1490,19 @@ function renderDoItemsList() {
     const row = document.createElement("div");
     row.className = "calc-item-row";
 
+    if (item.sign === undefined) item.sign = 1;
+
+    const signBtn = document.createElement("button");
+    signBtn.type = "button";
+    signBtn.className = "calc-item-sign" + (item.sign === -1 ? " calc-item-sign-minus" : "");
+    signBtn.textContent = item.sign === -1 ? "－" : "＋";
+    signBtn.title = "눌러서 더하기/빼기 전환";
+    signBtn.onclick = () => {
+      item.sign = item.sign === -1 ? 1 : -1;
+      renderDoItemsList();
+    };
+    row.appendChild(signBtn);
+
     const badge = document.createElement("span");
     badge.className = "calc-item-badge " + (item.type === "foreign" ? "calc-item-badge-usd" : "calc-item-badge-krw");
     badge.textContent = item.type === "foreign" ? "USD" : "원화";
@@ -1544,15 +1557,17 @@ function renderDoResult() {
       return;
     }
     hasAny = true;
+    const sign = item.sign === -1 ? -1 : 1;
+    const signPrefix = sign === -1 ? "－ " : "";
     if (item.type === "foreign") {
       const converted = Math.round(amount * rate);
-      total += converted;
-      lines.push("USD " + amount.toLocaleString() + " × " + rate.toLocaleString() + "원 = " + converted.toLocaleString() + "원");
+      total += sign * converted;
+      lines.push(signPrefix + "USD " + amount.toLocaleString() + " × " + rate.toLocaleString() + "원 = " + converted.toLocaleString() + "원");
       const eqEl = document.getElementById("doItemEq_" + item.id);
-      if (eqEl) eqEl.textContent = rate ? ("= " + converted.toLocaleString() + "원") : "환율을 입력해주세요";
+      if (eqEl) eqEl.textContent = rate ? ("= " + signPrefix + converted.toLocaleString() + "원") : "환율을 입력해주세요";
     } else {
-      total += amount;
-      lines.push(amount.toLocaleString() + "원");
+      total += sign * amount;
+      lines.push(signPrefix + amount.toLocaleString() + "원");
     }
   });
 
