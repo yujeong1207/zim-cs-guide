@@ -1092,13 +1092,21 @@ input, select, textarea {
   width: 30px; height: 30px; cursor: pointer; font-size: 13px;
 }
 .calc-item-del:hover { background: #fecaca; }
-.calc-item-sign {
+.calc-item-badge-factor { background: #7c3aed; }
+.calc-item-start-label {
+  flex-shrink: 0; width: 30px; text-align: center; font-size: 11px; color: #6b7280;
+}
+.calc-item-op {
   flex-shrink: 0; border: none; background: #e0f2fe; color: #0369a1; border-radius: 8px;
   width: 30px; height: 30px; cursor: pointer; font-size: 15px; font-weight: bold;
 }
-.calc-item-sign:hover { background: #bae6fd; }
-.calc-item-sign-minus { background: #fef3c7; color: #b45309; }
-.calc-item-sign-minus:hover { background: #fde68a; }
+.calc-item-op:hover { background: #bae6fd; }
+.calc-item-op-minus { background: #fef3c7; color: #b45309; }
+.calc-item-op-minus:hover { background: #fde68a; }
+.calc-item-op-mul { background: #ede9fe; color: #6d28d9; }
+.calc-item-op-mul:hover { background: #ddd6fe; }
+.calc-item-op-div { background: #fee2e2; color: #b91c1c; }
+.calc-item-op-div:hover { background: #fecaca; }
 .calc-item-add-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
 
 /* ===== D/O 계산기 - 저장된 지난 환율 ===== */
@@ -1725,6 +1733,7 @@ input, select, textarea {
 .desk-result-row div { margin-top: 3px; color: #4b5563; }
 .desk-result-row.ok { border-left: 3px solid #16a34a; }
 .desk-result-row.warn { border-left: 3px solid #d97706; }
+.badge-count { font-size: 12px; font-weight: 400; color: #6b7280; }
 
 .payment-row {
   background: #fff;

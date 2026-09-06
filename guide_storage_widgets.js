@@ -1353,8 +1353,8 @@ function renderLapResult() {
 
 /* ---- 💱 D/O 비용(환율) 계산기 - 항목을 자유롭게 추가/삭제하며 합산하는 진짜 계산기 ---- */
 let DO_CALC_ITEMS = [
-  { id: "d1", type: "foreign", amount: "", sign: 1 },
-  { id: "d2", type: "krw", amount: "", sign: 1 },
+  { id: "d1", type: "foreign", amount: "", op: "+" },
+  { id: "d2", type: "krw", amount: "", op: "+" },
 ];
 
 /* 씨티은행 환율 워커에서 "오늘 환율"을 가져와 숫자만 뽑아온다.
@@ -1384,7 +1384,7 @@ function renderDoCalculator(containerId) {
   const card = document.createElement("div");
   card.className = "calc-card";
   card.innerHTML = `
-    <div class="hint" style="margin-bottom:14px;">날짜를 선택하면 그 날 환율이 자동으로 채워져요(오늘은 씨티은행에서 자동 조회, 이전 날짜는 저장해둔 값). 아래에서 외화·원화 항목을 자유롭게 추가해가며 계산기처럼 더해보세요.</div>
+    <div class="hint" style="margin-bottom:14px;">날짜를 선택하면 그 날 환율이 자동으로 채워져요(오늘은 씨티은행에서 자동 조회, 이전 날짜는 저장해둔 값). 아래에서 외화·원화·배수 항목을 자유롭게 추가해가며 계산기처럼 계산해보세요.</div>
     <div class="calc-field"><label>📅 적용할 환율 날짜</label><input type="date" id="doDate" value="${window.__doSelectedDate}"></div>
     <div class="calc-field"><label>💱 해당 날짜 환율 (1 USD 당 원화)</label>
       <div style="display:flex; gap:8px; align-items:center;">
@@ -1394,10 +1394,12 @@ function renderDoCalculator(containerId) {
       <div id="doRateStatus" class="hint" style="margin-top:6px;"></div>
     </div>
     <div class="label" style="margin-top:14px;">🧮 항목</div>
+    <div class="hint" style="margin:0 0 8px;">첫 번째 항목은 항상 시작값이에요. 두 번째 항목부터 왼쪽 버튼을 눌러 <b>＋ 더하기 / － 빼기 / × 곱하기 / ÷ 나누기</b>로 바꿔가며 앞의 결과에 순서대로 적용할 수 있어요.</div>
     <div id="doItemsWrap"></div>
     <div class="calc-item-add-row">
       <button type="button" class="btn secondary-btn" id="doAddForeignBtn">＋ 외화(USD) 항목 추가</button>
       <button type="button" class="btn secondary-btn" id="doAddKrwBtn">＋ 원화 항목 추가</button>
+      <button type="button" class="btn secondary-btn" id="doAddFactorBtn">＋ 배수(계수) 항목 추가</button>
     </div>
     <div id="doResultBox"></div>
     <div id="doRateHistoryBox" style="margin-top:18px;"></div>
@@ -1411,11 +1413,15 @@ function renderDoCalculator(containerId) {
   };
   document.getElementById("doSaveRateBtn").onclick = saveDoRateForSelectedDate;
   document.getElementById("doAddForeignBtn").onclick = () => {
-    DO_CALC_ITEMS.push({ id: genId("d"), type: "foreign", amount: "", sign: 1 });
+    DO_CALC_ITEMS.push({ id: genId("d"), type: "foreign", amount: "", op: "+" });
     renderDoItemsList();
   };
   document.getElementById("doAddKrwBtn").onclick = () => {
-    DO_CALC_ITEMS.push({ id: genId("d"), type: "krw", amount: "", sign: 1 });
+    DO_CALC_ITEMS.push({ id: genId("d"), type: "krw", amount: "", op: "+" });
+    renderDoItemsList();
+  };
+  document.getElementById("doAddFactorBtn").onclick = () => {
+    DO_CALC_ITEMS.push({ id: genId("d"), type: "factor", amount: "", op: "+" });
     renderDoItemsList();
   };
 
@@ -1523,32 +1529,45 @@ function renderDoItemsList() {
   if (!wrap) return;
   wrap.innerHTML = "";
 
+  const OP_CYCLE = ["+", "-", "×", "÷"];
+  const OP_LABEL = { "+": "＋", "-": "－", "×": "×", "÷": "÷" };
+  const OP_CLASS = { "+": "", "-": " calc-item-op-minus", "×": " calc-item-op-mul", "÷": " calc-item-op-div" };
+
   DO_CALC_ITEMS.forEach((item, i) => {
     const row = document.createElement("div");
     row.className = "calc-item-row";
 
-    if (item.sign === undefined) item.sign = 1;
+    if (item.op === undefined) item.op = item.sign === -1 ? "-" : "+";
 
-    const signBtn = document.createElement("button");
-    signBtn.type = "button";
-    signBtn.className = "calc-item-sign" + (item.sign === -1 ? " calc-item-sign-minus" : "");
-    signBtn.textContent = item.sign === -1 ? "－" : "＋";
-    signBtn.title = "눌러서 더하기/빼기 전환";
-    signBtn.onclick = () => {
-      item.sign = item.sign === -1 ? 1 : -1;
-      renderDoItemsList();
-    };
-    row.appendChild(signBtn);
+    if (i === 0) {
+      const startLabel = document.createElement("span");
+      startLabel.className = "calc-item-start-label";
+      startLabel.textContent = "시작";
+      startLabel.title = "첫 번째 항목은 항상 시작값이에요";
+      row.appendChild(startLabel);
+    } else {
+      const opBtn = document.createElement("button");
+      opBtn.type = "button";
+      opBtn.className = "calc-item-op" + (OP_CLASS[item.op] || "");
+      opBtn.textContent = OP_LABEL[item.op] || "＋";
+      opBtn.title = "눌러서 더하기/빼기/곱하기/나누기 전환";
+      opBtn.onclick = () => {
+        const idx = OP_CYCLE.indexOf(item.op);
+        item.op = OP_CYCLE[(idx + 1) % OP_CYCLE.length];
+        renderDoItemsList();
+      };
+      row.appendChild(opBtn);
+    }
 
     const badge = document.createElement("span");
-    badge.className = "calc-item-badge " + (item.type === "foreign" ? "calc-item-badge-usd" : "calc-item-badge-krw");
-    badge.textContent = item.type === "foreign" ? "USD" : "원화";
+    badge.className = "calc-item-badge " + (item.type === "foreign" ? "calc-item-badge-usd" : item.type === "factor" ? "calc-item-badge-factor" : "calc-item-badge-krw");
+    badge.textContent = item.type === "foreign" ? "USD" : item.type === "factor" ? "배수" : "원화";
     row.appendChild(badge);
 
     const input = document.createElement("input");
     input.type = "number";
     input.value = item.amount;
-    input.placeholder = item.type === "foreign" ? "예: 250" : "예: 5000";
+    input.placeholder = item.type === "foreign" ? "예: 250" : item.type === "factor" ? "예: 1.1 또는 3" : "예: 5000";
     input.oninput = (e) => { item.amount = e.target.value; renderDoResult(); };
     row.appendChild(input);
 
@@ -1585,8 +1604,9 @@ function renderDoResult() {
   let total = 0;
   let hasAny = false;
   const lines = [];
+  const OP_LABEL = { "+": "＋", "-": "－", "×": "×", "÷": "÷" };
 
-  DO_CALC_ITEMS.forEach((item) => {
+  DO_CALC_ITEMS.forEach((item, idx) => {
     const amount = parseFloat(item.amount);
     if (!amount) {
       const eqEl = document.getElementById("doItemEq_" + item.id);
@@ -1594,17 +1614,32 @@ function renderDoResult() {
       return;
     }
     hasAny = true;
-    const sign = item.sign === -1 ? -1 : 1;
-    const signPrefix = sign === -1 ? "－ " : "";
+    const op = idx === 0 ? "+" : (item.op || "+");
+    const opPrefix = idx === 0 ? "" : OP_LABEL[op] + " ";
+
+    let value;
     if (item.type === "foreign") {
-      const converted = Math.round(amount * rate);
-      total += sign * converted;
-      lines.push(signPrefix + "USD " + amount.toLocaleString() + " × " + rate.toLocaleString() + "원 = " + converted.toLocaleString() + "원");
+      value = Math.round(amount * rate);
+      lines.push(opPrefix + "USD " + amount.toLocaleString() + " × " + rate.toLocaleString() + "원 = " + value.toLocaleString() + "원");
       const eqEl = document.getElementById("doItemEq_" + item.id);
-      if (eqEl) eqEl.textContent = rate ? ("= " + signPrefix + converted.toLocaleString() + "원") : "환율을 입력해주세요";
+      if (eqEl) eqEl.textContent = rate ? ("= " + value.toLocaleString() + "원") : "환율을 입력해주세요";
+    } else if (item.type === "factor") {
+      value = amount;
+      lines.push(opPrefix + amount.toLocaleString() + " (배수)");
     } else {
-      total += sign * amount;
-      lines.push(signPrefix + amount.toLocaleString() + "원");
+      value = amount;
+      lines.push(opPrefix + amount.toLocaleString() + "원");
+    }
+
+    if (idx === 0) {
+      total = value;
+    } else {
+      switch (op) {
+        case "+": total += value; break;
+        case "-": total -= value; break;
+        case "×": total *= value; break;
+        case "÷": total = value !== 0 ? total / value : total; break;
+      }
     }
   });
 

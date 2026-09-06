@@ -348,10 +348,33 @@ function saveDoDeskPaymentRecent(list) {
   try { localStorage.setItem(DO_DESK_PAYMENT_RECENT_KEY, JSON.stringify(list)); } catch (e) { /* 저장 실패해도 이번 세션은 그대로 유지되니 무시 */ }
 }
 
+const DO_DESK_PAYMENT_RECENT_COLLAPSED_KEY = "do_desk_recent_payments_collapsed";
+
+function isDoDeskPaymentRecentCollapsed() {
+  try { return localStorage.getItem(DO_DESK_PAYMENT_RECENT_COLLAPSED_KEY) === "1"; } catch (e) { return false; }
+}
+
+function toggleDoDeskPaymentRecentList() {
+  const collapsed = !isDoDeskPaymentRecentCollapsed();
+  try { localStorage.setItem(DO_DESK_PAYMENT_RECENT_COLLAPSED_KEY, collapsed ? "1" : "0"); } catch (e) { /* 무시 */ }
+  applyDoDeskPaymentRecentCollapsedState();
+}
+
+function applyDoDeskPaymentRecentCollapsedState() {
+  const wrap = document.getElementById("doDeskPaymentRecentListWrap");
+  const btn = document.getElementById("doDeskPaymentRecentToggleBtn");
+  if (!wrap || !btn) return;
+  const collapsed = isDoDeskPaymentRecentCollapsed();
+  wrap.style.display = collapsed ? "none" : "";
+  btn.textContent = collapsed ? "▼ 펼치기" : "▲ 접기";
+}
+
 function renderDoDeskPaymentRecentList() {
   const box = document.getElementById("doDeskPaymentRecentList");
   if (!box) return;
   const list = loadDoDeskPaymentRecent();
+  const countEl = document.getElementById("doDeskPaymentRecentCount");
+  if (countEl) countEl.textContent = list.length > 0 ? "(" + list.length + "건)" : "";
   if (list.length === 0) {
     box.innerHTML = '<div class="hint">아직 이 브라우저에서 추가한 항목이 없어요.</div>';
   } else {
@@ -368,6 +391,7 @@ function renderDoDeskPaymentRecentList() {
       </div>
     `).join("");
   }
+  applyDoDeskPaymentRecentCollapsedState();
   updateDoDeskPaymentMergeUI();
 }
 
@@ -578,9 +602,14 @@ function loadDoDeskTab() {
         </div>
         <div id="doDeskPaymentStatus" class="hint" style="margin-top:6px;"></div>
 
-        <div class="label" style="margin:16px 0 8px;">🕓 최근 추가한 항목 (이 브라우저 기준)</div>
+        <div class="label" style="margin:16px 0 8px; display:flex; align-items:center; justify-content:space-between; gap:8px; cursor:pointer;" onclick="toggleDoDeskPaymentRecentList()">
+          <span>🕓 최근 추가한 항목 (이 브라우저 기준) <span id="doDeskPaymentRecentCount" class="badge-count"></span></span>
+          <button type="button" class="btn secondary-btn" id="doDeskPaymentRecentToggleBtn" style="padding:2px 10px; font-size:12px;" onclick="event.stopPropagation(); toggleDoDeskPaymentRecentList();">▲ 접기</button>
+        </div>
         <div class="hint" style="margin:0 0 8px;">여기 목록에 있는 것만 수정할 수 있어요. 합송금 처리할 건들은 체크박스로 2개 이상 선택하면 병합 버튼이 나타나요.</div>
-        <div id="doDeskPaymentRecentList" class="desk-result-box"></div>
+        <div id="doDeskPaymentRecentListWrap" style="max-height:340px; overflow-y:auto;">
+          <div id="doDeskPaymentRecentList" class="desk-result-box"></div>
+        </div>
 
         <div id="doDeskPaymentMergeBox" style="display:none; margin-top:10px; padding:12px; border:1px dashed #d1d5db; border-radius:10px;">
           <div class="label" style="margin:0 0 8px;">🔗 선택한 항목 합송금으로 병합</div>
