@@ -1601,7 +1601,13 @@ function saveNtfAsPdf(idx) {
   const bodyInner = bodyMatch ? bodyMatch[2] : htm;
 
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = bodyStyle + "width:700px;padding:24px;";
+  /* body가 flex/grid 레이아웃이라 그냥 append하면 wrapper가 그 레이아웃 영향을 받아
+     세로로 불필요하게 늘어나면서(참고: 로고가 페이지 중간에 뜨고 위아래로 빈 여백이 크게
+     남는 문제) 캡처된다. position:fixed로 화면 밖에 완전히 독립시켜서 이 문제를 막는다.
+     패딩은 html2pdf의 margin:10과 별개로 좌우에만 살짝 주고, 로고 배너가 최상단에
+     바로 붙도록 위쪽 패딩은 없앤다. */
+  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;display:block;margin:0;"
+    + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;";
   wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
   document.body.appendChild(wrapper);
 

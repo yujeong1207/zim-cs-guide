@@ -286,10 +286,12 @@ async function handlePdfSelected(event) {
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     const pageHtmlList = [];
+    pdfConvertedRawPages = [];
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
+      pdfConvertedRawPages.push(textContent.items);
       const lines = groupPdfTextItemsIntoLines(textContent.items);
       pageHtmlList.push(lines.map((l) => escapeHtml(l)).join("<br>"));
     }
@@ -346,6 +348,9 @@ let PDF_TABLE_COLUMNS = ["Port", "ETA"];
 let PDF_TABLE_ROWS = [["", ""]];
 let pdfPreviewLastRange = null;
 let pdfConvertedFileBaseName = "CA_문서";
+/* 마지막으로 업로드한 PDF의 페이지별 원본 텍스트 조각(pdf.js textContent.items)을 그대로 보관.
+   "PDF(CA) → Word로 저장"에서 표를 좌표 기반으로 다시 감지해 진짜 <table>로 재구성할 때 쓴다. */
+let pdfConvertedRawPages = [];
 
 function attachPdfPreviewSelectionTracking() {
   const el = document.getElementById("pdfConvertPreview");
@@ -538,10 +543,148 @@ function joinPdfLineItems(lineItems) {
   return result.replace(/[ \t]+/g, " ").trim();
 }
 
+/* ============================================================
+   📄 PDF(CA) → Word (표 좌표 인식해서 진짜 <table>로 재구성)
+   ============================================================ */
+
+/* 한 페이지의 줄(같은 y좌표로 묶인 텍스트 조각들)들을 보고, 연속된 여러 줄에서
+   "같은 x좌표 근처에서 반복적으로 새 칸이 시작되는" 패턴이 3줄 이상 나오면 표로 판단한다.
+   각 줄 안에서 조각들 사이 간격이 그 줄 평균 글자폭의 3배 이상 벌어지는 지점을 "칸 경계"로 보고,
+   그 경계 x좌표들이 여러 줄에 걸쳐 비슷한 위치(±10pt)에 반복되면 열 경계로 확정한다. */
+function detectPdfTableBlocks(lines) {
+  // lines: [{ y, items: [{str, x, endX}] }]
+  const lineColBoundaries = lines.map((line) => {
+    const items = line.items.slice().sort((a, b) => a.x - b.x);
+    const boundaries = [];
+    for (let i = 1; i < items.length; i++) {
+      const gap = items[i].x - items[i - 1].endX;
+      const avgCharW = Math.max(3, (items[i - 1].endX - items[i - 1].x) / Math.max(1, items[i - 1].str.length));
+      if (gap > avgCharW * 3) boundaries.push((items[i - 1].endX + items[i].x) / 2);
+    }
+    return boundaries;
+  });
+
+  const blocks = [];
+  let runStart = -1;
+  let runBoundarySet = null;
+
+  function closeRun(endIdxExclusive) {
+    if (runStart === -1) return;
+    const runLen = endIdxExclusive - runStart;
+    if (runLen >= 3 && runBoundarySet && runBoundarySet.length >= 1) {
+      blocks.push({ start: runStart, end: endIdxExclusive, boundaries: runBoundarySet.slice().sort((a, b) => a - b) });
+    }
+    runStart = -1;
+    runBoundarySet = null;
+  }
+
+  function boundariesMatch(a, b) {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 10) return false;
+    return true;
+  }
+
+  lineColBoundaries.forEach((bnds, idx) => {
+    if (bnds.length === 0) { closeRun(idx); return; }
+    if (runStart === -1) { runStart = idx; runBoundarySet = bnds; return; }
+    if (boundariesMatch(runBoundarySet, bnds)) return; // 이어짐
+    closeRun(idx);
+    runStart = idx;
+    runBoundarySet = bnds;
+  });
+  closeRun(lineColBoundaries.length);
+
+  return blocks;
+}
+
+/* 표로 판정된 줄 구간을, 열 경계 기준으로 셀 텍스트를 나눠 <table> HTML로 만든다.
+   첫 줄은 제목행(th)으로 취급한다. */
+function buildPdfTableHtmlFromLines(lines, block) {
+  const boundaries = block.boundaries;
+  const rows = [];
+  for (let i = block.start; i < block.end; i++) {
+    const items = lines[i].items.slice().sort((a, b) => a.x - b.x);
+    const cells = boundaries.map(() => []).concat([[]]); // boundaries.length + 1 칸
+    items.forEach((it) => {
+      let col = 0;
+      while (col < boundaries.length && it.x >= boundaries[col]) col++;
+      cells[col].push(it.str);
+    });
+    rows.push(cells.map((c) => c.join(" ").replace(/\s+/g, " ").trim()));
+  }
+
+  let html = '<table class="pdf-conv-table">';
+  rows.forEach((row, rIdx) => {
+    const tag = rIdx === 0 ? "th" : "td";
+    html += "<tr>" + row.map((c) => "<" + tag + ">" + escapeHtml(c) + "</" + tag + ">").join("") + "</tr>";
+  });
+  html += "</table>";
+  return html;
+}
+
+/* pdf.js textContent.items를 y좌표로 줄 묶고, 각 줄 안 조각을 x좌표·좌표정보와 함께 보존한다
+   (groupPdfTextItemsIntoLines는 최종 문자열만 반환해서 좌표가 사라지므로 별도로 다시 묶음). */
+function groupPdfItemsWithCoords(items) {
+  if (!items || items.length === 0) return [];
+  const sorted = items.slice().sort((a, b) => b.transform[5] - a.transform[5] || a.transform[4] - b.transform[4]);
+  const lines = [];
+  let current = [];
+  let currentY = null;
+  let currentMaxHeight = 0;
+
+  sorted.forEach((item) => {
+    const y = item.transform[5];
+    const h = item.height || Math.abs(item.transform[3]) || 10;
+    const threshold = Math.max(5, currentMaxHeight * 0.75, h * 0.75);
+    if (currentY === null || Math.abs(y - currentY) <= threshold) {
+      current.push(item);
+      if (currentY === null) currentY = y;
+      currentMaxHeight = Math.max(currentMaxHeight, h);
+    } else {
+      lines.push({ y: currentY, items: current });
+      current = [item];
+      currentY = y;
+      currentMaxHeight = h;
+    }
+  });
+  if (current.length > 0) lines.push({ y: currentY, items: current });
+
+  return lines
+    .map((line) => ({
+      y: line.y,
+      items: line.items
+        .filter((it) => (it.str || "").trim().length > 0)
+        .map((it) => ({ str: it.str, x: it.transform[4], endX: it.transform[4] + (it.width || (it.str || "").length * 4) })),
+    }))
+    .filter((line) => line.items.length > 0);
+}
+
+/* 페이지 하나를 표 구간과 일반 문단 구간으로 나눠서 순서대로 HTML로 합친다. */
+function buildPdfPageHtmlWithTables(items) {
+  const lines = groupPdfItemsWithCoords(items);
+  if (lines.length === 0) return "";
+  const blocks = detectPdfTableBlocks(lines);
+
+  let html = "";
+  let cursor = 0;
+  blocks.forEach((block) => {
+    for (let i = cursor; i < block.start; i++) {
+      html += escapeHtml(joinPdfLineItems(lines[i].items.map((it) => ({ str: it.str, transform: [0, 0, 0, 0, it.x], width: it.endX - it.x })))) + "<br>";
+    }
+    html += buildPdfTableHtmlFromLines(lines, block);
+    cursor = block.end;
+  });
+  for (let i = cursor; i < lines.length; i++) {
+    html += escapeHtml(joinPdfLineItems(lines[i].items.map((it) => ({ str: it.str, transform: [0, 0, 0, 0, it.x], width: it.endX - it.x })))) + "<br>";
+  }
+  return html;
+}
+
 function buildPdfConvertedHtml() {
   const previewEl = document.getElementById("pdfConvertPreview");
   const html = previewEl ? normalizeSmartChars(previewEl.innerHTML) : "";
   if (!html.trim()) return null;
+
 
   const styles = "<style>@page{size:A4;margin:20mm 25mm;}"
     + "html,body{margin:0;}"
@@ -556,6 +699,35 @@ function buildPdfConvertedHtml() {
   const title = pdfConvertedFileBaseName || "CA_문서";
   const htm = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + darkModeSafeMeta()
     + "<title>" + escapeHtml(title) + "</title>" + styles + darkModeSafeCss("#ffffff", "#1f3864") + "</head><body>" + html + "</body></html>";
+  return { htm, title };
+}
+
+/* PDF(CA) → Word 전용 HTML 조립: 편집 미리보기(줄바꿈만 있는 평문)를 재사용하지 않고,
+   원본 PDF 좌표 정보(pdfConvertedRawPages)에서 표를 다시 감지해 진짜 <table>로 만든다.
+   그래야 Origin/ETA 같은 표가 워드에서도 표 그대로 열린다. */
+function buildPdfConvertedWordHtml() {
+  if (!pdfConvertedRawPages || pdfConvertedRawPages.length === 0) return null;
+
+  const pageHtmlList = pdfConvertedRawPages.map((items) => buildPdfPageHtmlWithTables(items));
+  const combined = pageHtmlList.join('<br><br><div style="color:#999;font-size:11px;">— 다음 페이지 —</div><br>');
+  if (!combined.trim()) return null;
+
+  const dateLine = '<div class="pdf-conv-date">' + formatDateWithSup() + "</div>";
+  const bodyHtml = dateLine + "<br>" + combined;
+
+  const styles = "<style>@page{size:A4;margin:20mm 25mm;}"
+    + "html,body{margin:0;}"
+    + "body{font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#1f3864;"
+    + "width:210mm;min-height:297mm;margin:0 auto;padding:20mm 25mm;box-sizing:border-box;}"
+    + "strong,b{font-weight:700;}"
+    + ".pdf-conv-date{text-align:right;margin-bottom:10px;color:#1f3864;}"
+    + ".pdf-conv-table{font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;border-collapse:collapse;margin:14px auto;font-size:12pt;}"
+    + ".pdf-conv-table th{background:#003d6b;color:#fff;padding:6px 16px;text-align:center;font-weight:600;}"
+    + ".pdf-conv-table td{padding:6px 16px;border:1px solid #ccc;text-align:center;color:#1f3864;}"
+    + "</style>";
+  const title = pdfConvertedFileBaseName || "CA_문서";
+  const htm = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + darkModeSafeMeta()
+    + "<title>" + escapeHtml(title) + "</title>" + styles + darkModeSafeCss("#ffffff", "#1f3864") + "</head><body>" + bodyHtml + "</body></html>";
   return { htm, title };
 }
 
@@ -575,11 +747,10 @@ function savePdfConvertedHtml() {
 }
 
 /* Word는 확장자가 .doc여도 내용이 HTML이면 그대로 열어서 서식 있는 문서로 인식한다.
-   회사 브라우저(프리즈마)가 html/htm 확장자 다운로드를 막는 경우를 대비해, 완전히 같은
-   내용을 .doc 확장자로 내려주는 대안. 이렇게 받은 .doc를 워드로 열고 "웹페이지(*.htm)"로
-   다시 저장하면, 다운로드 차단을 우회해서 결국 HTML 파일을 손에 넣을 수 있다. */
+   여기서는 편집 미리보기가 아니라 원본 PDF 좌표에서 표를 다시 감지해 재구성한 HTML을 쓴다 —
+   그래야 PDF에 있던 표가 워드에서도 진짜 표로, 줄바꿈이나 내용 누락 없이 열린다. */
 function savePdfConvertedDoc() {
-  const built = buildPdfConvertedHtml();
+  const built = buildPdfConvertedWordHtml();
   if (!built) { alert("저장할 내용이 없어요. 먼저 PDF를 변환해주세요."); return; }
   const { htm, title } = built;
   const blob = new Blob([htm], { type: "application/msword;charset=utf-8" });
