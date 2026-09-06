@@ -1608,32 +1608,59 @@ function saveNtfAsPdf(idx) {
   const wrapper = document.createElement("div");
   /* body가 flex/grid 레이아웃이라 그냥 append하면 wrapper가 그 레이아웃 영향을 받아
      세로로 늘어나며 캡처되는 문제가 있었다 (로고가 중간에 뜨고 여백이 커짐).
-     반대로 position:fixed; left:-9999px로 화면 밖에 두면, html2canvas가 화면 밖 요소를
-     아예 못 찍어서 완전히 빈 PDF가 나오는 문제가 생겼다. 그래서 화면 "안"에 두되,
-     매우 큰 z-index와 불투명 흰 배경으로 다른 요소를 완전히 덮어써서 실질적으로
-     안 보이는 것처럼 만든다 (캡처 직후 바로 제거되므로 사람 눈에는 거의 안 띈다). */
-  wrapper.style.cssText = "position:fixed;left:0;top:0;z-index:999999;display:block;margin:0;"
-    + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;";
+     position:fixed; left:-9999px로 화면 밖에 두면 html2canvas가 화면 밖 요소를
+     못 찍어서 완전히 빈 PDF가 나오는 문제가 있었다. z-index로 덮어쓰는 방식도
+     여전히 빈 PDF가 나오는 걸 보니 근본 원인은 위치가 아니라 "로고 이미지(base64)가
+     아직 다 그려지기 전에 캡처가 시작되는 타이밍 문제"로 보인다. 그래서 화면 안,
+     레이아웃 흐름에서 벗어나지 않는 자연스러운 위치(문서 맨 끝에 추가)에 두고,
+     안의 <img>가 완전히 로드된 뒤에만 캡처를 시작하도록 명시적으로 기다린다. */
+  wrapper.style.cssText = "position:absolute;left:0;top:0;margin:0;"
+    + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;background:#ffffff;";
   wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
   document.body.appendChild(wrapper);
 
   const filename = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".pdf";
 
-  html2pdf()
-    .set({
-      margin: 10,
-      filename: filename,
-      image: { type: "jpeg", quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-    })
-    .from(wrapper)
-    .save()
-    .then(() => document.body.removeChild(wrapper))
-    .catch((err) => {
-      document.body.removeChild(wrapper);
-      alert("PDF 생성 중 문제가 발생했어요: " + err.message);
+  function runCapture() {
+    html2pdf()
+      .set({
+        margin: 10,
+        filename: filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+      })
+      .from(wrapper)
+      .save()
+      .then(() => document.body.removeChild(wrapper))
+      .catch((err) => {
+        document.body.removeChild(wrapper);
+        alert("PDF 생성 중 문제가 발생했어요: " + err.message);
+      });
+  }
+
+  // wrapper 안의 모든 <img>(로고 포함)가 완전히 로드될 때까지 기다린 뒤 캡처 시작.
+  const imgs = wrapper.querySelectorAll("img");
+  if (imgs.length === 0) {
+    runCapture();
+  } else {
+    let remaining = imgs.length;
+    let started = false;
+    const proceedIfReady = () => {
+      remaining--;
+      if (remaining <= 0 && !started) { started = true; runCapture(); }
+    };
+    imgs.forEach((img) => {
+      if (img.complete && img.naturalWidth > 0) {
+        proceedIfReady();
+      } else {
+        img.onload = proceedIfReady;
+        img.onerror = proceedIfReady;
+      }
     });
+    // 안전장치: 혹시 onload/onerror가 안 불리는 예외 상황에 대비해 최대 3초 후 강제 진행
+    setTimeout(() => { if (!started) { started = true; runCapture(); } }, 3000);
+  }
 }
 
 function appendNtfToRow(block, idx, toResolved, subjectResolved) {
