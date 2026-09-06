@@ -1258,7 +1258,27 @@ function collectNtfValues() {
   const tpl = getCurrentNtfTemplate();
   const values = {};
   tpl.fields.forEach((f) => { values[f.label] = document.getElementById("ntf_field_" + f.id).value; });
+  if (tpl.id === "item_msscllzy9qpp") {
+    values["🔀 콜링 순서 문구"] = buildRotationCallingPhrase(values);
+  }
   return values;
+}
+
+/* 로테이션 변경 공지 전용: "1️⃣ 먼저 기항" / "2️⃣ 그 다음" / "3️⃣ 마지막(선택)" 세 개의
+   포트 입력값을 모아서 "SYDNEY first, followed by MELBOURNE and BRISBANE" 같은 문장으로
+   자동 조합한다. 3️⃣ 항구가 비어 있으면 2곳짜리 문장("A first, followed by B")으로 자연스럽게
+   줄어들고, 1개만 입력돼 있으면 항구 이름만 그대로 반환한다. */
+function buildRotationCallingPhrase(values) {
+  const p1 = (values["1️⃣로테이션 변경되어 먼저 기항하는 포트"] || "").trim();
+  const p2 = (values["2️⃣ 로테이션 변경되어 그 다음에 기항하는 포트"] || "").trim();
+  const p3 = (values["3️⃣ 로테이션 변경되어 마지막에 기항하는 포트 (선택, 2곳만 바뀌면 비워두세요)"] || "").trim();
+  if (!p1) return "";
+  const rest = [p2, p3].filter(Boolean);
+  if (rest.length === 0) return p1;
+  if (rest.length === 1) return p1 + " first, followed by " + rest[0];
+  const last = rest[rest.length - 1];
+  const middle = rest.slice(0, -1);
+  return p1 + " first, followed by " + middle.join(", ") + " and " + last;
 }
 
 function buildNtfTableParts(tpl) {

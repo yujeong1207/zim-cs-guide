@@ -54,6 +54,12 @@ if (!DATA.ntfSeedsMigratedV3) {
   saveData();
 }
 
+if (!DATA.ntfSeedsMigratedV4) {
+  migrateNtfSeedsV4();
+  DATA.ntfSeedsMigratedV4 = true;
+  saveData();
+}
+
 if (!DATA.workManualImportedV1) {
   migrateWorkManualProcedures();
   DATA.workManualImportedV1 = true;
@@ -163,6 +169,37 @@ function migrateNtfSeedsV3() {
     if (!NTF_TEMPLATES.some((t) => t.id === def.id)) {
       NTF_TEMPLATES.push(JSON.parse(JSON.stringify(def)));
     }
+  });
+}
+
+/* v4: "로테이션 변경 공지"에 3번째 기항 포트(선택) 칸이 새로 추가됐다. 이미 이 템플릿을 쓰고
+   있던 브라우저에는 옛날 2칸짜리 필드 목록이 저장되어 있으므로, 3번째 필드가 없으면 추가해준다.
+   본문 문구도 "A first, and then B" → "A first, followed by B (and C)" 자동 조합 방식으로
+   바뀌었는데, 팀에서 본문을 직접 수정해뒀을 수도 있어서 "예전 기본 문구 그대로인 경우에만"
+   새 문구로 교체하고, 이미 수정된 내용이 있으면 절대 덮어쓰지 않는다. */
+function migrateNtfSeedsV4() {
+  const OLD_DEFAULT_TEXT = "<b>Dear valued customers,</b>\n\nWe would like to update you that {{🚢 모선 / 항차}} will change the rotation to call {{1️⃣로테이션 변경되어 먼저 기항하는 포트}} first, and then {{2️⃣ 로테이션 변경되어 그 다음에 기항하는 포트}}.\n\nNew rotation will be : ….. {{🔁로테이션 순서}} …..\n\nWe apologize for any inconvenience and appreciate your patience and understanding in this matter.\nSchedule is updated on ZIM’s website.\n\nFor additional information related to your shipment, please feel free to ask our local agent office.\n\n<div style=\"text-align:right;font-size:11pt;\">Sincerely,<br><b>ZIM Integrated Shipping</b></div>";
+  const NEW_TEXT = "<b>Dear valued customers,</b>\n\nWe would like to update you that {{🚢 모선 / 항차}} will change the rotation to call {{🔀 콜링 순서 문구}}.\n\nNew rotation will be : ….. {{🔁로테이션 순서}} …..\n\nWe apologize for any inconvenience and appreciate your patience and understanding in this matter.\nSchedule is updated on ZIM’s website.\n\nFor additional information related to your shipment, please feel free to ask our local agent office.\n\n<div style=\"text-align:right;font-size:11pt;\">Sincerely,<br><b>ZIM Integrated Shipping</b></div>";
+  const PORT3_FIELD = {
+    id: "f_rotation_port3_v1",
+    label: "3️⃣ 로테이션 변경되어 마지막에 기항하는 포트 (선택, 2곳만 바뀌면 비워두세요)",
+    placeholder: "BRISBANE",
+    multiline: false,
+  };
+
+  const tpl = NTF_TEMPLATES.find((t) => t.id === "item_msscllzy9qpp");
+  if (!tpl) return;
+
+  const hasPort3 = tpl.fields.some((f) => f.label.indexOf("3️⃣") === 0);
+  if (!hasPort3) {
+    // "🔁로테이션 순서" 필드 바로 앞에 끼워 넣어서, 항구 3개가 순서대로 보이게 한다.
+    const insertAt = tpl.fields.findIndex((f) => f.label.indexOf("🔁로테이션 순서") === 0);
+    if (insertAt === -1) tpl.fields.push(JSON.parse(JSON.stringify(PORT3_FIELD)));
+    else tpl.fields.splice(insertAt, 0, JSON.parse(JSON.stringify(PORT3_FIELD)));
+  }
+
+  tpl.outputs.forEach((out) => {
+    if (out.text === OLD_DEFAULT_TEXT) out.text = NEW_TEXT;
   });
 }
 

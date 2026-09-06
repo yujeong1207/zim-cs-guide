@@ -976,7 +976,7 @@ const DEFAULT_NTF_TEMPLATES = [
     "id": "item_msscllzy9qpp",
     "label": "로테이션 변경 공지",
     "group": "",
-    "guide": "1. 여기서 만드는 건 \"제목\"과 \"본문\"만이에요 — 화면 상단의 ZIM 로고 배너나 TO/FROM 줄은 발송 시스템에서 자동으로 붙으니 따로 만들 필요 없어요.\n2. \"제목\" 칸에는 NOTIFICATION TITLE에 들어갈 문구를, \"본문\" 칸에는 Dear valued customers, 부터 이어지는 실제 내용을 넣으세요.\n3. 생성 후 \"📌 제목 복사\"로 제목만, \"💾 HTML 파일로 저장\"으로 파일로 받을 수 있어요.",
+    "guide": "1. 여기서 만드는 건 \"제목\"과 \"본문\"만이에요 — 화면 상단의 ZIM 로고 배너나 TO/FROM 줄은 발송 시스템에서 자동으로 붙으니 따로 만들 필요 없어요.\n2. \"제목\" 칸에는 NOTIFICATION TITLE에 들어갈 문구를, \"본문\" 칸에는 Dear valued customers, 부터 이어지는 실제 내용을 넣으세요.\n3. 기항지가 2곳만 바뀌면 3️⃣ 항구 칸은 비워두세요 — 자동으로 A first, followed by B 로 나가요. 3곳이 바뀌면 3️⃣ 항구까지 채우면 A first, followed by B and C 로 자동 조합돼요.\n4. 생성 후 \"📌 제목 복사\"로 제목만, \"💾 HTML 파일로 저장\"으로 파일로 받을 수 있어요.",
     "fields": [
       {
         "id": "f_msscfn1w9kje",
@@ -987,19 +987,25 @@ const DEFAULT_NTF_TEMPLATES = [
       {
         "id": "f_msscgojysz3s",
         "label": "1️⃣로테이션 변경되어 먼저 기항하는 포트",
-        "placeholder": "VANCOUVER",
+        "placeholder": "SYDNEY",
         "multiline": false
       },
       {
         "id": "f_msschrf6xkdk",
         "label": "2️⃣ 로테이션 변경되어 그 다음에 기항하는 포트",
-        "placeholder": "SEATTLE",
+        "placeholder": "MELBOURNE",
+        "multiline": false
+      },
+      {
+        "id": "f_rotation_port3_v1",
+        "label": "3️⃣ 로테이션 변경되어 마지막에 기항하는 포트 (선택, 2곳만 바뀌면 비워두세요)",
+        "placeholder": "BRISBANE",
         "multiline": false
       },
       {
         "id": "f_mssck0yjmw12",
         "label": "🔁로테이션 순서",
-        "placeholder": "VANCOUVER / SEATTLE / PRINCE RUPERT",
+        "placeholder": "SYDNEY / MELBOURNE / BRISBANE",
         "multiline": false
       }
     ],
@@ -1008,7 +1014,7 @@ const DEFAULT_NTF_TEMPLATES = [
       {
         "id": "o_msscfc60fbck",
         "name": "화주 안내",
-        "text": "<b>Dear valued customers,</b>\n\nWe would like to update you that {{🚢 모선 / 항차}} will change the rotation to call {{1️⃣로테이션 변경되어 먼저 기항하는 포트}} first, and then {{2️⃣ 로테이션 변경되어 그 다음에 기항하는 포트}}.\n\nNew rotation will be : ….. {{🔁로테이션 순서}} …..\n\nWe apologize for any inconvenience and appreciate your patience and understanding in this matter.\nSchedule is updated on ZIM’s website.\n\nFor additional information related to your shipment, please feel free to ask our local agent office.\n\n<div style=\"text-align:right;font-size:11pt;\">Sincerely,<br><b>ZIM Integrated Shipping</b></div>",
+        "text": "<b>Dear valued customers,</b>\n\nWe would like to update you that {{🚢 모선 / 항차}} will change the rotation to call {{🔀 콜링 순서 문구}}.\n\nNew rotation will be : ….. {{🔁로테이션 순서}} …..\n\nWe apologize for any inconvenience and appreciate your patience and understanding in this matter.\nSchedule is updated on ZIM’s website.\n\nFor additional information related to your shipment, please feel free to ask our local agent office.\n\n<div style=\"text-align:right;font-size:11pt;\">Sincerely,<br><b>ZIM Integrated Shipping</b></div>",
         "to": "",
         "subject": "ROTATION CHANGE NOTIFICATION - {{🚢 모선 / 항차}}",
         "attachments": [],
@@ -1016,7 +1022,7 @@ const DEFAULT_NTF_TEMPLATES = [
         "images": []
       }
     ],
-    "updatedAt": "2026-08-14"
+    "updatedAt": "2026-09-07"
   }
 ];
 
