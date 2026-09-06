@@ -259,6 +259,8 @@ async function handlePdfSelected(event) {
   const statusEl = document.getElementById("pdfConvertStatus");
   const previewEl = document.getElementById("pdfConvertPreview");
   const saveBtn = document.getElementById("pdfSaveHtmlBtn");
+  const saveDocBtn = document.getElementById("pdfSaveDocBtn");
+  const downloadBlockedHint = document.getElementById("pdfDownloadBlockedHint");
   const toolbarEl = document.getElementById("pdfConvertToolbar");
   const toolbarHintEl = document.getElementById("pdfConvertToolbarHint");
   const tableBuilderEl = document.getElementById("pdfConvertTableBuilder");
@@ -274,6 +276,8 @@ async function handlePdfSelected(event) {
   statusEl.textContent = "변환 중이에요... (페이지 수에 따라 몇 초 걸릴 수 있어요)";
   previewEl.style.display = "none";
   saveBtn.style.display = "none";
+  saveDocBtn.style.display = "none";
+  downloadBlockedHint.style.display = "none";
   toolbarEl.style.display = "none";
   toolbarHintEl.style.display = "none";
   tableBuilderEl.style.display = "none";
@@ -304,6 +308,8 @@ async function handlePdfSelected(event) {
     previewEl.style.fontSize = "12pt";
     previewEl.style.display = "block";
     saveBtn.style.display = "block";
+    saveDocBtn.style.display = "block";
+    downloadBlockedHint.style.display = "block";
     toolbarEl.style.display = "flex";
     toolbarHintEl.style.display = "block";
     tableBuilderEl.style.display = "block";
@@ -532,10 +538,10 @@ function joinPdfLineItems(lineItems) {
   return result.replace(/[ \t]+/g, " ").trim();
 }
 
-function savePdfConvertedHtml() {
+function buildPdfConvertedHtml() {
   const previewEl = document.getElementById("pdfConvertPreview");
   const html = previewEl ? normalizeSmartChars(previewEl.innerHTML) : "";
-  if (!html.trim()) { alert("저장할 내용이 없어요. 먼저 PDF를 변환해주세요."); return; }
+  if (!html.trim()) return null;
 
   const styles = "<style>@page{size:A4;margin:20mm 25mm;}"
     + "html,body{margin:0;}"
@@ -550,11 +556,37 @@ function savePdfConvertedHtml() {
   const title = pdfConvertedFileBaseName || "CA_문서";
   const htm = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + darkModeSafeMeta()
     + "<title>" + escapeHtml(title) + "</title>" + styles + darkModeSafeCss("#ffffff", "#1f3864") + "</head><body>" + html + "</body></html>";
+  return { htm, title };
+}
+
+function savePdfConvertedHtml() {
+  const built = buildPdfConvertedHtml();
+  if (!built) { alert("저장할 내용이 없어요. 먼저 PDF를 변환해주세요."); return; }
+  const { htm, title } = built;
   const blob = new Blob([htm], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".htm";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+/* Word는 확장자가 .doc여도 내용이 HTML이면 그대로 열어서 서식 있는 문서로 인식한다.
+   회사 브라우저(프리즈마)가 html/htm 확장자 다운로드를 막는 경우를 대비해, 완전히 같은
+   내용을 .doc 확장자로 내려주는 대안. 이렇게 받은 .doc를 워드로 열고 "웹페이지(*.htm)"로
+   다시 저장하면, 다운로드 차단을 우회해서 결국 HTML 파일을 손에 넣을 수 있다. */
+function savePdfConvertedDoc() {
+  const built = buildPdfConvertedHtml();
+  if (!built) { alert("저장할 내용이 없어요. 먼저 PDF를 변환해주세요."); return; }
+  const { htm, title } = built;
+  const blob = new Blob([htm], { type: "application/msword;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".doc";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

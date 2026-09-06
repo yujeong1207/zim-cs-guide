@@ -469,6 +469,14 @@
     </div>
 
     <button class="btn generate-btn full" id="pdfSaveHtmlBtn" style="display:none;margin-top:16px;" onclick="savePdfConvertedHtml()">💾 HTML 파일로 저장</button>
+    <button class="btn secondary-btn full" id="pdfSaveDocBtn" style="display:none;margin-top:8px;" onclick="savePdfConvertedDoc()">📄 Word 파일로 저장 (.doc, 서식 동일)</button>
+    <div class="hint" id="pdfDownloadBlockedHint" style="display:none;margin-top:10px;">
+      ⚠️ 브라우저(프리즈마)가 바뀌면서 .htm 파일 다운로드가 막혀 있을 수 있어요. 이 경우 아래 순서로 하시면 돼요:<br>
+      1. 위 <b>"Word 파일로 저장"</b>을 눌러 .doc 파일을 받으세요 (이건 다운로드가 막히지 않아요).<br>
+      2. 받은 .doc 파일을 워드로 여세요 (형식이 다르다는 경고가 뜨면 "예/열기"로 진행하면 정상적으로 열려요).<br>
+      3. 워드에서 <b>파일 → 다른 이름으로 저장 → 파일 형식을 "웹페이지(*.htm, *.html)"</b>로 바꿔서 저장하세요.<br>
+      4. 이렇게 만들어진 .htm 파일을 발송 시스템에 그대로 업로드하시면 됩니다.
+    </div>
   </div>
 </div>
 

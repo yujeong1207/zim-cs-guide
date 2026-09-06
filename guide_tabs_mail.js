@@ -1425,6 +1425,16 @@ function generateNtf() {
     savePdfBtn.onclick = () => saveNtfAsPdf(idx);
     block.appendChild(savePdfBtn);
 
+    const downloadBlockedHint = document.createElement("div");
+    downloadBlockedHint.className = "hint";
+    downloadBlockedHint.style.marginTop = "10px";
+    downloadBlockedHint.innerHTML = "⚠️ 브라우저(프리즈마)가 바뀌면서 .htm 파일 다운로드가 막혀 있을 수 있어요. 이 경우:<br>"
+      + "1. <b>\"Word 파일로 저장\"</b>을 눌러 .doc 파일을 받으세요 (다운로드가 막히지 않아요).<br>"
+      + "2. 받은 .doc 파일을 워드로 여세요 (형식이 다르다는 경고가 뜨면 \"예/열기\"로 진행).<br>"
+      + "3. 워드에서 파일 → 다른 이름으로 저장 → 파일 형식을 <b>\"웹페이지(*.htm, *.html)\"</b>로 바꿔서 저장하세요.<br>"
+      + "4. 이렇게 만들어진 .htm 파일을 발송 시스템에 업로드하시면 됩니다.";
+    block.appendChild(downloadBlockedHint);
+
     outputsWrap.appendChild(block);
   });
 }
@@ -1489,12 +1499,22 @@ function buildNtfDocumentHtml(idx) {
     <div style="${toFromStyle}">FROM : ${escapeHtml(NTF_LETTERHEAD.from)}</div>
     <div style="${titleLineStyle}">NOTIFICATION TITLE : <span style="${titleSpanStyle}">${escapeHtml(title)}</span></div>`;
 
-  const bodyStyle = "margin:0 auto;padding:18px 20px;box-sizing:border-box;max-width:620px;"
-    + "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;background:#ffffff;";
+  const bodyStyle = "margin:0;padding:0;background:#ffffff;"
+    + "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;";
+  const cellStyle = "width:620px;max-width:620px;padding:18px 20px;box-sizing:border-box;text-align:left;";
 
+  /* CSS의 max-width/width는 아웃룩(Word 렌더링 엔진 사용) 등 일부 메일 클라이언트가 무시해서
+     결국 창 폭 그대로 넓게 퍼져 보이는 문제가 있다. 이메일 HTML의 표준 대응은 폭을 강제하는
+     <table width="620">로 감싸는 것 — 이 방식은 아웃룩을 포함한 거의 모든 클라이언트가
+     지킨다. 가운데 정렬을 위해 바깥 표를 하나 더 두고 그 안에 실제 폭 620px 표를 넣는다. */
   const htm = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + darkModeSafeMeta()
     + "<title>" + escapeHtml(title) + "</title></head><body style=\"" + bodyStyle + "\">"
-    + letterheadHtml + bodyHtml + "</body></html>";
+    + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td align=\"center\">"
+    + "<table role=\"presentation\" width=\"620\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"" + cellStyle + "\">"
+    + letterheadHtml + bodyHtml
+    + "</td></tr></table>"
+    + "</td></tr></table>"
+    + "</body></html>";
 
   return { htm, title };
 }
