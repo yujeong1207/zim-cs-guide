@@ -1476,8 +1476,14 @@ function darkModeSafeCss(bg, fg) {
 }
 
 /* saveNtfAsHtml / saveNtfAsDoc이 공유하는 본문 조립 로직. 서식(레터헤드+본문)은 완전히
-   동일하고, 마지막에 어떤 확장자·MIME으로 내보내느냐만 다르다. */
-function buildNtfDocumentHtml(idx) {
+   동일하고, 폭을 강제하는 방식만 용도에 따라 다르다.
+   - forWord=false (HTML 저장, 실제 메일 발송용): <table width="620">로 감싼다.
+     CSS max-width는 아웃룩 같은 클라이언트가 무시해서 폭이 넓게 퍼지는 문제가 있어서,
+     이메일 HTML의 표준 대응인 표 기반 폭 강제를 쓴다.
+   - forWord=true (Word 파일로 저장): 같은 <table>을 Word가 열면, border="0"이어도
+     편집 화면에 옅은 점선 셀 경계를 그려주는 고질적인 특성이 있어서, 대신 일반
+     <div style="width:620px">로 감싼다. Word는 max-width를 잘 지키므로 div로도 충분하다. */
+function buildNtfDocumentHtml(idx, forWord) {
   const info = generatedNtfOutputs[idx];
   if (!info) return null;
   const titleInput = document.getElementById("ntf_title_" + idx);
@@ -1501,26 +1507,26 @@ function buildNtfDocumentHtml(idx) {
 
   const bodyStyle = "margin:0;padding:0;background:#ffffff;"
     + "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;";
-  const cellStyle = "width:620px;max-width:620px;padding:18px 20px;box-sizing:border-box;text-align:left;";
+  const cellStyle = "width:620px;max-width:620px;padding:18px 20px;box-sizing:border-box;text-align:left;"
+    + "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;";
 
-  /* CSS의 max-width/width는 아웃룩(Word 렌더링 엔진 사용) 등 일부 메일 클라이언트가 무시해서
-     결국 창 폭 그대로 넓게 퍼져 보이는 문제가 있다. 이메일 HTML의 표준 대응은 폭을 강제하는
-     <table width="620">로 감싸는 것 — 이 방식은 아웃룩을 포함한 거의 모든 클라이언트가
-     지킨다. 가운데 정렬을 위해 바깥 표를 하나 더 두고 그 안에 실제 폭 620px 표를 넣는다. */
+  const contentHtml = forWord
+    ? `<div style="${cellStyle}margin:0 auto;">${letterheadHtml}${bodyHtml}</div>`
+    : `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center">`
+      + `<table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0"><tr><td style="${cellStyle}">`
+      + letterheadHtml + bodyHtml
+      + `</td></tr></table></td></tr></table>`;
+
   const htm = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\">" + darkModeSafeMeta()
     + "<title>" + escapeHtml(title) + "</title></head><body style=\"" + bodyStyle + "\">"
-    + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td align=\"center\">"
-    + "<table role=\"presentation\" width=\"620\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"" + cellStyle + "\">"
-    + letterheadHtml + bodyHtml
-    + "</td></tr></table>"
-    + "</td></tr></table>"
+    + contentHtml
     + "</body></html>";
 
   return { htm, title };
 }
 
 function saveNtfAsHtml(idx) {
-  const built = buildNtfDocumentHtml(idx);
+  const built = buildNtfDocumentHtml(idx, false);
   if (!built) return;
   const { htm, title } = built;
 
@@ -1536,11 +1542,10 @@ function saveNtfAsHtml(idx) {
 }
 
 /* Word는 확장자가 .doc여도 내용이 HTML이면 그대로 열어서 서식 있는 문서로 인식한다
-   (Word의 오래된 "필터링된 HTML" 저장 방식과 동일한 원리). 그래서 지금 만드는 HTML을
-   그대로 재사용하고 확장자·MIME 타입만 .doc/msword로 바꿔서 내려주면, 위 HTML 저장
-   버튼과 완전히 같은 서식의 워드 문서가 만들어진다. */
+   (Word의 오래된 "필터링된 HTML" 저장 방식과 동일한 원리). forWord=true로 만들어서
+   <table> 대신 <div>를 쓰므로, Word 편집 화면에 점선 표 경계선이 뜨지 않는다. */
 function saveNtfAsDoc(idx) {
-  const built = buildNtfDocumentHtml(idx);
+  const built = buildNtfDocumentHtml(idx, true);
   if (!built) return;
   const { htm, title } = built;
 
