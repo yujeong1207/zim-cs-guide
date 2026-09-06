@@ -1602,11 +1602,12 @@ function saveNtfAsPdf(idx) {
 
   const wrapper = document.createElement("div");
   /* body가 flex/grid 레이아웃이라 그냥 append하면 wrapper가 그 레이아웃 영향을 받아
-     세로로 불필요하게 늘어나면서(참고: 로고가 페이지 중간에 뜨고 위아래로 빈 여백이 크게
-     남는 문제) 캡처된다. position:fixed로 화면 밖에 완전히 독립시켜서 이 문제를 막는다.
-     패딩은 html2pdf의 margin:10과 별개로 좌우에만 살짝 주고, 로고 배너가 최상단에
-     바로 붙도록 위쪽 패딩은 없앤다. */
-  wrapper.style.cssText = "position:fixed;left:-9999px;top:0;display:block;margin:0;"
+     세로로 늘어나며 캡처되는 문제가 있었다 (로고가 중간에 뜨고 여백이 커짐).
+     반대로 position:fixed; left:-9999px로 화면 밖에 두면, html2canvas가 화면 밖 요소를
+     아예 못 찍어서 완전히 빈 PDF가 나오는 문제가 생겼다. 그래서 화면 "안"에 두되,
+     매우 큰 z-index와 불투명 흰 배경으로 다른 요소를 완전히 덮어써서 실질적으로
+     안 보이는 것처럼 만든다 (캡처 직후 바로 제거되므로 사람 눈에는 거의 안 띈다). */
+  wrapper.style.cssText = "position:fixed;left:0;top:0;z-index:999999;display:block;margin:0;"
     + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;";
   wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
   document.body.appendChild(wrapper);
