@@ -60,6 +60,12 @@ if (!DATA.ntfSeedsMigratedV4) {
   saveData();
 }
 
+if (!DATA.ntfSeedsMigratedV5) {
+  migrateNtfSeedsV5();
+  DATA.ntfSeedsMigratedV5 = true;
+  saveData();
+}
+
 if (!DATA.workManualImportedV1) {
   migrateWorkManualProcedures();
   DATA.workManualImportedV1 = true;
@@ -200,6 +206,19 @@ function migrateNtfSeedsV4() {
 
   tpl.outputs.forEach((out) => {
     if (out.text === OLD_DEFAULT_TEXT) out.text = NEW_TEXT;
+  });
+}
+
+/* v5: DEFAULT_NTF_TEMPLATES에 새로 추가된 공문 유형(예: "서비스 재편성(Redeployment) 공지")을
+   이미 공문 발송 화면을 써본 적 있는 브라우저에도 자동으로 채워 넣는다. V3와 로직은 완전히
+   같지만, V3는 이미 실행된 브라우저에서는 다시 안 돌아서 그 이후 새로 추가된 유형은 못 채운다
+   — 그래서 새 유형을 추가할 때마다 이런 버전을 하나씩 새로 만들어서 "누락분 채우기"를
+   한 번 더 돌려준다. */
+function migrateNtfSeedsV5() {
+  DEFAULT_NTF_TEMPLATES.forEach((def) => {
+    if (!NTF_TEMPLATES.some((t) => t.id === def.id)) {
+      NTF_TEMPLATES.push(JSON.parse(JSON.stringify(def)));
+    }
   });
 }
 

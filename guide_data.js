@@ -96,6 +96,38 @@ const DEFAULT_NTF_TEMPLATES = [
       }
     ],
     "updatedAt": "2026-09-07"
+  },
+  {
+    "id": "ntf_redeployment",
+    "label": "서비스 재편성(Redeployment) 공지",
+    "group": "",
+    "guide": "1. 여기서 만드는 건 \"제목\"과 \"본문\"만이에요 — 화면 상단의 ZIM 로고 배너나 TO/FROM 줄은 발송 시스템에서 자동으로 붙으니 따로 만들 필요 없어요.\n2. 이 유형은 딱 \"항차 재배치\" 상황만 쓰는 게 아니라, 본사에서 받은 네트워크 조정(재배치) 안내 메일을 보고 화주에게 \"OO 모선/항차 스케줄이 OO로 변경됐다\"고 알려야 할 때 넓게 쓰시면 돼요.\n3. 본사 메일은 내부 회람용(COO 승인 내역 등)이라 그대로 화주에게 보내면 안 돼요 — 그 메일에서 \"이전에 어떤 모선/항차였는지\"와 \"어떤 모선/항차로 바뀌었는지\"만 뽑아서 아래 두 칸에 채워주세요.\n4. \"제목\" 칸에는 NOTIFICATION TITLE에 들어갈 문구를, \"본문\" 칸에는 Dear valued customers, 부터 이어지는 실제 내용을 넣으세요.\n5. 생성 후 \"📌 제목 복사\"로 제목만, \"💾 HTML 파일로 저장\"으로 파일로 받을 수 있어요.",
+    "fields": [
+      {
+        "id": "f_redeploy_from",
+        "label": "🚢 이전 모선/항차",
+        "placeholder": "ZIM SPINEL 10W"
+      },
+      {
+        "id": "f_redeploy_to",
+        "label": "🚢 변경된 모선/항차",
+        "placeholder": "GANGES 21W"
+      }
+    ],
+    "table": null,
+    "outputs": [
+      {
+        "id": "o1",
+        "name": "화주 안내",
+        "to": "",
+        "subject": "SERVICE REDEPLOYMENT NOTIFICATION - {{🚢 이전 모선/항차}}",
+        "attachments": [],
+        "attachmentLink": "",
+        "text": "<b>Dear valued customers,</b>\n\nWe would like to update you that {{🚢 이전 모선/항차}} vessel schedule has been changed to {{🚢 변경된 모선/항차}} due to network redeployment.\n\nWe apologize for any inconvenience and appreciate your patience and understanding in this matter.\nSchedule is updated on ZIM's website.\n\nFor additional information related to your shipment, please feel free to ask our local agent office.\n\n<div style=\"text-align:right;font-size:11pt;\">Sincerely,<br><b>ZIM Integrated Shipping</b></div>",
+        "images": []
+      }
+    ],
+    "updatedAt": "2026-09-07"
   }
 ];
 
