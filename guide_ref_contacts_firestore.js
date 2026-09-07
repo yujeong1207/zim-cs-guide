@@ -59,14 +59,18 @@ async function replaceAllRefContactsInFirestore(list) {
     await batch.commit();
   }
 
-  // 새 목록 순서대로 다시 기록
+  // 새 목록 순서대로 다시 기록. id가 있는 항목은 그 id를 문서 ID로 그대로 쓰고(관리 화면에서
+  // "수정"을 위해 저장했던 값이 새로고침 한 번에 다른 id로 둔갑하는 걸 막기 위함), id가 없는
+  // 새 항목만 Firestore가 새 id를 만들게 둔다.
   for (let i = 0; i < list.length; i += batchSize) {
     const batch = window.fbDb.batch();
     list.slice(i, i + batchSize).forEach((item, offset) => {
       const order = i + offset;
       const data = Object.assign({}, item, { order, updatedAt: todayStr() });
-      delete data.id; // id는 Firestore가 문서 ID로 따로 관리
-      batch.set(collectionRef.doc(), data);
+      const id = data.id;
+      delete data.id;
+      const docRef = id ? collectionRef.doc(id) : collectionRef.doc();
+      batch.set(docRef, data);
     });
     await batch.commit();
   }

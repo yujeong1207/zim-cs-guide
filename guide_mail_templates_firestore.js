@@ -62,13 +62,18 @@ async function replaceAllMailTemplatesInFirestore(list) {
     await batch.commit();
   }
 
+  // 새 목록 순서대로 다시 기록. id가 있는 항목(예: istanbul, omit 같은 원래 코드 id)은
+  // 그 id를 문서 ID로 그대로 써서 보존하고, id가 없는 새 항목만 Firestore가 새 id를 만들게 둔다.
+  // (이걸 안 지키면 마이그레이션할 때마다 화면 드롭다운 옵션 값과 실제 데이터 id가 어긋난다.)
   for (let i = 0; i < list.length; i += batchSize) {
     const batch = window.fbDb.batch();
     list.slice(i, i + batchSize).forEach((item, offset) => {
       const order = i + offset;
       const data = Object.assign({}, item, { order, updatedAt: todayStr() });
+      const id = data.id;
       delete data.id;
-      batch.set(collectionRef.doc(), data);
+      const docRef = id ? collectionRef.doc(id) : collectionRef.doc();
+      batch.set(docRef, data);
     });
     await batch.commit();
   }
