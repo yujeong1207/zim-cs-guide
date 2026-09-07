@@ -36,9 +36,9 @@ function initMailTemplatesFirestoreSync() {
       (snapshot) => {
         TEMPLATES = snapshot.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
         mailTemplatesLoaded = true;
-        // 현재 화면이 메일 탭이면 드롭다운/미리보기를 새로고침해서 최신 내용을 바로 보여준다.
-        if (typeof mainTab !== "undefined" && mainTab === "mail" && typeof renderTemplateSelect === "function") {
-          renderTemplateSelect();
+        // 현재 화면이 메일 템플릿 탭이면 드롭다운/미리보기를 새로고침해서 최신 내용을 바로 보여준다.
+        if (typeof mainTab !== "undefined" && mainTab === "templates" && typeof initTypeSelect === "function") {
+          initTypeSelect();
         }
         if (typeof adminSection !== "undefined" && adminSection === "templates" && typeof renderAdminList === "function") {
           renderAdminList();
