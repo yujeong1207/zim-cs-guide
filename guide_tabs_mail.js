@@ -1591,109 +1591,122 @@ function buildNtfHeaderBannerHtml() {
 /* PDF는 시스템 폰트/렌더링에 좌우되기 쉬워서, html2pdf(내부적으로 html2canvas+jsPDF)가
    화면 밖(고정폭 A4 비율 컨테이너)에 그린 뒤 이미지처럼 캡처해서 PDF로 떨어뜨리는 방식.
    그래서 buildNtfDocumentHtml과 같은 본문 HTML을 재사용하되, 최상단에 로고 배너만 추가한다. */
-function saveNtfAsPdf(idx) {
-  // forWord: true를 넘겨서 <table> 대신 <div>로 감싸진 버전을 쓴다. html2canvas가 화면 밖
-  // (transform으로 밀어낸) 위치에서 중첩된 <table width="100%" align="center"> 구조를
-  // 렌더링할 때 폭 계산이 깨지거나 아예 못 그리는 경우가 있어서(빈 PDF의 원인), PDF는
-  // 어차피 폭이 고정 캡처라 표로 감쌀 필요가 없는 div 버전을 쓰는 게 안전하다.
+let __html2canvasLoadPromise = null;
+let __jsPdfLoadPromise = null;
+
+/* html2pdf.js 라이브러리(내부적으로 html2canvas+jsPDF를 번들링)를 여러 방식으로 시도해봤지만
+   전부 실패했다 — html2pdf가 내부적으로 만드는 컨테이너(html2pdf__container)에
+   position:absolute가 박혀 있는데, 이게 바로 우리가 앞서 겪었던 "position:absolute면
+   html2canvas가 내용을 못 그린다" 문제를 라이브러리 내부에서도 그대로 일으켰다.
+   그래서 html2canvas와 jsPDF를 별도 CDN에서 직접 로드해서, position:absolute 컨테이너를
+   거치지 않고 우리가 완전히 통제하는 방식으로 캡처한다. */
+function ensureHtml2CanvasLoaded() {
+  if (typeof html2canvas !== "undefined") return Promise.resolve();
+  if (__html2canvasLoadPromise) return __html2canvasLoadPromise;
+  __html2canvasLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("html2canvas 라이브러리를 불러오지 못했어요"));
+    document.head.appendChild(script);
+  });
+  return __html2canvasLoadPromise;
+}
+
+function ensureJsPdfLoaded() {
+  if (typeof window.jspdf !== "undefined") return Promise.resolve();
+  if (__jsPdfLoadPromise) return __jsPdfLoadPromise;
+  __jsPdfLoadPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.onload = resolve;
+    script.onerror = () => reject(new Error("jsPDF 라이브러리를 불러오지 못했어요"));
+    document.head.appendChild(script);
+  });
+  return __jsPdfLoadPromise;
+}
+
+async function saveNtfAsPdf(idx) {
+  // forWord: true를 넘겨서 <table> 대신 <div>로 감싸진 버전을 쓴다 (PDF는 표로 폭을
+  // 강제할 필요가 없는 고정폭 캡처라서).
   const built = buildNtfDocumentHtml(idx, true);
   if (!built) return;
   const { htm, title } = built;
 
-  if (typeof html2pdf === "undefined") {
-    alert("PDF 생성 라이브러리를 아직 불러오지 못했어요. 페이지를 새로고침한 뒤 다시 시도해주세요.");
-    return;
-  }
+  let wrapper;
+  try {
+    await Promise.all([ensureHtml2CanvasLoaded(), ensureJsPdfLoaded()]);
 
-  // htm은 완전한 <html> 문서이므로, <body> 안쪽 내용만 꺼내서 배너와 함께 감싼다.
-  const bodyMatch = htm.match(/<body[^>]*style="([^"]*)"[^>]*>([\s\S]*)<\/body>/i);
-  const bodyStyle = bodyMatch ? bodyMatch[1] : "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;background:#ffffff;";
-  const bodyInner = bodyMatch ? bodyMatch[2] : htm;
+    // htm은 완전한 <html> 문서이므로, <body> 안쪽 내용만 꺼내서 배너와 함께 감싼다.
+    const bodyMatch = htm.match(/<body[^>]*style="([^"]*)"[^>]*>([\s\S]*)<\/body>/i);
+    const bodyStyle = bodyMatch ? bodyMatch[1] : "font-family:'Aptos',Calibri,'Malgun Gothic',sans-serif;font-size:12pt;line-height:1.8;color:#333;background:#ffffff;";
+    const bodyInner = bodyMatch ? bodyMatch[2] : htm;
 
-  const wrapper = document.createElement("div");
-  /* [문제 이력]
-     1) body가 flex/grid라 그냥 append하면 wrapper가 그 레이아웃 영향을 받아 세로로
-        불필요하게 늘어난다 (로고가 중간에, 위아래 큰 여백).
-     2) position:fixed; left:-9999px로 화면 밖에 두면 html2canvas가 화면 밖 요소를
-        아예 못 찍어서 완전히 빈 PDF가 나온다.
-     3) position:absolute로 바꾸면 html2canvas가 레이아웃을 다시 계산할 때 canvas.height를
-        0으로 오판해서 빈 PDF가 나온다.
-     4) position:static + transform:translateX(-10000px)로 화면 밖에 밀어내면, 이번엔
-        canvas 크기는 정상(예: 1536×1550)인데 내용이 하나도 안 그려진 완전히 흰 캔버스가
-        나온다 — getImageData로 직접 픽셀을 세어봐도 흰색 아닌 픽셀이 0개였다.
-        transform 자체가 html2canvas의 내부 렌더링 좌표 계산을 깨뜨리는 것으로 보인다.
-     콘솔에서 직접 확인한 결과: transform 없이 문서 맨 끝(body 안 정상 위치)에 그대로 두면
-     캡처가 완벽하게 된다 (로고·본문 전부 정상). 그래서 transform을 버리고, 대신 화면에
-     아주 짧게(캡처 완료 직후 바로 제거) 노출시키는 방식으로 바꾼다. 순간적으로 페이지
-     맨 아래에 흰 박스가 깜빡일 수 있지만, 캡처가 보통 1초 이내로 끝나서 실사용에는 거의
-     티가 안 난다. */
-  wrapper.style.cssText = "margin:0;" + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;background:#ffffff;";
-  wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
-  document.body.appendChild(wrapper);
+    wrapper = document.createElement("div");
+    /* [문제 해결 이력 요약] position:fixed/absolute, transform으로 화면 밖에 두는 방식은
+       전부 html2canvas가 내용을 못 그리거나(흰 화면 0픽셀) 엉뚱한 좌표를 캡처하는
+       문제가 있었다. 유일하게 확실히 성공한 조합은: position 기본값(static, 문서 정상
+       흐름) + 실제로 스크롤해서 화면에 보이는 위치로 이동 + 충분한 대기 시간. */
+    wrapper.style.cssText = "margin:0;" + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;background:#ffffff;";
+    wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
+    document.body.appendChild(wrapper);
 
-  const filename = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".pdf";
+    // 로고 등 <img> 완전 로드 대기
+    const imgs = wrapper.querySelectorAll("img");
+    await Promise.all(Array.from(imgs).map((img) => {
+      if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+      return new Promise((res) => { img.onload = res; img.onerror = res; });
+    }));
 
-  /* [핵심 원인] wrapper를 body에 붙인 직후 바로 html2canvas를 호출하면, 브라우저가 그
-     요소를 실제 화면에 그리기(paint)도 전에 캡처가 시작돼서 완전히 빈 흰 캔버스가
-     찍힌다 (콘솔에서 getImageData로 직접 픽셀을 세어 확인 — 흰색 아닌 픽셀 0개).
-     requestAnimationFrame을 두 번 중첩해서 최소 한 프레임 이상 브라우저에게 그릴
-     시간을 주면 이 문제는 해결된다.
-     [두 번째 원인] wrapper가 body 맨 끝(스크롤해야 보이는 위치, 예: offsetTop 1664px)에
-     붙어있으면, html2canvas가 기본적으로 "현재 보이는 뷰포트 크기"를 기준으로 캡처
-     좌표계를 잡다가 실제 요소 위치와 어긋나서, 로고 등 일부만 찍히고 나머지가 잘리거나
-     완전히 빈 캔버스가 나오는 문제가 있었다. html2canvas의 windowWidth/windowHeight
-     옵션을 "문서 전체 크기"로 명시하면 뷰포트가 아니라 문서 전체 기준으로 좌표를 잡아서
-     스크롤 여부와 무관하게 정확히 캡처된다 (콘솔에서 검증: 이 옵션 없이는 빈 파일
-     18KB~3KB, 옵션을 주니 252KB 정상 크기로 캡처 확인). */
-  function waitForPaint() {
-    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-  }
+    // 실제로 화면에 보이는 위치로 스크롤 이동 + 충분한 대기 (이 조합이 콘솔에서 검증됨)
+    wrapper.scrollIntoView({ block: "start", behavior: "instant" });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
 
-  async function runCapture() {
-    await waitForPaint();
-    html2pdf()
-      .set({
-        margin: 10,
-        filename: filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          windowWidth: document.documentElement.scrollWidth,
-          windowHeight: document.documentElement.scrollHeight,
-        },
-        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-      })
-      .from(wrapper)
-      .save()
-      .then(() => document.body.removeChild(wrapper))
-      .catch((err) => {
-        document.body.removeChild(wrapper);
-        alert("PDF 생성 중 문제가 발생했어요: " + err.message);
-      });
-  }
+    const canvas = await html2canvas(wrapper, { scale: 2, useCORS: true });
 
-  // wrapper 안의 모든 <img>(로고 포함)가 완전히 로드될 때까지 기다린 뒤 캡처 시작.
-  const imgs = wrapper.querySelectorAll("img");
-  if (imgs.length === 0) {
-    runCapture();
-  } else {
-    let remaining = imgs.length;
-    let started = false;
-    const proceedIfReady = () => {
-      remaining--;
-      if (remaining <= 0 && !started) { started = true; runCapture(); }
-    };
-    imgs.forEach((img) => {
-      if (img.complete && img.naturalWidth > 0) {
-        proceedIfReady();
-      } else {
-        img.onload = proceedIfReady;
-        img.onerror = proceedIfReady;
+    const imgData = canvas.toDataURL("image/jpeg", 0.98);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: "pt", format: "a4", orientation: "portrait" });
+
+    const marginPt = 10;
+    const pageWidth = pdf.internal.pageSize.getWidth() - marginPt * 2;
+    const pageHeight = pdf.internal.pageSize.getHeight() - marginPt * 2;
+    const imgWidthPt = pageWidth;
+    const imgHeightPt = (canvas.height * imgWidthPt) / canvas.width;
+
+    if (imgHeightPt <= pageHeight) {
+      pdf.addImage(imgData, "JPEG", marginPt, marginPt, imgWidthPt, imgHeightPt);
+    } else {
+      // 내용이 A4 한 페이지를 넘으면, canvas를 세로로 잘라서 여러 페이지로 나눠 넣는다.
+      let remainingHeightPx = canvas.height;
+      let yOffsetPx = 0;
+      const pageHeightPx = (pageHeight * canvas.width) / imgWidthPt;
+      let firstPage = true;
+      while (remainingHeightPx > 0) {
+        if (!firstPage) pdf.addPage();
+        const sliceHeightPx = Math.min(pageHeightPx, remainingHeightPx);
+        const sliceCanvas = document.createElement("canvas");
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = sliceHeightPx;
+        const sctx = sliceCanvas.getContext("2d");
+        sctx.drawImage(canvas, 0, yOffsetPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
+        const sliceImgData = sliceCanvas.toDataURL("image/jpeg", 0.98);
+        const sliceHeightPt = (sliceHeightPx * imgWidthPt) / canvas.width;
+        pdf.addImage(sliceImgData, "JPEG", marginPt, marginPt, imgWidthPt, sliceHeightPt);
+        yOffsetPx += sliceHeightPx;
+        remainingHeightPx -= sliceHeightPx;
+        firstPage = false;
       }
-    });
-    // 안전장치: 혹시 onload/onerror가 안 불리는 예외 상황에 대비해 최대 3초 후 강제 진행
-    setTimeout(() => { if (!started) { started = true; runCapture(); } }, 3000);
+    }
+
+    const filename = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".pdf";
+    pdf.save(filename);
+  } catch (err) {
+    alert("PDF 생성 중 문제가 발생했어요: " + err.message);
+  } finally {
+    if (wrapper && wrapper.parentElement) document.body.removeChild(wrapper);
+    window.scrollTo(0, 0);
   }
 }
 
