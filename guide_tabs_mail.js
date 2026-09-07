@@ -1616,24 +1616,35 @@ function saveNtfAsPdf(idx) {
         불필요하게 늘어난다 (로고가 중간에, 위아래 큰 여백).
      2) position:fixed; left:-9999px로 화면 밖에 두면 html2canvas가 화면 밖 요소를
         아예 못 찍어서 완전히 빈 PDF가 나온다.
-     3) position:absolute로 바꾸고 로고 이미지 로드까지 기다려도 여전히 빈 PDF —
-        직접 캡처된 canvas를 눈으로 확인해보니 canvas.height가 0으로 나왔다.
-        position:absolute인 요소는 브라우저 화면엔 정상적으로 그려지지만(offsetHeight는
-        정상 반환), html2canvas가 내부적으로 레이아웃을 다시 계산하는 시점에는 이 요소가
-        일반적인 문서 흐름(정적 레이아웃)에 속해있지 않아서 높이를 0으로 오판하는
-        경우가 있었다.
-     그래서 position은 기본값(static)으로 두어 문서 흐름에 정상적으로 참여시키고,
-     대신 transform으로 화면 밖으로 밀어내는 방식으로 "화면 흐름엔 있지만 안 보이게"
-     만든다. flex-shrink:0으로 body의 flex/grid 레이아웃이 크기를 임의로 줄이지
-     못하게 고정한다. */
-  wrapper.style.cssText = "position:static;transform:translateX(-10000px);margin:0;flex-shrink:0;"
-    + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;background:#ffffff;";
+     3) position:absolute로 바꾸면 html2canvas가 레이아웃을 다시 계산할 때 canvas.height를
+        0으로 오판해서 빈 PDF가 나온다.
+     4) position:static + transform:translateX(-10000px)로 화면 밖에 밀어내면, 이번엔
+        canvas 크기는 정상(예: 1536×1550)인데 내용이 하나도 안 그려진 완전히 흰 캔버스가
+        나온다 — getImageData로 직접 픽셀을 세어봐도 흰색 아닌 픽셀이 0개였다.
+        transform 자체가 html2canvas의 내부 렌더링 좌표 계산을 깨뜨리는 것으로 보인다.
+     콘솔에서 직접 확인한 결과: transform 없이 문서 맨 끝(body 안 정상 위치)에 그대로 두면
+     캡처가 완벽하게 된다 (로고·본문 전부 정상). 그래서 transform을 버리고, 대신 화면에
+     아주 짧게(캡처 완료 직후 바로 제거) 노출시키는 방식으로 바꾼다. 순간적으로 페이지
+     맨 아래에 흰 박스가 깜빡일 수 있지만, 캡처가 보통 1초 이내로 끝나서 실사용에는 거의
+     티가 안 난다. */
+  wrapper.style.cssText = "margin:0;" + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;background:#ffffff;";
   wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
   document.body.appendChild(wrapper);
 
   const filename = title.replace(/[\/\\:*?"<>|]/g, "_").replace(/\s+/g, "_") + ".pdf";
 
-  function runCapture() {
+  /* [핵심 원인] wrapper를 body에 붙인 직후 바로 html2canvas를 호출하면, 브라우저가 그
+     요소를 실제 화면에 그리기(paint)도 전에 캡처가 시작돼서 완전히 빈 흰 캔버스가
+     찍힌다 (콘솔에서 getImageData로 직접 픽셀을 세어 확인 — 흰색 아닌 픽셀 0개).
+     requestAnimationFrame을 두 번 중첩해서 최소 한 프레임 이상 브라우저에게 그릴
+     시간을 주면, 캡처가 정상적으로 이뤄진다 (같은 방식으로 콘솔에서 확인 완료:
+     프레임 대기 후 흰색 아닌 픽셀 20만개 이상 정상 검출). */
+  function waitForPaint() {
+    return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  }
+
+  async function runCapture() {
+    await waitForPaint();
     html2pdf()
       .set({
         margin: 10,
