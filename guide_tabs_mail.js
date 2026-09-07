@@ -1592,7 +1592,11 @@ function buildNtfHeaderBannerHtml() {
    화면 밖(고정폭 A4 비율 컨테이너)에 그린 뒤 이미지처럼 캡처해서 PDF로 떨어뜨리는 방식.
    그래서 buildNtfDocumentHtml과 같은 본문 HTML을 재사용하되, 최상단에 로고 배너만 추가한다. */
 function saveNtfAsPdf(idx) {
-  const built = buildNtfDocumentHtml(idx);
+  // forWord: true를 넘겨서 <table> 대신 <div>로 감싸진 버전을 쓴다. html2canvas가 화면 밖
+  // (transform으로 밀어낸) 위치에서 중첩된 <table width="100%" align="center"> 구조를
+  // 렌더링할 때 폭 계산이 깨지거나 아예 못 그리는 경우가 있어서(빈 PDF의 원인), PDF는
+  // 어차피 폭이 고정 캡처라 표로 감쌀 필요가 없는 div 버전을 쓰는 게 안전하다.
+  const built = buildNtfDocumentHtml(idx, true);
   if (!built) return;
   const { htm, title } = built;
 
