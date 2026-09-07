@@ -694,31 +694,11 @@ function renderAdminList() {
 
   if (adminSection === "contacts") {
     if (!refContactsLoaded || CONTACTS.length === 0) {
-      const migrateBox = document.createElement("div");
-      migrateBox.className = "hint";
-      migrateBox.style.cssText = "margin:10px 0;background:#fef3c7;padding:10px;border-radius:8px;";
-      migrateBox.innerHTML = "⚠️ Firestore에 연락처가 아직 없어요. 예전 기본 목록(" + DEFAULT_CONTACTS.length + "건)을 한 번만 옮겨올까요? (이미 옮긴 적 있다면 누르지 마세요 — 중복으로 쌓여요)";
-      body.appendChild(migrateBox);
-
-      const migrateBtn = document.createElement("button");
-      migrateBtn.className = "btn generate-btn full";
-      migrateBtn.style.marginBottom = "16px";
-      migrateBtn.textContent = "☁️ 예전 기본 연락처 " + DEFAULT_CONTACTS.length + "건 Firestore로 옮기기 (1회용)";
-      migrateBtn.onclick = async () => {
-        if (!confirm("예전 기본 연락처 " + DEFAULT_CONTACTS.length + "건을 Firestore로 옮길까요? 이미 데이터가 있는 상태에서 누르면 중복돼요.")) return;
-        migrateBtn.disabled = true;
-        migrateBtn.textContent = "옮기는 중... (데이터가 많아서 몇십 초 걸릴 수 있어요)";
-        try {
-          await replaceAllRefContactsInFirestore(DEFAULT_CONTACTS);
-          alert("완료됐어요 ✅ 팀원 전체 화면에 반영돼요.");
-          renderAdminList();
-        } catch (err) {
-          alert("실패했어요: " + err.message);
-          migrateBtn.disabled = false;
-          migrateBtn.textContent = "☁️ 예전 기본 연락처 " + DEFAULT_CONTACTS.length + "건 Firestore로 옮기기 (1회용)";
-        }
-      };
-      body.appendChild(migrateBtn);
+      const emptyHint = document.createElement("div");
+      emptyHint.className = "hint";
+      emptyHint.style.cssText = "margin:10px 0;background:#fef3c7;padding:10px;border-radius:8px;";
+      emptyHint.textContent = "⚠️ Firestore에서 연락처를 아직 불러오지 못했어요. 페이지를 새로고침해보시고, 그래도 비어있으면 알려주세요.";
+      body.appendChild(emptyHint);
     }
 
     const hint = document.createElement("div");
