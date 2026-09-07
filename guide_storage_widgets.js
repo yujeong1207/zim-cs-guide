@@ -72,6 +72,12 @@ if (!DATA.ntfSeedsMigratedV6) {
   saveData();
 }
 
+if (!DATA.ntfSeedsMigratedV7) {
+  migrateNtfSeedsV7();
+  DATA.ntfSeedsMigratedV7 = true;
+  saveData();
+}
+
 if (!DATA.workManualImportedV1) {
   migrateWorkManualProcedures();
   DATA.workManualImportedV1 = true;
@@ -250,6 +256,19 @@ function migrateNtfSeedsV6() {
       f.placeholder = NEW_PLACEHOLDERS[f.id];
     }
   });
+}
+
+/* v7: "서비스 재편성" 유형의 "변경된 모선/항차" placeholder에서 (ZMP) 서비스명 코드를 뺀다
+   — 바로 앞 "이전 모선/항차"에서 이미 서비스명을 적으니, 뒤에서 또 반복할 필요가 없다는
+   피드백 반영. V6과 마찬가지로 예전 기본값 그대로인 경우에만 교체한다. */
+function migrateNtfSeedsV7() {
+  const tpl = NTF_TEMPLATES.find((t) => t.id === "ntf_redeployment");
+  if (!tpl) return;
+
+  const field = tpl.fields.find((f) => f.id === "f_redeploy_to");
+  if (field && field.placeholder === "(ZMP) GANGES 21W") {
+    field.placeholder = "GANGES 21W";
+  }
 }
 
 /* 예전에 저장된 기본 메일 템플릿들(스케줄 확인 이스탄불 / ETA 확인 OMIT·PHASE OUT / ERS 요청 안내)에

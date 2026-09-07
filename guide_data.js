@@ -111,7 +111,7 @@ const DEFAULT_NTF_TEMPLATES = [
       {
         "id": "f_redeploy_to",
         "label": "🚢 변경된 모선/항차",
-        "placeholder": "(ZMP) GANGES 21W"
+        "placeholder": "GANGES 21W"
       }
     ],
     "table": null,
