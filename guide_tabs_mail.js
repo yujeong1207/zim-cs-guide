@@ -1606,15 +1606,22 @@ function saveNtfAsPdf(idx) {
   const bodyInner = bodyMatch ? bodyMatch[2] : htm;
 
   const wrapper = document.createElement("div");
-  /* body가 flex/grid 레이아웃이라 그냥 append하면 wrapper가 그 레이아웃 영향을 받아
-     세로로 늘어나며 캡처되는 문제가 있었다 (로고가 중간에 뜨고 여백이 커짐).
-     position:fixed; left:-9999px로 화면 밖에 두면 html2canvas가 화면 밖 요소를
-     못 찍어서 완전히 빈 PDF가 나오는 문제가 있었다. z-index로 덮어쓰는 방식도
-     여전히 빈 PDF가 나오는 걸 보니 근본 원인은 위치가 아니라 "로고 이미지(base64)가
-     아직 다 그려지기 전에 캡처가 시작되는 타이밍 문제"로 보인다. 그래서 화면 안,
-     레이아웃 흐름에서 벗어나지 않는 자연스러운 위치(문서 맨 끝에 추가)에 두고,
-     안의 <img>가 완전히 로드된 뒤에만 캡처를 시작하도록 명시적으로 기다린다. */
-  wrapper.style.cssText = "position:absolute;left:0;top:0;margin:0;"
+  /* [문제 이력]
+     1) body가 flex/grid라 그냥 append하면 wrapper가 그 레이아웃 영향을 받아 세로로
+        불필요하게 늘어난다 (로고가 중간에, 위아래 큰 여백).
+     2) position:fixed; left:-9999px로 화면 밖에 두면 html2canvas가 화면 밖 요소를
+        아예 못 찍어서 완전히 빈 PDF가 나온다.
+     3) position:absolute로 바꾸고 로고 이미지 로드까지 기다려도 여전히 빈 PDF —
+        직접 캡처된 canvas를 눈으로 확인해보니 canvas.height가 0으로 나왔다.
+        position:absolute인 요소는 브라우저 화면엔 정상적으로 그려지지만(offsetHeight는
+        정상 반환), html2canvas가 내부적으로 레이아웃을 다시 계산하는 시점에는 이 요소가
+        일반적인 문서 흐름(정적 레이아웃)에 속해있지 않아서 높이를 0으로 오판하는
+        경우가 있었다.
+     그래서 position은 기본값(static)으로 두어 문서 흐름에 정상적으로 참여시키고,
+     대신 transform으로 화면 밖으로 밀어내는 방식으로 "화면 흐름엔 있지만 안 보이게"
+     만든다. flex-shrink:0으로 body의 flex/grid 레이아웃이 크기를 임의로 줄이지
+     못하게 고정한다. */
+  wrapper.style.cssText = "position:static;transform:translateX(-10000px);margin:0;flex-shrink:0;"
     + bodyStyle + "width:700px;padding:0 12px 12px;box-sizing:border-box;background:#ffffff;";
   wrapper.innerHTML = buildNtfHeaderBannerHtml() + bodyInner;
   document.body.appendChild(wrapper);
