@@ -36,8 +36,11 @@ function initMailTemplatesFirestoreSync() {
       (snapshot) => {
         TEMPLATES = snapshot.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
         mailTemplatesLoaded = true;
-        // 현재 화면이 메일 템플릿 탭이면 드롭다운/미리보기를 새로고침해서 최신 내용을 바로 보여준다.
-        if (typeof mainTab !== "undefined" && mainTab === "templates" && typeof initTypeSelect === "function") {
+        // mainTab 값에 조건을 걸었더니 타이밍 이슈로 갱신이 안 되는 경우가 있었다
+        // (본인이 방금 추가한 항목이 저장 직후·화면 전환 중에는 반영이 안 됨).
+        // initTypeSelect는 이제 select#type이 화면에 없으면 조용히 아무것도 안 하도록
+        // 안전장치가 있으니, 조건 없이 항상 불러서 어떤 화면에 있든 최신 상태를 유지한다.
+        if (typeof initTypeSelect === "function") {
           initTypeSelect();
         }
         if (typeof adminSection !== "undefined" && adminSection === "templates" && typeof renderAdminList === "function") {

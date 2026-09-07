@@ -393,6 +393,7 @@ let generatedNtfOutputs = [];
 
 function initTypeSelect() {
   const select = document.getElementById("type");
+  if (!select) return; // 이 화면에 없는 탭이면 조용히 아무것도 안 함
   const prevValue = select.value;
   select.innerHTML = "";
 
