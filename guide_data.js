@@ -106,12 +106,12 @@ const DEFAULT_NTF_TEMPLATES = [
       {
         "id": "f_redeploy_from",
         "label": "🚢 이전 모선/항차",
-        "placeholder": "ZIM SPINEL 10W"
+        "placeholder": "(ZMP) ZIM SPINEL 10W"
       },
       {
         "id": "f_redeploy_to",
         "label": "🚢 변경된 모선/항차",
-        "placeholder": "GANGES 21W"
+        "placeholder": "(ZMP) GANGES 21W"
       }
     ],
     "table": null,
@@ -120,7 +120,7 @@ const DEFAULT_NTF_TEMPLATES = [
         "id": "o1",
         "name": "화주 안내",
         "to": "",
-        "subject": "SERVICE REDEPLOYMENT NOTIFICATION - {{🚢 이전 모선/항차}}",
+        "subject": "SCHEDULE CHANGE NOTIFICATION - {{🚢 이전 모선/항차}}",
         "attachments": [],
         "attachmentLink": "",
         "text": "<b>Dear valued customers,</b>\n\nWe would like to update you that {{🚢 이전 모선/항차}} vessel schedule has been changed to {{🚢 변경된 모선/항차}} due to network redeployment.\n\nWe apologize for any inconvenience and appreciate your patience and understanding in this matter.\nSchedule is updated on ZIM's website.\n\nFor additional information related to your shipment, please feel free to ask our local agent office.\n\n<div style=\"text-align:right;font-size:11pt;\">Sincerely,<br><b>ZIM Integrated Shipping</b></div>",

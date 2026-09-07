@@ -66,6 +66,12 @@ if (!DATA.ntfSeedsMigratedV5) {
   saveData();
 }
 
+if (!DATA.ntfSeedsMigratedV6) {
+  migrateNtfSeedsV6();
+  DATA.ntfSeedsMigratedV6 = true;
+  saveData();
+}
+
 if (!DATA.workManualImportedV1) {
   migrateWorkManualProcedures();
   DATA.workManualImportedV1 = true;
@@ -218,6 +224,30 @@ function migrateNtfSeedsV5() {
   DEFAULT_NTF_TEMPLATES.forEach((def) => {
     if (!NTF_TEMPLATES.some((t) => t.id === def.id)) {
       NTF_TEMPLATES.push(JSON.parse(JSON.stringify(def)));
+    }
+  });
+}
+
+/* v6: "서비스 재편성(Redeployment) 공지"의 제목·placeholder를 방금 수정했다
+   (SERVICE REDEPLOYMENT NOTIFICATION → SCHEDULE CHANGE NOTIFICATION, 그리고
+   모선/항차 예시에 서비스명 코드를 붙임: "ZIM SPINEL 10W" → "(ZMP) ZIM SPINEL 10W").
+   V5로 이미 이 유형을 채워 넣은 브라우저에는 예전 버전이 그대로 저장되어 있어서,
+   "예전 기본값 그대로인 경우에만" 새 값으로 교체한다 (팀에서 직접 수정해뒀으면 안 건드림). */
+function migrateNtfSeedsV6() {
+  const tpl = NTF_TEMPLATES.find((t) => t.id === "ntf_redeployment");
+  if (!tpl) return;
+
+  const OLD_SUBJECT = "SERVICE REDEPLOYMENT NOTIFICATION - {{🚢 이전 모선/항차}}";
+  const NEW_SUBJECT = "SCHEDULE CHANGE NOTIFICATION - {{🚢 이전 모선/항차}}";
+  tpl.outputs.forEach((out) => {
+    if (out.subject === OLD_SUBJECT) out.subject = NEW_SUBJECT;
+  });
+
+  const OLD_PLACEHOLDERS = { f_redeploy_from: "ZIM SPINEL 10W", f_redeploy_to: "GANGES 21W" };
+  const NEW_PLACEHOLDERS = { f_redeploy_from: "(ZMP) ZIM SPINEL 10W", f_redeploy_to: "(ZMP) GANGES 21W" };
+  tpl.fields.forEach((f) => {
+    if (OLD_PLACEHOLDERS[f.id] && f.placeholder === OLD_PLACEHOLDERS[f.id]) {
+      f.placeholder = NEW_PLACEHOLDERS[f.id];
     }
   });
 }
