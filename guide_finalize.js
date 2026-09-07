@@ -124,4 +124,5 @@ checkAndShowDailyQuote();
 renderRecentItemsRow();
 populateOblNameSelect();
 loadCachedPaymentData();
+initRefContactsFirestoreSync(); // 참고자료 > 연락처: Firestore 실시간 구독 시작 (팀원 추가/수정이 새로고침 없이 반영됨)
 

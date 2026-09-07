@@ -693,11 +693,40 @@ function renderAdminList() {
   }
 
   if (adminSection === "contacts") {
+    if (!refContactsLoaded || CONTACTS.length === 0) {
+      const migrateBox = document.createElement("div");
+      migrateBox.className = "hint";
+      migrateBox.style.cssText = "margin:10px 0;background:#fef3c7;padding:10px;border-radius:8px;";
+      migrateBox.innerHTML = "⚠️ Firestore에 연락처가 아직 없어요. 예전 기본 목록(" + DEFAULT_CONTACTS.length + "건)을 한 번만 옮겨올까요? (이미 옮긴 적 있다면 누르지 마세요 — 중복으로 쌓여요)";
+      body.appendChild(migrateBox);
+
+      const migrateBtn = document.createElement("button");
+      migrateBtn.className = "btn generate-btn full";
+      migrateBtn.style.marginBottom = "16px";
+      migrateBtn.textContent = "☁️ 예전 기본 연락처 " + DEFAULT_CONTACTS.length + "건 Firestore로 옮기기 (1회용)";
+      migrateBtn.onclick = async () => {
+        if (!confirm("예전 기본 연락처 " + DEFAULT_CONTACTS.length + "건을 Firestore로 옮길까요? 이미 데이터가 있는 상태에서 누르면 중복돼요.")) return;
+        migrateBtn.disabled = true;
+        migrateBtn.textContent = "옮기는 중... (데이터가 많아서 몇십 초 걸릴 수 있어요)";
+        try {
+          await replaceAllRefContactsInFirestore(DEFAULT_CONTACTS);
+          alert("완료됐어요 ✅ 팀원 전체 화면에 반영돼요.");
+          renderAdminList();
+        } catch (err) {
+          alert("실패했어요: " + err.message);
+          migrateBtn.disabled = false;
+          migrateBtn.textContent = "☁️ 예전 기본 연락처 " + DEFAULT_CONTACTS.length + "건 Firestore로 옮기기 (1회용)";
+        }
+      };
+      body.appendChild(migrateBtn);
+    }
+
     const hint = document.createElement("div");
     hint.className = "hint";
     hint.style.margin = "10px 0";
     hint.innerHTML = "엑셀에서 국가/지역 · 구분 · 담당자/팀 · ZIM 이메일 · GSL 이메일, 순서로 최대 5개 열(머리글 행은 제외)을 선택해 복사한 다음 붙여넣으세요. GSL 이메일이 없는 행은 그 칸만 비워두면 돼요(빈 칸도 괜찮아요). 병합된 셀이라 빈칸으로 복사돼도 국가/지역과 구분은 각각 바로 위 값으로 자동 채워지고, 화면 표에서도 같은 국가/구분이 연속되면 자동으로 병합돼 보여요.<br><br>"
-      + "<b>\"APAC\"처럼 새 그룹으로 묶고 싶으면</b>, 붙여넣을 내용 맨 위에 다른 칸 없이 그룹 이름만 있는 줄 하나를 넣어주세요(예: 그냥 \"APAC\"만 있고 탭도 없는 한 줄). 그 줄이 그룹 제목이 되고, 그 아래 붙어있는 행들이 접었다 펼 수 있는 그 그룹의 하위 항목으로 들어가요. 이 그룹 줄을 안 넣으면, \"추가하기\"로 이어붙였을 때 화면상 바로 이전 그룹 밑에 딸려있는 것처럼 보일 수 있어요.";
+      + "<b>\"APAC\"처럼 새 그룹으로 묶고 싶으면</b>, 붙여넣을 내용 맨 위에 다른 칸 없이 그룹 이름만 있는 줄 하나를 넣어주세요(예: 그냥 \"APAC\"만 있고 탭도 없는 한 줄). 그 줄이 그룹 제목이 되고, 그 아래 붙어있는 행들이 접었다 펼 수 있는 그 그룹의 하위 항목으로 들어가요. 이 그룹 줄을 안 넣으면, \"추가하기\"로 이어붙였을 때 화면상 바로 이전 그룹 밑에 딸려있는 것처럼 보일 수 있어요.<br><br>"
+      + "💡 이제 여기서 추가/수정/삭제하는 내용은 <b>Firestore에 저장돼서 팀원 전체 화면에 바로 반영돼요</b> (새로고침 필요 없음).";
     body.appendChild(hint);
 
     const pasteArea = document.createElement("textarea");
@@ -896,6 +925,20 @@ function renderAdminList() {
 
     const actions = document.createElement("div");
     actions.className = "tpl-card-actions";
+    if (adminSection === "contacts") {
+      const upBtn = document.createElement("button");
+      upBtn.className = "btn secondary-btn";
+      upBtn.textContent = "↑";
+      upBtn.title = "위로 이동";
+      upBtn.onclick = () => moveRefContactItem(item.id, -1);
+      const downBtn = document.createElement("button");
+      downBtn.className = "btn secondary-btn";
+      downBtn.textContent = "↓";
+      downBtn.title = "아래로 이동";
+      downBtn.onclick = () => moveRefContactItem(item.id, 1);
+      actions.appendChild(upBtn);
+      actions.appendChild(downBtn);
+    }
     const editBtn = document.createElement("button");
     editBtn.className = "btn secondary-btn";
     editBtn.textContent = "수정";
@@ -998,7 +1041,16 @@ async function deleteItem(id) {
   } else if (adminSection === "contacts") {
     const item = CONTACTS.find((t) => t.id === id);
     if (!confirm(`"${item.isHeader ? item.label : (item.country || item.contact || "이")}" 연락처를 삭제할까요?`)) return;
-    CONTACTS = CONTACTS.filter((t) => t.id !== id);
+    try {
+      await deleteRefContactFromFirestore(id);
+    } catch (err) {
+      alert("삭제에 실패했어요: " + err.message);
+      return;
+    }
+    // Firestore 실시간 구독이 CONTACTS 배열은 자동 갱신해주지만, 관리자 목록 화면은 직접 다시 그려야 한다.
+    renderAdminList();
+    refreshCurrentTab();
+    return;
   } else if (adminSection === "vacations") {
     const item = VACATIONS.find((t) => t.id === id);
     if (!confirm(`"${item.name}"님의 휴가 일정을 삭제할까요?`)) return;
@@ -1815,6 +1867,38 @@ function renderContactEdit() {
   const body = document.getElementById("adminBody");
   body.innerHTML = "";
 
+  const isNew = !draft.id;
+  if (isNew) {
+    body.appendChild(makeLabel("추가할 위치"));
+    const posSelect = document.createElement("select");
+    const optEnd = document.createElement("option");
+    optEnd.value = "__end__";
+    optEnd.textContent = "맨 뒤에 추가";
+    posSelect.appendChild(optEnd);
+
+    // 이미 있는 국가/그룹들을 등장 순서대로 나열 - 선택하면 그 국가의 마지막 줄 바로 뒤에 끼워 넣는다.
+    const seenLabels = new Set();
+    CONTACTS.forEach((c) => {
+      const label = c.isHeader ? c.label : c.country;
+      if (!label || seenLabels.has(label)) return;
+      seenLabels.add(label);
+      const opt = document.createElement("option");
+      opt.value = label;
+      opt.textContent = "\"" + label + "\" 바로 뒤에 끼워넣기";
+      posSelect.appendChild(opt);
+    });
+    posSelect.value = draft.__insertAfterLabel || "__end__";
+    posSelect.onchange = (e) => { draft.__insertAfterLabel = e.target.value; };
+    if (!draft.__insertAfterLabel) draft.__insertAfterLabel = "__end__";
+    body.appendChild(posSelect);
+
+    const posHint = document.createElement("div");
+    posHint.className = "hint";
+    posHint.style.marginBottom = "10px";
+    posHint.textContent = "같은 국가/그룹 중 맨 마지막 줄 바로 다음 자리에 들어가요. 정확한 자리를 더 세밀하게 옮기고 싶으면, 저장 후 목록에서 ↑↓ 버튼으로 옮길 수 있어요.";
+    body.appendChild(posHint);
+  }
+
   body.appendChild(makeLabel("국가/지역"));
   const countryInput = document.createElement("input");
   countryInput.value = draft.country || "";
@@ -1853,12 +1937,27 @@ function renderContactEdit() {
   appendSaveCancelButtons(body, saveContact);
 }
 
-function saveContact() {
+async function saveContact() {
   if (!(draft.country || "").trim() && !(draft.contact || "").trim()) {
     alert("국가 또는 담당자 중 하나는 입력해주세요.");
     return;
   }
-  commitDraft(CONTACTS, (list) => { CONTACTS = list; });
+  const insertAfterLabel = draft.__insertAfterLabel;
+  delete draft.__insertAfterLabel; // Firestore에 저장할 필드가 아니라 화면 전용 임시값이라 저장 직전 제거
+  try {
+    if (insertAfterLabel && insertAfterLabel !== "__end__") {
+      await saveRefContactToFirestoreAtPosition(draft, insertAfterLabel);
+    } else {
+      await saveRefContactToFirestore(draft);
+    }
+  } catch (err) {
+    alert("저장에 실패했어요: " + err.message);
+    return;
+  }
+  draft = null;
+  // Firestore 실시간 구독이 CONTACTS 배열은 자동 갱신해주지만, 관리자 목록 화면은 직접 다시 그려야 한다.
+  renderAdminList();
+  refreshCurrentTab();
 }
 
 /* ---- 📞 연락처 엑셀 붙여넣기 파싱 (공용) ----
@@ -1962,36 +2061,40 @@ function confirmContactGroupings(rows) {
 }
 
 /* ---- 📞 연락처 엑셀 붙여넣기 일괄 반영 (전체 교체) ---- */
-function applyContactsPaste(text) {
+async function applyContactsPaste(text) {
   if (!text || !text.trim()) { alert("붙여넣을 내용이 없어요."); return; }
   let parsed = parseContactsPasteText(text);
   if (parsed.length === 0) { alert("붙여넣을 내용이 없어요."); return; }
   parsed = confirmContactGroupings(parsed);
   if (!confirm("현재 연락처 표 전체(" + CONTACTS.length + "건)가 붙여넣은 내용(" + parsed.length + "행)으로 교체됩니다. 계속할까요?")) return;
 
-  CONTACTS = parsed;
-
-  const ok = saveData();
-  if (!ok) { alert("저장에 실패했어요. 저장 공간을 확인해주세요."); return; }
+  try {
+    await replaceAllRefContactsInFirestore(parsed);
+  } catch (err) {
+    alert("저장에 실패했어요: " + err.message);
+    return;
+  }
   renderAdminList();
   refreshCurrentTab();
-  alert("연락처 " + CONTACTS.length + "건이 반영됐어요 ✅");
+  alert("연락처 " + parsed.length + "건이 반영됐어요 ✅ (팀원 전체 화면에 바로 반영돼요)");
 }
 
 /* ---- 📞 연락처 엑셀 붙여넣기 - 기존 표 유지하고 뒤에 추가 ---- */
-function appendContactsPaste(text) {
+async function appendContactsPaste(text) {
   if (!text || !text.trim()) { alert("붙여넣을 내용이 없어요."); return; }
   let parsed = parseContactsPasteText(text);
   if (parsed.length === 0) { alert("붙여넣을 내용이 없어요."); return; }
   parsed = confirmContactGroupings(parsed);
 
-  CONTACTS = CONTACTS.concat(parsed);
-
-  const ok = saveData();
-  if (!ok) { alert("저장에 실패했어요. 저장 공간을 확인해주세요."); return; }
+  try {
+    await appendRefContactsToFirestore(parsed);
+  } catch (err) {
+    alert("저장에 실패했어요: " + err.message);
+    return;
+  }
   renderAdminList();
   refreshCurrentTab();
-  alert("연락처 " + parsed.length + "건이 기존 표 아래에 추가됐어요 ✅ (전체 " + CONTACTS.length + "건)");
+  alert("연락처 " + parsed.length + "건이 기존 표 아래에 추가됐어요 ✅ (팀원 전체 화면에 바로 반영돼요)");
 }
 
 /* ---- 휴가 일정 편집 ---- */
