@@ -5,13 +5,13 @@
    이걸로 쓰면 나머지 항목은 안 건드리고 딱 고른 것만 반영됨)
    ========================================================================= */
 const PARTIAL_IMPORT_LABELS = {
-  templates: "✉️ 메일 템플릿",
+  templates: "✉️ 메일 템플릿 (이미 실시간 연동됨 - 보통 선택 불필요)",
   ntfTemplates: "📨 공문 템플릿",
   procedures: "📋 업무 절차",
   faqs: "❓ FAQ",
   faqTopics: "🗂 FAQ 그룹",
   resources: "🔗 자료 모음",
-  contacts: "📞 연락처",
+  contacts: "📞 연락처 (이미 실시간 연동됨 - 보통 선택 불필요)",
   quotes: "💬 오늘의 한마디 문구",
   vacationMembers: "👥 팀원 휴가일수",
   vacationNotice: "📢 휴가 공지 문구",
@@ -32,13 +32,13 @@ const PARTIAL_IMPORT_LABELS = {
 };
 
 const PARTIAL_IMPORT_SETTERS = {
-  templates: (v) => { TEMPLATES = v; },
+  templates: (v) => { replaceAllMailTemplatesInFirestore(v).then(() => alert("메일 템플릿이 Firestore에 반영됐어요 ✅")).catch((err) => alert("메일 템플릿 복원 실패: " + err.message)); },
   ntfTemplates: (v) => { NTF_TEMPLATES = v; },
   procedures: (v) => { PROCEDURES = normalizeProcedures(v); },
   faqs: (v) => { FAQS = v; },
   faqTopics: (v) => { FAQ_TOPICS = v; },
   resources: (v) => { RESOURCES = v; },
-  contacts: (v) => { CONTACTS = v; },
+  contacts: (v) => { replaceAllRefContactsInFirestore(v).then(() => alert("연락처가 Firestore에 반영됐어요 ✅")).catch((err) => alert("연락처 복원 실패: " + err.message)); },
   quotes: (v) => { QUOTES = v; },
   vacationMembers: (v) => { VACATION_MEMBERS = v; },
   vacationNotice: (v) => { VACATION_NOTICE = v; },
@@ -201,7 +201,7 @@ function handleImportFile(event) {
       const imported = JSON.parse(e.target.result);
       if (!imported || typeof imported !== "object") throw new Error("형식이 올바르지 않습니다");
       if (!confirm("가져오기를 하면 절차·FAQ·메일템플릿·공문·자료·연락처·휴가일정 전체가 이 파일 내용으로 교체됩니다. 계속할까요?")) return;
-      TEMPLATES = imported.templates || TEMPLATES;
+      TEMPLATES = imported.templates || TEMPLATES; // 아래에서 Firestore로도 별도 반영
       NTF_TEMPLATES = imported.ntfTemplates || NTF_TEMPLATES;
       PROCEDURES = normalizeProcedures(imported.procedures || PROCEDURES);
       FAQS = imported.faqs || FAQS;
@@ -214,7 +214,7 @@ function handleImportFile(event) {
       NOTICE_BANNER = imported.noticeBanner || NOTICE_BANNER;
       LT_MAIL_SETTINGS = imported.ltMailSettings || LT_MAIL_SETTINGS;
       NTF_LETTERHEAD = imported.ntfLetterhead || NTF_LETTERHEAD;
-      CONTACTS = imported.contacts || CONTACTS;
+      CONTACTS = imported.contacts || CONTACTS; // 아래에서 Firestore로도 별도 반영
       FEEDBACK_LIST = imported.feedbackList || FEEDBACK_LIST;
       FAVORITE_TEMPLATE_IDS = imported.favoriteTemplateIds || FAVORITE_TEMPLATE_IDS;
       FAVORITE_PROC_IDS = imported.favoriteProcIds || FAVORITE_PROC_IDS;
@@ -237,7 +237,14 @@ function handleImportFile(event) {
       refreshCurrentTab();
       renderNoticeBanner();
       renderFeedbackBadge();
-      alert("가져오기 완료 💖");
+      // templates/contacts는 Firestore가 진짜 저장소라, 백업 파일에 값이 있으면 여기에도 반영해야
+      // 방금 위에서 로컬 변수만 바꾼 게 다음 실시간 갱신 때 도로 덮어써지지 않는다.
+      const firestoreRestores = [];
+      if (imported.templates) firestoreRestores.push(replaceAllMailTemplatesInFirestore(imported.templates).catch((err) => alert("메일 템플릿 Firestore 반영 실패: " + err.message)));
+      if (imported.contacts) firestoreRestores.push(replaceAllRefContactsInFirestore(imported.contacts).catch((err) => alert("연락처 Firestore 반영 실패: " + err.message)));
+      Promise.all(firestoreRestores).then(() => {
+        alert("가져오기 완료 💖" + (firestoreRestores.length > 0 ? " (메일 템플릿/연락처는 Firestore에도 반영했어요)" : ""));
+      });
     } catch (err) {
       alert("파일을 읽을 수 없습니다. 올바른 백업 JSON 파일인지 확인해주세요.");
     }

@@ -692,6 +692,36 @@ function renderAdminList() {
     renderGroupRenameBox(body);
   }
 
+  if (adminSection === "templates") {
+    if (!mailTemplatesLoaded || TEMPLATES.length === 0) {
+      const migrateBox = document.createElement("div");
+      migrateBox.className = "hint";
+      migrateBox.style.cssText = "margin:10px 0;background:#fef3c7;padding:10px;border-radius:8px;";
+      migrateBox.innerHTML = "⚠️ Firestore에 메일 템플릿이 아직 없어요. 예전 기본 목록(" + DEFAULT_TEMPLATES.length + "건)을 한 번만 옮겨올까요? (이미 옮긴 적 있다면 누르지 마세요 — 중복으로 쌓여요)";
+      body.appendChild(migrateBox);
+
+      const migrateBtn = document.createElement("button");
+      migrateBtn.className = "btn generate-btn full";
+      migrateBtn.style.marginBottom = "16px";
+      migrateBtn.textContent = "☁️ 예전 기본 메일 템플릿 " + DEFAULT_TEMPLATES.length + "건 Firestore로 옮기기 (1회용)";
+      migrateBtn.onclick = async () => {
+        if (!confirm("예전 기본 메일 템플릿 " + DEFAULT_TEMPLATES.length + "건을 Firestore로 옮길까요? 이미 데이터가 있는 상태에서 누르면 중복돼요.")) return;
+        migrateBtn.disabled = true;
+        migrateBtn.textContent = "옮기는 중... (데이터가 많아서 몇십 초 걸릴 수 있어요)";
+        try {
+          await replaceAllMailTemplatesInFirestore(DEFAULT_TEMPLATES);
+          alert("완료됐어요 ✅ 팀원 전체 화면에 반영돼요.");
+          renderAdminList();
+        } catch (err) {
+          alert("실패했어요: " + err.message);
+          migrateBtn.disabled = false;
+          migrateBtn.textContent = "☁️ 예전 기본 메일 템플릿 " + DEFAULT_TEMPLATES.length + "건 Firestore로 옮기기 (1회용)";
+        }
+      };
+      body.appendChild(migrateBtn);
+    }
+  }
+
   if (adminSection === "contacts") {
     if (!refContactsLoaded || CONTACTS.length === 0) {
       const emptyHint = document.createElement("div");
@@ -905,17 +935,18 @@ function renderAdminList() {
 
     const actions = document.createElement("div");
     actions.className = "tpl-card-actions";
-    if (adminSection === "contacts") {
+    if (adminSection === "contacts" || adminSection === "templates") {
+      const moveFn = adminSection === "contacts" ? moveRefContactItem : moveMailTemplateItem;
       const upBtn = document.createElement("button");
       upBtn.className = "btn secondary-btn";
       upBtn.textContent = "↑";
       upBtn.title = "위로 이동";
-      upBtn.onclick = () => moveRefContactItem(item.id, -1);
+      upBtn.onclick = () => moveFn(item.id, -1);
       const downBtn = document.createElement("button");
       downBtn.className = "btn secondary-btn";
       downBtn.textContent = "↓";
       downBtn.title = "아래로 이동";
-      downBtn.onclick = () => moveRefContactItem(item.id, 1);
+      downBtn.onclick = () => moveFn(item.id, 1);
       actions.appendChild(upBtn);
       actions.appendChild(downBtn);
     }
@@ -994,8 +1025,17 @@ async function deleteItem(id) {
   if (adminSection === "templates") {
     const item = TEMPLATES.find((t) => t.id === id);
     if (!confirm(`"${item.label}" 유형을 삭제할까요?`)) return;
-    TEMPLATES = TEMPLATES.filter((t) => t.id !== id);
+    try {
+      await deleteMailTemplateFromFirestore(id);
+    } catch (err) {
+      alert("삭제에 실패했어요: " + err.message);
+      return;
+    }
     FAVORITE_TEMPLATE_IDS = FAVORITE_TEMPLATE_IDS.filter((fid) => fid !== id);
+    saveData(); // 즐겨찾기는 여전히 localStorage 기반이라 이 부분만 별도 저장
+    renderAdminList();
+    refreshCurrentTab();
+    return;
   } else if (adminSection === "ntf") {
     const item = NTF_TEMPLATES.find((t) => t.id === id);
     if (!confirm(`"${item.label}" 공문 유형을 삭제할까요?`)) return;
@@ -3142,9 +3182,17 @@ function insertTokenIntoField(el, outIdx, fieldLabel) {
   draft.outputs[outIdx][key] = el.value;
 }
 
-function saveTemplateDraft() {
+async function saveTemplateDraft() {
   if (!draft.label.trim()) { alert("메일 유형 이름을 입력해주세요."); return; }
-  commitDraft(TEMPLATES, (list) => { TEMPLATES = list; });
+  try {
+    await saveMailTemplateToFirestore(draft);
+  } catch (err) {
+    alert("저장에 실패했어요: " + err.message);
+    return;
+  }
+  draft = null;
+  renderAdminList();
+  refreshCurrentTab();
 }
 
 /* ---- 📨 공문 발송 (NTF) 유형 편집 ---- */

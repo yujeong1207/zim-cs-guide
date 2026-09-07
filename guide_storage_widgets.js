@@ -352,7 +352,7 @@ function loadData() {
     if (saved) {
       const parsed = JSON.parse(saved);
       return {
-        templates: parsed.templates || JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)),
+        templates: parsed.templates || [], // Firestore로 이전 완료 - initMailTemplatesFirestoreSync()가 실제 값을 채워준다
         ntfTemplates: parsed.ntfTemplates || JSON.parse(JSON.stringify(DEFAULT_NTF_TEMPLATES)),
         procedures: parsed.procedures || JSON.parse(JSON.stringify(DEFAULT_PROCEDURES)),
         faqs: parsed.faqs || JSON.parse(JSON.stringify(DEFAULT_FAQS)),
@@ -388,7 +388,7 @@ function loadData() {
     }
   } catch (e) {}
   return {
-    templates: JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)),
+    templates: [], // Firestore로 이전 완료 - initMailTemplatesFirestoreSync()가 실제 값을 채워준다
     ntfTemplates: JSON.parse(JSON.stringify(DEFAULT_NTF_TEMPLATES)),
     procedures: JSON.parse(JSON.stringify(DEFAULT_PROCEDURES)),
     faqs: JSON.parse(JSON.stringify(DEFAULT_FAQS)),
