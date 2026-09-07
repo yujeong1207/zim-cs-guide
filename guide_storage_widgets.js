@@ -372,7 +372,7 @@ function loadData() {
         noticeBanner: parsed.noticeBanner || JSON.parse(JSON.stringify(DEFAULT_NOTICE_BANNER)),
         ltMailSettings: parsed.ltMailSettings || JSON.parse(JSON.stringify(DEFAULT_LT_MAIL_SETTINGS)),
         ntfLetterhead: parsed.ntfLetterhead || JSON.parse(JSON.stringify(DEFAULT_NTF_LETTERHEAD)),
-        contacts: parsed.contacts || JSON.parse(JSON.stringify(DEFAULT_CONTACTS)),
+        contacts: parsed.contacts || [], // Firestore로 이전 완료 - initRefContactsFirestoreSync()가 실제 값을 채워준다
         feedbackList: parsed.feedbackList || JSON.parse(JSON.stringify(DEFAULT_FEEDBACK_LIST)),
         favoriteTemplateIds: parsed.favoriteTemplateIds || JSON.parse(JSON.stringify(DEFAULT_FAVORITE_TEMPLATE_IDS)),
         favoriteProcIds: parsed.favoriteProcIds || JSON.parse(JSON.stringify(DEFAULT_FAVORITE_PROC_IDS)),
@@ -408,7 +408,7 @@ function loadData() {
     noticeBanner: JSON.parse(JSON.stringify(DEFAULT_NOTICE_BANNER)),
     ltMailSettings: JSON.parse(JSON.stringify(DEFAULT_LT_MAIL_SETTINGS)),
     ntfLetterhead: JSON.parse(JSON.stringify(DEFAULT_NTF_LETTERHEAD)),
-    contacts: JSON.parse(JSON.stringify(DEFAULT_CONTACTS)),
+    contacts: [], // Firestore로 이전 완료 - initRefContactsFirestoreSync()가 실제 값을 채워준다
     feedbackList: JSON.parse(JSON.stringify(DEFAULT_FEEDBACK_LIST)),
     favoriteTemplateIds: JSON.parse(JSON.stringify(DEFAULT_FAVORITE_TEMPLATE_IDS)),
     favoriteProcIds: JSON.parse(JSON.stringify(DEFAULT_FAVORITE_PROC_IDS)),
