@@ -1637,8 +1637,14 @@ function saveNtfAsPdf(idx) {
      요소를 실제 화면에 그리기(paint)도 전에 캡처가 시작돼서 완전히 빈 흰 캔버스가
      찍힌다 (콘솔에서 getImageData로 직접 픽셀을 세어 확인 — 흰색 아닌 픽셀 0개).
      requestAnimationFrame을 두 번 중첩해서 최소 한 프레임 이상 브라우저에게 그릴
-     시간을 주면, 캡처가 정상적으로 이뤄진다 (같은 방식으로 콘솔에서 확인 완료:
-     프레임 대기 후 흰색 아닌 픽셀 20만개 이상 정상 검출). */
+     시간을 주면 이 문제는 해결된다.
+     [두 번째 원인] wrapper가 body 맨 끝(스크롤해야 보이는 위치, 예: offsetTop 1664px)에
+     붙어있으면, html2canvas가 기본적으로 "현재 보이는 뷰포트 크기"를 기준으로 캡처
+     좌표계를 잡다가 실제 요소 위치와 어긋나서, 로고 등 일부만 찍히고 나머지가 잘리거나
+     완전히 빈 캔버스가 나오는 문제가 있었다. html2canvas의 windowWidth/windowHeight
+     옵션을 "문서 전체 크기"로 명시하면 뷰포트가 아니라 문서 전체 기준으로 좌표를 잡아서
+     스크롤 여부와 무관하게 정확히 캡처된다 (콘솔에서 검증: 이 옵션 없이는 빈 파일
+     18KB~3KB, 옵션을 주니 252KB 정상 크기로 캡처 확인). */
   function waitForPaint() {
     return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   }
@@ -1650,7 +1656,12 @@ function saveNtfAsPdf(idx) {
         margin: 10,
         filename: filename,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          windowWidth: document.documentElement.scrollWidth,
+          windowHeight: document.documentElement.scrollHeight,
+        },
         jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
       })
       .from(wrapper)
