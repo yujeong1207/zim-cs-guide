@@ -11,6 +11,7 @@ let followupMonthFilter = "__all"; // "__all" | "YYYY-MM" | "__current" - 기본
 let followupDraft = null; // 지금 편집중인 항목 (없으면 새 항목)
 let followupQuickAddOpen = false;
 let followupQuickDraft = {}; // 빠른등록 줄에 입력 중이던 값 - 실시간 갱신으로 표가 다시 그려져도 안 날아가게 여기 저장해뒀다가 복원함
+let followupCompletedExpanded = false; // 완료 건 묶음을 펼쳐서 보고 있는지 - 기본은 접어둠 (진행중 건 위주로 보이게)
 
 const FOLLOWUP_WORK_TYPES = ["스케줄", "COD", "정산/비용", "클레임", "기타"];
 const FOLLOWUP_URGENCIES = ["당일필수", "익일가능", "오늘확인"];
@@ -150,6 +151,28 @@ async function toggleFollowupPinned(id) {
   } catch (err) {
     alert("고정 상태 변경에 실패했어요: " + err);
   }
+}
+
+/* "✅ 완료" 묶음 헤더를 누르면 접혔다 펼쳐졌다 함 */
+function toggleFollowupCompletedSection() {
+  followupCompletedExpanded = !followupCompletedExpanded;
+  renderFollowupList();
+}
+
+/* 진행 상황/메모처럼 긴 텍스트 칸을 2줄로 접어뒀다가, "더보기" 누르면 전체를 펼침 */
+function toggleFollowupClamp(btn) {
+  const target = btn.previousElementSibling;
+  const expanded = target.dataset.expanded === "1";
+  target.style.webkitLineClamp = expanded ? "2" : "unset";
+  target.dataset.expanded = expanded ? "0" : "1";
+  btn.textContent = expanded ? "더보기" : "접기";
+}
+
+function followupClampCell(text) {
+  if (!text) return "-";
+  const escaped = escapeHtml(text).replace(/\n/g, "<br>");
+  return `<div class="followup-clamp-text" data-expanded="0" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;">${escaped}</div>`
+    + `<button type="button" class="no-strike" style="background:none;border:none;padding:0;margin-top:2px;font-size:11px;color:var(--text-accent,#185fa5);cursor:pointer;" onclick="event.stopPropagation();toggleFollowupClamp(this)">더보기</button>`;
 }
 
 /* 팔로우업보드 탭을 열 때 호출 - 처음 한 번만 실시간 구독을 시작해서, 팀원 누가 등록/수정/삭제하면 자동으로 화면 반영.
@@ -308,31 +331,27 @@ function renderFollowupList() {
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (followupQuickAddOpen) tbody.appendChild(buildFollowupQuickAddRow());
-  list.forEach((f) => {
-    const isDone = f.status === "완료";
-    const isPinned = f.pinned === true;
-    const tr = document.createElement("tr");
-    tr.className = [isDone ? "row-done" : "", isPinned ? "row-pinned" : ""].filter(Boolean).join(" ");
-    tr.dataset.followupId = f.id;
-    tr.innerHTML = `<td class="no-strike" style="text-align:center;"><button class="pin-btn ${isPinned ? "pinned" : ""}" title="${isPinned ? "고정 해제" : "표 맨 위에 고정"}" onclick="event.stopPropagation();toggleFollowupPinned('${f.id}')">📌</button></td>`
-      + `<td>${escapeHtml(f.registeredDate || "-")}</td>`
-      + `<td>${escapeHtml(f.customer || "-")}</td>`
-      + `<td>${escapeHtml(f.workType || "-")}</td>`
-      + `<td class="followup-title-cell">${escapeHtml(f.title || "-")}</td>`
-      + `<td class="no-strike"><span class="${followupUrgencyBadgeClass(f.urgency)}">${escapeHtml(f.urgency || "-")}</span></td>`
-      + `<td class="no-strike"><span class="${followupStatusBadgeClass(f.status)}">${escapeHtml(f.status || "-")}</span></td>`
-      + `<td>${escapeHtml(f.nextAction || "-")}</td>`
-      + `<td class="followup-memo-cell">${f.memo ? escapeHtml(f.memo) : "-"}</td>`
-      + `<td>${escapeHtml(f.followUpDate || "-")}</td>`
-      + `<td>${escapeHtml(f.owner || "-")}</td>`
-      + `<td class="no-strike" style="white-space:nowrap;">`
-      + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleFollowupDone('${f.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
-      + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openFollowupEditor('${f.id}')">✏️ 수정</button>`
-      + `</td>`;
-    tr.style.cursor = "pointer";
-    tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openFollowupEditor(f.id); };
-    tbody.appendChild(tr);
-  });
+
+  // "전체 보기" 상태일 때만 진행중/완료를 분리해요. 상태 필터로 "완료"만 콕 집어 보고 있으면 굳이 또 나눌 필요 없어서 그냥 다 보여줘요.
+  const splitByStatus = statusFilter === "__all";
+  const activeList = splitByStatus ? list.filter((f) => f.status !== "완료") : list;
+  const doneList = splitByStatus ? list.filter((f) => f.status === "완료") : [];
+
+  activeList.forEach((f) => tbody.appendChild(buildFollowupRow(f)));
+
+  if (splitByStatus && doneList.length > 0) {
+    const headerTr = document.createElement("tr");
+    headerTr.innerHTML = `<td colspan="12" class="no-strike" style="cursor:pointer;padding:9px 14px;background:var(--surface-1,#f4f4f2);">`
+      + `<span style="display:flex;align-items:center;gap:8px;font-weight:700;color:var(--text-secondary,#5f5e5a);">`
+      + `<span>${followupCompletedExpanded ? "▾" : "▸"}</span>✅ 완료 ${doneList.length}건${followupCompletedExpanded ? "" : " (눌러서 펼치기)"}`
+      + `</span></td>`;
+    headerTr.onclick = () => toggleFollowupCompletedSection();
+    tbody.appendChild(headerTr);
+    if (followupCompletedExpanded) {
+      doneList.forEach((f) => tbody.appendChild(buildFollowupRow(f)));
+    }
+  }
+
   table.appendChild(tbody);
   wrap.innerHTML = "";
   wrap.appendChild(table);
@@ -345,6 +364,32 @@ function renderFollowupList() {
 
   const firstInput = document.getElementById("followupQuickCustomer");
   if (firstInput) firstInput.focus();
+}
+
+function buildFollowupRow(f) {
+  const isDone = f.status === "완료";
+  const isPinned = f.pinned === true;
+  const tr = document.createElement("tr");
+  tr.className = [isDone ? "row-done" : "", isPinned ? "row-pinned" : ""].filter(Boolean).join(" ");
+  tr.dataset.followupId = f.id;
+  tr.innerHTML = `<td class="no-strike" style="text-align:center;"><button class="pin-btn ${isPinned ? "pinned" : ""}" title="${isPinned ? "고정 해제" : "표 맨 위에 고정"}" onclick="event.stopPropagation();toggleFollowupPinned('${f.id}')">📌</button></td>`
+    + `<td>${escapeHtml(f.registeredDate || "-")}</td>`
+    + `<td>${escapeHtml(f.customer || "-")}</td>`
+    + `<td>${escapeHtml(f.workType || "-")}</td>`
+    + `<td class="followup-title-cell">${escapeHtml(f.title || "-")}</td>`
+    + `<td class="no-strike"><span class="${followupUrgencyBadgeClass(f.urgency)}">${escapeHtml(f.urgency || "-")}</span></td>`
+    + `<td class="no-strike"><span class="${followupStatusBadgeClass(f.status)}">${escapeHtml(f.status || "-")}</span></td>`
+    + `<td>${followupClampCell(f.nextAction)}</td>`
+    + `<td class="followup-memo-cell">${followupClampCell(f.memo)}</td>`
+    + `<td>${escapeHtml(f.followUpDate || "-")}</td>`
+    + `<td>${escapeHtml(f.owner || "-")}</td>`
+    + `<td class="no-strike" style="white-space:nowrap;">`
+    + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleFollowupDone('${f.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
+    + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openFollowupEditor('${f.id}')">✏️ 수정</button>`
+    + `</td>`;
+  tr.style.cursor = "pointer";
+  tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openFollowupEditor(f.id); };
+  return tr;
 }
 
 /* ---- 엑셀처럼 표 맨 위에 빈 줄 하나 열어서 바로 입력하는 빠른등록 ---- */

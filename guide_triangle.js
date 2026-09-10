@@ -10,12 +10,19 @@ let triangleUnsubscribe = null;
 let triangleDraft = null;
 let triangleQuickAddOpen = false;
 let triangleQuickDraft = {}; // 빠른등록 줄에 입력 중이던 값 - 실시간 갱신으로 표가 다시 그려져도 안 날아가게 여기 저장해뒀다가 복원함
+let triangleExpandedGroups = new Set(); // 같은 배(VSL)·화주 그룹 중 지금 펼쳐서 보고 있는 그룹의 key 모음 (기본은 전부 접힘)
+
+function triangleGroupKey(vessel, shipper) {
+  return (vessel || "").trim() + "‖" + (shipper || "").trim();
+}
 
 function triangleDocToEntry(doc) {
   const d = doc.data();
   return {
     id: doc.id,
     blNumber: d.blNumber || "",
+    vessel: d.vessel || "",
+    shipper: d.shipper || "",
     popCharge: d.popCharge || "",
     mfstClose: d.mfstClose || "",
     invoiceRequest: d.invoiceRequest || "",
@@ -32,6 +39,8 @@ async function submitTriangleToServer(entry) {
     await window.fbReady;
     const docRef = await window.fbDb.collection(TRIANGLE_COLLECTION).add({
       blNumber: entry.blNumber || "",
+      vessel: entry.vessel || "",
+      shipper: entry.shipper || "",
       popCharge: entry.popCharge || "",
       mfstClose: entry.mfstClose || "",
       invoiceRequest: entry.invoiceRequest || "",
@@ -54,6 +63,8 @@ async function updateTriangleOnServer(entry) {
     await window.fbReady;
     await window.fbDb.collection(TRIANGLE_COLLECTION).doc(entry.id).update({
       blNumber: entry.blNumber || "",
+      vessel: entry.vessel || "",
+      shipper: entry.shipper || "",
       popCharge: entry.popCharge || "",
       mfstClose: entry.mfstClose || "",
       invoiceRequest: entry.invoiceRequest || "",
@@ -93,6 +104,13 @@ async function toggleTriangleDoneStatus(id) {
   }
 }
 
+/* 같은 배(VSL)·화주 그룹 헤더를 누르면 접혔다 펼쳐졌다 함 - 여러 그룹을 동시에 펼쳐둘 수 있음 */
+function toggleTriangleGroup(key) {
+  if (triangleExpandedGroups.has(key)) triangleExpandedGroups.delete(key);
+  else triangleExpandedGroups.add(key);
+  renderTriangleList();
+}
+
 async function loadTriangleTab(forceRefresh) {
   const wrap = document.getElementById("triangleListWrap");
   if (liveSubscribed.triangle && !forceRefresh) { renderTriangleList(); return; }
@@ -120,6 +138,30 @@ function triangleCellClass(value) {
   return "triangle-cell-badge note";
 }
 
+function buildTriangleRow(t, grouped) {
+  const isDone = t.doneStatus === "done";
+  const tr = document.createElement("tr");
+  tr.className = isDone ? "row-done" : "";
+  tr.dataset.triangleId = t.id;
+  tr.innerHTML = `<td${grouped ? ' style="padding-left:28px;"' : ""}><b>${escapeHtml(t.blNumber || "-")}</b></td>`
+    + `<td>${escapeHtml(t.vessel || "-")}</td>`
+    + `<td>${escapeHtml(t.shipper || "-")}</td>`
+    + `<td><span class="${triangleCellClass(t.popCharge)}">${escapeHtml(t.popCharge || "-")}</span></td>`
+    + `<td><span class="${triangleCellClass(t.mfstClose)}">${escapeHtml(t.mfstClose || "-")}</span></td>`
+    + `<td><span class="${triangleCellClass(t.invoiceRequest)}">${escapeHtml(t.invoiceRequest || "-")}</span></td>`
+    + `<td><span class="${triangleCellClass(t.remittance)}">${escapeHtml(t.remittance || "-")}</span></td>`
+    + `<td><span class="${triangleCellClass(t.polPodInform)}">${escapeHtml(t.polPodInform || "-")}</span></td>`
+    + `<td>${escapeHtml(t.remark || "-")}</td>`
+    + `<td class="no-strike"><span class="${isDone ? "done-badge done" : "done-badge progress"}">${isDone ? "✅ 완료" : "🔄 진행중"}</span></td>`
+    + `<td class="no-strike" style="white-space:nowrap;">`
+    + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleTriangleDoneStatus('${t.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
+    + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openTriangleEditor('${t.id}')">✏️ 수정</button>`
+    + `</td>`;
+  tr.style.cursor = "pointer";
+  tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openTriangleEditor(t.id); };
+  return tr;
+}
+
 function renderTriangleList() {
   const wrap = document.getElementById("triangleListWrap");
   if (!wrap) return;
@@ -133,7 +175,7 @@ function renderTriangleList() {
 
   let list = TRIANGLE_LIST.slice().sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   if (q) {
-    list = list.filter((t) => [t.blNumber, t.remark, t.remittance].filter(Boolean).join(" ").toLowerCase().includes(q));
+    list = list.filter((t) => [t.blNumber, t.vessel, t.shipper, t.remark, t.remittance].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
 
   if (q && list.length === 0 && !triangleQuickAddOpen) {
@@ -141,33 +183,54 @@ function renderTriangleList() {
     return;
   }
 
+  // 같은 배(VSL)+화주 조합이 2건 이상이면 그룹으로 묶어요. 배 이름이 비어있거나 1건뿐이면 그냥 평범한 행으로 보여요.
+  const groupCounts = {};
+  list.forEach((t) => {
+    const vessel = (t.vessel || "").trim();
+    if (!vessel) return;
+    const key = triangleGroupKey(t.vessel, t.shipper);
+    groupCounts[key] = (groupCounts[key] || 0) + 1;
+  });
+
   const table = document.createElement("table");
   table.className = "contacts-table triangle-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>BL번호</th><th>POP CHARGE</th><th>MFST CLOSE</th><th>인보이스 발송요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>REMARK</th><th>처리</th><th></th></tr>";
+  thead.innerHTML = "<tr><th>BL번호</th><th>VSL</th><th>화주</th><th>POP CHARGE</th><th>MFST CLOSE</th><th>인보이스 발송요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>REMARK</th><th>처리</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (triangleQuickAddOpen) tbody.appendChild(buildTriangleQuickAddRow());
+
+  const renderedGroupKeys = new Set();
   list.forEach((t) => {
-    const isDone = t.doneStatus === "done";
-    const tr = document.createElement("tr");
-    if (isDone) tr.className = "row-done";
-    tr.dataset.triangleId = t.id;
-    tr.innerHTML = `<td><b>${escapeHtml(t.blNumber || "-")}</b></td>`
-      + `<td><span class="${triangleCellClass(t.popCharge)}">${escapeHtml(t.popCharge || "-")}</span></td>`
-      + `<td><span class="${triangleCellClass(t.mfstClose)}">${escapeHtml(t.mfstClose || "-")}</span></td>`
-      + `<td><span class="${triangleCellClass(t.invoiceRequest)}">${escapeHtml(t.invoiceRequest || "-")}</span></td>`
-      + `<td><span class="${triangleCellClass(t.remittance)}">${escapeHtml(t.remittance || "-")}</span></td>`
-      + `<td><span class="${triangleCellClass(t.polPodInform)}">${escapeHtml(t.polPodInform || "-")}</span></td>`
-      + `<td>${escapeHtml(t.remark || "-")}</td>`
-      + `<td class="no-strike"><span class="${isDone ? "done-badge done" : "done-badge progress"}">${isDone ? "✅ 완료" : "🔄 진행중"}</span></td>`
-      + `<td class="no-strike" style="white-space:nowrap;">`
-      + `<button class="btn ${isDone ? "secondary-btn" : "generate-btn"}" style="padding:4px 10px;font-size:12px;margin-right:4px;" onclick="event.stopPropagation();toggleTriangleDoneStatus('${t.id}')">${isDone ? "↩️ 되돌리기" : "✅ 처리완료"}</button>`
-      + `<button class="btn secondary-btn" style="padding:4px 10px;font-size:12px;" onclick="event.stopPropagation();openTriangleEditor('${t.id}')">✏️ 수정</button>`
-      + `</td>`;
-    tr.style.cursor = "pointer";
-    tr.onclick = (e) => { if (e.target.tagName !== "BUTTON") openTriangleEditor(t.id); };
-    tbody.appendChild(tr);
+    const vessel = (t.vessel || "").trim();
+    const key = vessel ? triangleGroupKey(t.vessel, t.shipper) : null;
+    const groupSize = key ? (groupCounts[key] || 0) : 0;
+
+    if (key && groupSize > 1) {
+      if (!renderedGroupKeys.has(key)) {
+        renderedGroupKeys.add(key);
+        const groupEntries = list.filter((x) => (x.vessel || "").trim() && triangleGroupKey(x.vessel, x.shipper) === key);
+        const doneCount = groupEntries.filter((x) => x.doneStatus === "done").length;
+        const progressCount = groupEntries.length - doneCount;
+        const isExpanded = triangleExpandedGroups.has(key);
+        const shipper = (t.shipper || "").trim();
+        const headerTr = document.createElement("tr");
+        headerTr.innerHTML = `<td colspan="11" class="no-strike" style="cursor:pointer;padding:9px 14px;${progressCount > 0 ? "background:var(--bg-accent,#e6f1fb);" : "background:var(--surface-1,#f4f4f2);"}">`
+          + `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">`
+          + `<span style="display:flex;align-items:center;gap:8px;font-weight:700;${progressCount > 0 ? "color:var(--text-accent,#0c447c);" : "color:var(--text-secondary,#5f5e5a);"}">`
+          + `<span>${isExpanded ? "▾" : "▸"}</span>🚢 ${escapeHtml(vessel)}${shipper ? " · " + escapeHtml(shipper) : ""}`
+          + `</span>`
+          + `<span style="display:flex;gap:6px;">`
+          + (progressCount > 0 ? `<span class="done-badge progress">진행중 ${progressCount}</span>` : "")
+          + (doneCount > 0 ? `<span class="done-badge done">완료 ${doneCount}</span>` : "")
+          + `</span></div></td>`;
+        headerTr.onclick = () => toggleTriangleGroup(key);
+        tbody.appendChild(headerTr);
+      }
+      if (!triangleExpandedGroups.has(key)) return; // 접혀있으면 상세 행은 건너뜀
+    }
+
+    tbody.appendChild(buildTriangleRow(t, !!key));
   });
   table.appendChild(tbody);
   wrap.innerHTML = "";
@@ -211,6 +274,8 @@ function buildTriangleQuickAddRow() {
   };
 
   tr.appendChild(mk("triangleQuickBl", "BL번호", true, "blNumber"));
+  tr.appendChild(mk("triangleQuickVessel", "예: MSC ARIA", false, "vessel"));
+  tr.appendChild(mk("triangleQuickShipper", "예: 코오롱", false, "shipper"));
   tr.appendChild(mk("triangleQuickPop", "예: O", false, "popCharge"));
   tr.appendChild(mk("triangleQuickMfst", "예: O", false, "mfstClose"));
   tr.appendChild(mk("triangleQuickInvoice", "예: O", false, "invoiceRequest"));
@@ -242,8 +307,12 @@ async function saveTriangleQuickAdd() {
   const blNumber = (document.getElementById("triangleQuickBl").value || "").trim();
   if (!blNumber) { alert("BL번호를 입력해주세요."); document.getElementById("triangleQuickBl").focus(); return; }
 
+  const vessel = (document.getElementById("triangleQuickVessel").value || "").trim();
+  const shipper = (document.getElementById("triangleQuickShipper").value || "").trim();
   const entry = {
     blNumber,
+    vessel,
+    shipper,
     popCharge: (document.getElementById("triangleQuickPop").value || "").trim(),
     mfstClose: (document.getElementById("triangleQuickMfst").value || "").trim(),
     invoiceRequest: (document.getElementById("triangleQuickInvoice").value || "").trim(),
@@ -253,7 +322,9 @@ async function saveTriangleQuickAdd() {
   };
   const result = await submitTriangleToServer(entry);
   if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류") + " - 입력하신 내용은 그대로 남아있으니 다시 저장을 눌러주세요."); return; }
-  triangleQuickDraft = {}; // 저장 성공했으니 기억해둔 값도 비움
+  // 같은 배·화주로 여러 건 이어서 등록하는 경우가 많아서, VSL/화주는 지우지 않고 남겨둬요 (BL번호부터 나머지만 비움)
+  triangleQuickDraft = { vessel, shipper };
+  if (vessel) triangleExpandedGroups.add(triangleGroupKey(vessel, shipper)); // 방금 등록한 그룹은 바로 확인할 수 있게 펼쳐둠
   ["triangleQuickBl", "triangleQuickPop", "triangleQuickMfst", "triangleQuickInvoice", "triangleQuickRemit", "triangleQuickInform", "triangleQuickRemark"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = "";
@@ -264,7 +335,7 @@ async function saveTriangleQuickAdd() {
 
 function openTriangleEditor(existingId) {
   triangleDraft = existingId ? Object.assign({}, TRIANGLE_LIST.find((t) => t.id === existingId)) : {
-    id: null, blNumber: "", popCharge: "", mfstClose: "", invoiceRequest: "", remittance: "", polPodInform: "", remark: "", doneStatus: "progress",
+    id: null, blNumber: "", vessel: "", shipper: "", popCharge: "", mfstClose: "", invoiceRequest: "", remittance: "", polPodInform: "", remark: "", doneStatus: "progress",
   };
   document.getElementById("triangleEditTitle").textContent = existingId ? "✏️ 삼국간 건 수정" : "➕ 삼국간 건 등록";
   document.getElementById("triangleEditOverlay").style.display = "flex";
@@ -309,6 +380,18 @@ function renderTriangleEditorBody() {
   blInput.value = d.blNumber || "";
   body.appendChild(makeFollowupField("BL번호", blInput));
 
+  const row0 = document.createElement("div");
+  row0.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;";
+  const vesselInput = document.createElement("input");
+  vesselInput.placeholder = "예: MSC ARIA";
+  vesselInput.value = d.vessel || "";
+  row0.appendChild(makeFollowupField("VSL(배 이름)", vesselInput));
+  const shipperInput = document.createElement("input");
+  shipperInput.placeholder = "예: 코오롱";
+  shipperInput.value = d.shipper || "";
+  row0.appendChild(makeFollowupField("화주", shipperInput));
+  body.appendChild(row0);
+
   const popField = makeTriangleStatusField("POP CHARGE", d.popCharge);
   body.appendChild(popField);
   const mfstField = makeTriangleStatusField("MFST CLOSE", d.mfstClose);
@@ -340,6 +423,8 @@ function renderTriangleEditorBody() {
     const entry = {
       id: d.id,
       blNumber: blInput.value.trim(),
+      vessel: vesselInput.value.trim(),
+      shipper: shipperInput.value.trim(),
       popCharge: popField._input.value.trim(),
       mfstClose: mfstField._input.value.trim(),
       invoiceRequest: invoiceField._input.value.trim(),
