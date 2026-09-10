@@ -668,7 +668,7 @@ function freshExcelToolState() {
 let excelToolState = freshExcelToolState();
 
 /* =========================================================================
-   🔎 선적 대조 - 선사 양하목록(바이플랜)에서, 우리가 만든 양하리스트가 향하는
+   🔎 선적 대조 - 선사 양하목록(베이플랜)에서, 우리가 만든 양하리스트가 향하는
    POD(양하항)에 해당하는 우리 화물(ZIM/GSL)만 뽑아서, 우리 리스트의 컨테이너가
    전부 그 안에 들어있는지(=실제로 실려있는지) 대조
    ========================================================================= */
@@ -691,7 +691,7 @@ let crossCheckState = freshCrossCheckState();
 
 function buildCrossCheckMscHtml() {
   const carrierLabel = CROSS_CHECK_CARRIER_LABELS[crossCheckState.carrier];
-  let html = `<div class="hint" style="margin-bottom:14px;">선사 양하목록(바이플랜)에서, 우리가 만든 양하리스트가 향하는 POD(양하항)에 해당하는 컨테이너만 뽑아서, 우리 리스트의 컨테이너가 다 그 안에 들어있는지(=실제로 실려있는지) 확인해요.</div>`;
+  let html = `<div class="hint" style="margin-bottom:14px;">선사 양하목록(베이플랜)에서, 우리가 만든 양하리스트가 향하는 POD(양하항)에 해당하는 컨테이너만 뽑아서, 우리 리스트의 컨테이너가 다 그 안에 들어있는지(=실제로 실려있는지) 확인해요.</div>`;
 
   html += `<div class="calc-sub-tabs" style="margin-bottom:14px;">
     ${Object.keys(CROSS_CHECK_CARRIER_LABELS).map((c) => `<button class="calc-sub-tab-btn${crossCheckState.carrier === c ? " active" : ""}" onclick="switchCrossCheckCarrier('${c}')">${CROSS_CHECK_CARRIER_LABELS[c]}</button>`).join("")}
@@ -700,7 +700,7 @@ function buildCrossCheckMscHtml() {
   html += `<div style="display:flex; gap:14px; flex-wrap:wrap;">`;
 
   html += `<div style="flex:1; min-width:240px;">
-    <div style="font-size:13px;font-weight:bold;color:#4b5563;margin-bottom:6px;">① ${carrierLabel} 양하목록 (바이플랜)</div>
+    <div style="font-size:13px;font-weight:bold;color:#4b5563;margin-bottom:6px;">① ${carrierLabel} 양하목록 (베이플랜)</div>
     <label class="excel-upload-box" id="crossManifestUploadBox" style="padding:22px 14px;">
       <input type="file" id="crossManifestInput" accept=".xlsx,.xls" onchange="handleCrossManifestFile(event)">
       <div class="excel-upload-icon">📄</div>
