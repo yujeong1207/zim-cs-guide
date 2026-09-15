@@ -106,6 +106,14 @@
     </div>
   </div>
 
+  <div class="tab-group" data-group="csboard-import">
+    <button class="tab-group-btn" onclick="toggleTabGroup('csboard-import')">📌 수입 CS 공유 <span class="tab-group-caret">▾</span></button>
+    <div class="tab-group-dropdown" id="tabGroupDropdown-csboard-import">
+      <button class="main-tab-btn" data-tab="followupImport" onclick="switchMainTab('followupImport')">📌 팔로우업 보드</button>
+      <button class="main-tab-btn" data-tab="caseShareImport" onclick="switchMainTab('caseShareImport')">📚 케이스 공유</button>
+    </div>
+  </div>
+
   <div class="tab-group" data-group="reference">
     <button class="tab-group-btn" onclick="toggleTabGroup('reference')">📚 참고자료 <span class="tab-group-caret">▾</span></button>
     <div class="tab-group-dropdown" id="tabGroupDropdown-reference">
@@ -367,6 +375,51 @@
 
   <input id="caseShareFilter" class="contacts-filter-input" placeholder="🔍 제목·내용·작성자로 검색" oninput="renderCaseShareList()" style="margin-top:14px;">
   <div id="caseShareListWrap" style="margin-top:14px;"></div>
+</div>
+
+<!-- ===== 📌 팔로우업 보드 (수입 CS) 탭 ===== -->
+<div class="tab-page" id="page-followupImport">
+  <div class="hint" style="margin-bottom:10px;">수입 CS 미완료 건 포함해서 계속 기록하는 보드예요 (수출 팔로우업 보드와는 별도로 관리돼요). 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있고, 상태를 "완료"로 바꾸면 미완료 건수에서 자동으로 빠져요.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn generate-btn" onclick="toggleFollowupImportQuickAdd()">➕ 빠른 등록 (표에 바로 입력)</button>
+    <button class="btn secondary-btn" onclick="openFollowupImportEditor(null)">📝 자세히 입력 (메모 포함)</button>
+    <button class="btn secondary-btn" onclick="loadFollowupImportTab()">🔄 새로고침</button>
+    <select id="followupImportMonthSelect" class="poa-date-input" style="max-width:180px;" onchange="onFollowupImportMonthChange()"></select>
+    <select id="followupImportStatusFilter" class="poa-date-input" style="max-width:130px;" onchange="renderFollowupImportList()">
+      <option value="__all">상태 전체</option>
+      <option value="대기">대기</option>
+      <option value="진행중">진행중</option>
+      <option value="완료">완료</option>
+    </select>
+  </div>
+
+  <div id="followupImportSummaryRow" class="followup-summary-row"></div>
+
+  <input id="followupImportFilter" class="contacts-filter-input" placeholder="🔍 고객·건명·메모·담당으로 검색" oninput="renderFollowupImportList()" style="margin-top:14px;">
+  <div id="followupImportListWrap" class="table-scroll-wrap"></div>
+</div>
+
+<!-- ===== 📚 케이스 공유 (수입 CS) 탭 ===== -->
+<div class="tab-page" id="page-caseShareImport">
+  <div class="hint" style="margin-bottom:10px;">수입 CS 사례를 길게 적어서 두고두고 참고하는 게시판이에요 (수출 케이스 공유와는 별도로 관리돼요). 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 작성·수정할 수 있어요.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn generate-btn" onclick="openCaseShareImportEditor(null)">➕ 케이스 작성하기</button>
+    <button class="btn secondary-btn" onclick="loadCaseShareImportTab(true)">🔄 새로고침</button>
+    <select id="caseShareImportCategoryFilter" class="poa-date-input" style="max-width:150px;" onchange="renderCaseShareImportList()">
+      <option value="__all">유형 전체</option>
+      <option value="스케줄">스케줄</option>
+      <option value="세관정정">세관정정</option>
+      <option value="정산/비용">정산/비용</option>
+      <option value="클레임">클레임</option>
+      <option value="통관/서류">통관/서류</option>
+      <option value="기타">기타</option>
+    </select>
+  </div>
+
+  <input id="caseShareImportFilter" class="contacts-filter-input" placeholder="🔍 제목·내용·작성자로 검색" oninput="renderCaseShareImportList()" style="margin-top:14px;">
+  <div id="caseShareImportListWrap" style="margin-top:14px;"></div>
 </div>
 
 <!-- ===== 💱 COD 현황 탭 ===== -->
@@ -810,6 +863,26 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="followupImportEditOverlay" style="display:none;" onclick="if(event.target===this) closeFollowupImportEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="followupImportEditTitle">📌 팔로우업 건 (수입)</div>
+      <button class="close-btn" onclick="closeFollowupImportEditor()">✕ 닫기</button>
+    </div>
+    <div id="followupImportEditBody"></div>
+  </div>
+</div>
+
+<div class="admin-overlay" id="caseShareImportEditOverlay" style="display:none;" onclick="if(event.target===this) closeCaseShareImportEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="caseShareImportEditTitle">📚 케이스 (수입)</div>
+      <button class="close-btn" onclick="closeCaseShareImportEditor()">✕ 닫기</button>
+    </div>
+    <div id="caseShareImportEditBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="caseShareEditOverlay" style="display:none;" onclick="if(event.target===this) closeCaseShareEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -868,7 +941,9 @@
 <script src="guide_import_convert.js"></script>
 <script src="guide_finalize.js"></script>
 <script src="guide_followup.js"></script>
+<script src="guide_followup_import.js"></script>
 <script src="guide_case_share.js"></script>
+<script src="guide_case_share_import.js"></script>
 <script src="guide_ntf_archive.js"></script>
 <script src="guide_cod.js"></script>
 <script src="guide_triangle.js"></script>
