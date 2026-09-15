@@ -1426,6 +1426,13 @@ function generateNtf() {
     savePdfBtn.onclick = () => saveNtfAsPdf(idx);
     block.appendChild(savePdfBtn);
 
+    const saveArchiveBtn = document.createElement("button");
+    saveArchiveBtn.className = "btn generate-btn full";
+    saveArchiveBtn.style.marginTop = "12px";
+    saveArchiveBtn.textContent = "☁️ 팀 보관함에 저장 (나중에 검색·다운로드)";
+    saveArchiveBtn.onclick = () => saveGeneratedNtfToArchive(idx, tpl, out);
+    block.appendChild(saveArchiveBtn);
+
     const downloadBlockedHint = document.createElement("div");
     downloadBlockedHint.className = "hint";
     downloadBlockedHint.style.marginTop = "10px";

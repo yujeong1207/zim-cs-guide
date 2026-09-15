@@ -100,6 +100,7 @@
     <button class="tab-group-btn" onclick="toggleTabGroup('csboard')">📌 수출 CS 공유 <span class="tab-group-caret">▾</span></button>
     <div class="tab-group-dropdown" id="tabGroupDropdown-csboard">
       <button class="main-tab-btn" data-tab="followup" onclick="switchMainTab('followup')">📌 팔로우업 보드</button>
+      <button class="main-tab-btn" data-tab="caseShare" onclick="switchMainTab('caseShare')">📚 케이스 공유</button>
       <button class="main-tab-btn" data-tab="cod" onclick="switchMainTab('cod')">💱 COD 현황</button>
       <button class="main-tab-btn" data-tab="triangle" onclick="switchMainTab('triangle')">🌏 삼국간</button>
     </div>
@@ -189,7 +190,7 @@
 
 <!-- ===== 🛳️ 파나마 통과 현황 탭 ===== -->
 <div class="tab-page" id="page-panamaTransit">
-  <div class="hint" style="margin-bottom:14px;">💡 부산 출항일 기준으로 월별로 정리돼요. 소요일 25일 이상은 빨간 배지로 강조되고, 이미 통과한 항차는 흐리게 표시돼요 (오늘 날짜 기준 자동 계산).<br>🔴 <b>실시간 공유돼요</b> — 한 명이 항차를 등록·수정·삭제하면 팀원 전체 화면에 바로 반영되니, 같은 항차를 여러 명이 각자 입력할 필요 없어요.</div>
+  <div class="hint" style="margin-bottom:14px;">💡 부산 출항일 기준으로 월별로 정리돼요. 소요일 25일 이상은 빨간 배지로 강조되고, 이미 통과한 항차는 흐리게 표시돼요 (오늘 날짜 기준 자동 계산).<br>🧭 파나마 운하를 거치지 않고 희망봉을 돌아서 바로 미국으로 가는 배도 "경로"를 <b>희망봉 우회</b>로 선택해서 같이 기록할 수 있어요.<br>🔴 <b>실시간 공유돼요</b> — 한 명이 항차를 등록·수정·삭제하면 팀원 전체 화면에 바로 반영되니, 같은 항차를 여러 명이 각자 입력할 필요 없어요.</div>
   <div id="panamaTransitMonthsWrap"></div>
   <div class="vessel-bottom-actions">
     <button class="btn secondary-btn" onclick="openPanamaTransitEditor(null)">＋ 항차 추가</button>
@@ -346,6 +347,28 @@
   <div id="followupListWrap" class="table-scroll-wrap"></div>
 </div>
 
+<!-- ===== 📚 케이스 공유 탭 ===== -->
+<div class="tab-page" id="page-caseShare">
+  <div class="hint" style="margin-bottom:10px;">겪었던 사례를 길게 적어서 두고두고 참고하는 게시판이에요. 팔로우업 보드처럼 "지금 진행중인 건"을 추적하는 용도가 아니라, 한 번 정리해두면 계속 검색해서 찾아볼 수 있는 기록용이에요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 작성·수정할 수 있어요.</div>
+
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn generate-btn" onclick="openCaseShareEditor(null)">➕ 케이스 작성하기</button>
+    <button class="btn secondary-btn" onclick="loadCaseShareTab(true)">🔄 새로고침</button>
+    <select id="caseShareCategoryFilter" class="poa-date-input" style="max-width:150px;" onchange="renderCaseShareList()">
+      <option value="__all">유형 전체</option>
+      <option value="스케줄">스케줄</option>
+      <option value="COD">COD</option>
+      <option value="정산/비용">정산/비용</option>
+      <option value="클레임">클레임</option>
+      <option value="통관/서류">통관/서류</option>
+      <option value="기타">기타</option>
+    </select>
+  </div>
+
+  <input id="caseShareFilter" class="contacts-filter-input" placeholder="🔍 제목·내용·작성자로 검색" oninput="renderCaseShareList()" style="margin-top:14px;">
+  <div id="caseShareListWrap" style="margin-top:14px;"></div>
+</div>
+
 <!-- ===== 💱 COD 현황 탭 ===== -->
 <div class="tab-page" id="page-cod">
   <div class="hint" style="margin-bottom:10px;">COD(목적항 변경) 건만 따로 모아보는 표예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있어요.</div>
@@ -427,6 +450,8 @@
     <div class="card left">
       <div class="title">📨 공문 작성</div>
       <div class="hint" style="margin-bottom:12px;">여기서 만드는 건 "제목"과 "본문"만이에요. 로고 배너나 TO/FROM 줄은 발송 시스템에서 자동으로 붙으니 따로 만들 필요 없어요.</div>
+      <div class="label"><span class="icon">🙋</span>작성자 (팀 보관함에 저장할 때 표시돼요)</div>
+      <select id="ntfAuthorSelect" onchange="onNtfAuthorChange()"></select>
       <div class="label"><span class="icon">📂</span>공문 유형</div>
       <select id="ntfType" onchange="onNtfTypeChange()"></select>
       <div id="ntfGuideBox"></div>
@@ -439,6 +464,18 @@
       <div class="tabs" id="ntfTabs"></div>
       <div id="ntfOutputs"></div>
     </div>
+  </div>
+
+  <div class="content-card" style="margin-top:18px;">
+    <div class="content-card-head" style="cursor:default;">
+      <div class="content-card-title">🗂 저장된 공문 (팀 보관함)</div>
+    </div>
+    <div class="hint" style="margin:6px 0 10px;">🔴 실시간 공유돼요 — 팀원이 위 "☁️ 팀 보관함에 저장" 버튼으로 저장한 공문을 여기서 검색하고, 언제든 다시 파일로 받아서 고객 응대에 쓸 수 있어요.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+      <input id="ntfArchiveFilter" class="contacts-filter-input" placeholder="🔍 제목·유형·작성자로 검색" oninput="renderNtfArchiveList()" style="flex:1;min-width:200px;">
+      <button class="btn secondary-btn" onclick="loadNtfArchiveTab(true)">🔄 새로고침</button>
+    </div>
+    <div id="ntfArchiveListWrap" class="table-scroll-wrap"></div>
   </div>
 
   <div class="pdf-convert-card">
@@ -773,6 +810,16 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="caseShareEditOverlay" style="display:none;" onclick="if(event.target===this) closeCaseShareEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="caseShareEditTitle">📚 케이스</div>
+      <button class="close-btn" onclick="closeCaseShareEditor()">✕ 닫기</button>
+    </div>
+    <div id="caseShareEditBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="codEditOverlay" style="display:none;" onclick="if(event.target===this) closeCodEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -821,6 +868,8 @@
 <script src="guide_import_convert.js"></script>
 <script src="guide_finalize.js"></script>
 <script src="guide_followup.js"></script>
+<script src="guide_case_share.js"></script>
+<script src="guide_ntf_archive.js"></script>
 <script src="guide_cod.js"></script>
 <script src="guide_triangle.js"></script>
 

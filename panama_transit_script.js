@@ -7,7 +7,14 @@
    ========================================================================= */
 
 const PANAMA_TRANSIT_COLLECTION = "panama_transit"; // Firestore 컬렉션 이름
-const PANAMA_LONG_TRANSIT_DAYS = 25; // 이 값 이상 걸리면 강조 표시
+const PANAMA_LONG_TRANSIT_DAYS = 25; // 이 값 이상 걸리면 강조 표시 (파나마 통과 기준)
+
+/* 🧭 경로 유형 - 기본은 "파나마 통과"지만, 파나마 운하를 안 거치고 희망봉(남아공)을 돌아서
+   바로 미국으로 가는 배도 생겨서 여기서 같이 기록할 수 있게 함.
+   panamaTransit 필드는 두 경로 공통으로 "그 경로의 통과/도착 예정일"을 담음
+   (파나마 통과면 파나마 통과일, 희망봉 우회면 미국 도착 예정일). */
+const PANAMA_ROUTE_TYPES = { panama: "🌊 파나마 통과", cape: "🧭 희망봉 우회" };
+const PANAMA_ROUTE_DATE_LABEL = { panama: "파나마 통과 예정일", cape: "미국 도착 예정일 (희망봉 경유)" };
 
 let PANAMA_TRANSITS = [];
 let panamaTransitUnsubscribe = null;
@@ -50,6 +57,7 @@ async function fetchPanamaTransitListFromServer() {
         busanDeparture: d.busanDeparture || "",
         panamaTransit: d.panamaTransit || "",
         unconfirmed: d.unconfirmed === true,
+        routeType: d.routeType === "cape" ? "cape" : "panama",
       };
     });
   } catch (err) {
@@ -70,6 +78,7 @@ async function submitPanamaTransitToServer(entry) {
       busanDeparture: entry.busanDeparture || "",
       panamaTransit: entry.panamaTransit || "",
       unconfirmed: entry.unconfirmed === true,
+      routeType: entry.routeType === "cape" ? "cape" : "panama",
     };
     if (entry.id) {
       await window.fbDb.collection(PANAMA_TRANSIT_COLLECTION).doc(entry.id).update(payload);
@@ -114,6 +123,7 @@ async function loadPanamaTransitTab(forceRefresh) {
           busanDeparture: d.busanDeparture || "",
           panamaTransit: d.panamaTransit || "",
           unconfirmed: d.unconfirmed === true,
+          routeType: d.routeType === "cape" ? "cape" : "panama",
         };
       });
       renderPanamaTransitTab();
@@ -130,23 +140,23 @@ async function loadPanamaTransitTab(forceRefresh) {
 /* 처음에 주신 17건 원본 데이터 - "초기 데이터 등록" 버튼 한 번 누르면 이걸 그대로 Firestore에 올려요.
    연도는 시스템 기준 현재 연도(2026)로 넣었어요. */
 const PANAMA_TRANSIT_SEED_DATA = [
-  { line: "ZSL", vesselName: "ROTTERDAM", code: "ZTD", voyage: "86E", busanDeparture: "2026-07-17", panamaTransit: "2026-08-23", unconfirmed: false },
-  { line: "ZCP", vesselName: "ZIM AMBER", code: "ZA6", voyage: "14E", busanDeparture: "2026-07-18", panamaTransit: "2026-08-09", unconfirmed: false },
-  { line: "ZCP", vesselName: "ZIM ARIES", code: "ZA9", voyage: "11E", busanDeparture: "2026-07-18", panamaTransit: "2026-08-16", unconfirmed: false },
-  { line: "ZNS", vesselName: "MSC ILLINOIS VII", code: "IIO", voyage: "15E", busanDeparture: "2026-07-23", panamaTransit: "2026-08-11", unconfirmed: false },
-  { line: "ZNS", vesselName: "MSC BOSPHORUS", code: "B7P", voyage: "28E", busanDeparture: "2026-07-25", panamaTransit: "2026-08-13", unconfirmed: false },
-  { line: "ZSL", vesselName: "MSC RIDA VIII", code: "YYM", voyage: "5E", busanDeparture: "2026-07-28", panamaTransit: "2026-08-21", unconfirmed: false },
-  { line: "ZSL", vesselName: "SANTA LINEA", code: "VGX", voyage: "35E", busanDeparture: "2026-07-27", panamaTransit: "2026-08-21", unconfirmed: false },
-  { line: "ZCP", vesselName: "ZIM ALEXANDRITE", code: "ZA7", voyage: "7E", busanDeparture: "2026-07-30", panamaTransit: "2026-08-19", unconfirmed: false },
-  { line: "ZNS", vesselName: "GSL MYNY", code: "ER1", voyage: "35E", busanDeparture: "2026-07-31", panamaTransit: "2026-08-19", unconfirmed: false },
-  { line: "ZCP", vesselName: "ZIM SCORPIO", code: "ZS9", voyage: "10E", busanDeparture: "2026-08-01", panamaTransit: "2026-09-04", unconfirmed: false },
-  { line: "ZSL", vesselName: "MSC GREENWICH", code: "GR4", voyage: "9E", busanDeparture: "2026-08-15", panamaTransit: "2026-09-14", unconfirmed: false },
-  { line: "ZNS", vesselName: "MSC BRASILIA VII", code: "CP1", voyage: "11E", busanDeparture: "2026-08-18", panamaTransit: "2026-09-14", unconfirmed: false },
-  { line: "ZCP", vesselName: "ZIM CORAL", code: "ZIW", voyage: "12E", busanDeparture: "2026-08-18", panamaTransit: "2026-09-06", unconfirmed: false },
-  { line: "ZCP", vesselName: "ZIM PEARL", code: "ZP2", voyage: "11E", busanDeparture: "2026-08-21", panamaTransit: "2026-09-13", unconfirmed: true },
-  { line: "ZSL", vesselName: "ANTWERP", code: "ZAW", voyage: "81E", busanDeparture: "2026-08-22", panamaTransit: "2026-09-10", unconfirmed: true },
-  { line: "ZSL", vesselName: "MSC JAVELIN IX", code: "JN5", voyage: "16E", busanDeparture: "2026-08-25", panamaTransit: "2026-09-12", unconfirmed: false },
-  { line: "ZNS", vesselName: "KURE", code: "YVE", voyage: "11E", busanDeparture: "2026-08-27", panamaTransit: "2026-09-15", unconfirmed: false },
+  { line: "ZSL", vesselName: "ROTTERDAM", code: "ZTD", voyage: "86E", busanDeparture: "2026-07-17", panamaTransit: "2026-08-23", unconfirmed: false, routeType: "panama" },
+  { line: "ZCP", vesselName: "ZIM AMBER", code: "ZA6", voyage: "14E", busanDeparture: "2026-07-18", panamaTransit: "2026-08-09", unconfirmed: false, routeType: "panama" },
+  { line: "ZCP", vesselName: "ZIM ARIES", code: "ZA9", voyage: "11E", busanDeparture: "2026-07-18", panamaTransit: "2026-08-16", unconfirmed: false, routeType: "panama" },
+  { line: "ZNS", vesselName: "MSC ILLINOIS VII", code: "IIO", voyage: "15E", busanDeparture: "2026-07-23", panamaTransit: "2026-08-11", unconfirmed: false, routeType: "panama" },
+  { line: "ZNS", vesselName: "MSC BOSPHORUS", code: "B7P", voyage: "28E", busanDeparture: "2026-07-25", panamaTransit: "2026-08-13", unconfirmed: false, routeType: "panama" },
+  { line: "ZSL", vesselName: "MSC RIDA VIII", code: "YYM", voyage: "5E", busanDeparture: "2026-07-28", panamaTransit: "2026-08-21", unconfirmed: false, routeType: "panama" },
+  { line: "ZSL", vesselName: "SANTA LINEA", code: "VGX", voyage: "35E", busanDeparture: "2026-07-27", panamaTransit: "2026-08-21", unconfirmed: false, routeType: "panama" },
+  { line: "ZCP", vesselName: "ZIM ALEXANDRITE", code: "ZA7", voyage: "7E", busanDeparture: "2026-07-30", panamaTransit: "2026-08-19", unconfirmed: false, routeType: "panama" },
+  { line: "ZNS", vesselName: "GSL MYNY", code: "ER1", voyage: "35E", busanDeparture: "2026-07-31", panamaTransit: "2026-08-19", unconfirmed: false, routeType: "panama" },
+  { line: "ZCP", vesselName: "ZIM SCORPIO", code: "ZS9", voyage: "10E", busanDeparture: "2026-08-01", panamaTransit: "2026-09-04", unconfirmed: false, routeType: "panama" },
+  { line: "ZSL", vesselName: "MSC GREENWICH", code: "GR4", voyage: "9E", busanDeparture: "2026-08-15", panamaTransit: "2026-09-14", unconfirmed: false, routeType: "panama" },
+  { line: "ZNS", vesselName: "MSC BRASILIA VII", code: "CP1", voyage: "11E", busanDeparture: "2026-08-18", panamaTransit: "2026-09-14", unconfirmed: false, routeType: "panama" },
+  { line: "ZCP", vesselName: "ZIM CORAL", code: "ZIW", voyage: "12E", busanDeparture: "2026-08-18", panamaTransit: "2026-09-06", unconfirmed: false, routeType: "panama" },
+  { line: "ZCP", vesselName: "ZIM PEARL", code: "ZP2", voyage: "11E", busanDeparture: "2026-08-21", panamaTransit: "2026-09-13", unconfirmed: true, routeType: "panama" },
+  { line: "ZSL", vesselName: "ANTWERP", code: "ZAW", voyage: "81E", busanDeparture: "2026-08-22", panamaTransit: "2026-09-10", unconfirmed: true, routeType: "panama" },
+  { line: "ZSL", vesselName: "MSC JAVELIN IX", code: "JN5", voyage: "16E", busanDeparture: "2026-08-25", panamaTransit: "2026-09-12", unconfirmed: false, routeType: "panama" },
+  { line: "ZNS", vesselName: "KURE", code: "YVE", voyage: "11E", busanDeparture: "2026-08-27", panamaTransit: "2026-09-15", unconfirmed: false, routeType: "panama" },
 ];
 
 let panamaSeedBusy = false;
@@ -216,7 +226,7 @@ function buildPanamaTransitMonthSection(month) {
   tableWrap.className = "vessel-table-wrap";
   const table = document.createElement("table");
   table.className = "vessel-table";
-  table.innerHTML = "<thead><tr><th>라인</th><th>선명</th><th>코드명</th><th>항차</th><th>부산 출항</th><th>파나마 통과</th><th>소요일</th><th></th></tr></thead>";
+  table.innerHTML = "<thead><tr><th>라인</th><th>선명</th><th>코드명</th><th>항차</th><th>경로</th><th>부산 출항</th><th>통과/도착 예정일</th><th>소요일</th><th></th></tr></thead>";
   const tbody = document.createElement("tbody");
 
   rows.forEach((v) => {
@@ -229,6 +239,14 @@ function buildPanamaTransitMonthSection(month) {
     const nameTd = document.createElement("td"); nameTd.textContent = v.vesselName || "-";
     const codeTd = document.createElement("td"); codeTd.className = "vessel-code"; codeTd.textContent = v.code || "-";
     const voyTd = document.createElement("td"); voyTd.textContent = v.voyage || "-";
+
+    const routeTd = document.createElement("td");
+    routeTd.className = "no-strike";
+    const routeBadge = document.createElement("span");
+    routeBadge.className = "panama-route-badge" + (v.routeType === "cape" ? " panama-route-cape" : "");
+    routeBadge.textContent = PANAMA_ROUTE_TYPES[v.routeType === "cape" ? "cape" : "panama"];
+    routeTd.appendChild(routeBadge);
+
     const depTd = document.createElement("td"); depTd.textContent = formatPanamaShortDate(v.busanDeparture);
 
     const transitTd = document.createElement("td");
@@ -271,6 +289,7 @@ function buildPanamaTransitMonthSection(month) {
     tr.appendChild(nameTd);
     tr.appendChild(codeTd);
     tr.appendChild(voyTd);
+    tr.appendChild(routeTd);
     tr.appendChild(depTd);
     tr.appendChild(transitTd);
     tr.appendChild(daysTd);
@@ -309,6 +328,22 @@ function renderPanamaTransitEditorBody(existingId) {
   const body = document.getElementById("panamaEditBody");
   body.innerHTML = "";
   const existing = existingId ? PANAMA_TRANSITS.find((v) => v.id === existingId) : null;
+
+  body.appendChild(makeLabel("경로"));
+  const routeSel = document.createElement("select");
+  Object.keys(PANAMA_ROUTE_TYPES).forEach((key) => {
+    const o = document.createElement("option");
+    o.value = key;
+    o.textContent = PANAMA_ROUTE_TYPES[key];
+    if ((existing ? (existing.routeType === "cape" ? "cape" : "panama") : "panama") === key) o.selected = true;
+    routeSel.appendChild(o);
+  });
+  body.appendChild(routeSel);
+  const routeHint = document.createElement("div");
+  routeHint.className = "hint";
+  routeHint.style.margin = "4px 0 10px";
+  routeHint.textContent = "파나마 운하를 거치지 않고 남아공 희망봉을 돌아서 바로 미국으로 가는 배는 \"희망봉 우회\"로 등록해주세요.";
+  body.appendChild(routeHint);
 
   body.appendChild(makeLabel("라인"));
   const lineInput = document.createElement("input");
@@ -355,7 +390,8 @@ function renderPanamaTransitEditorBody(existingId) {
 
   const transitWrap = document.createElement("div");
   transitWrap.style.cssText = "flex:1;min-width:130px;";
-  transitWrap.appendChild(makeLabel("파나마 통과 예정일"));
+  const transitLabel = makeLabel(PANAMA_ROUTE_DATE_LABEL[routeSel.value]);
+  transitWrap.appendChild(transitLabel);
   const transitInput = document.createElement("input");
   transitInput.type = "date";
   transitInput.value = existing ? (existing.panamaTransit || "") : "";
@@ -385,6 +421,7 @@ function renderPanamaTransitEditorBody(existingId) {
   };
   depInput.addEventListener("input", updateDaysPreview);
   transitInput.addEventListener("input", updateDaysPreview);
+  routeSel.addEventListener("change", () => { transitLabel.textContent = PANAMA_ROUTE_DATE_LABEL[routeSel.value]; });
   updateDaysPreview();
 
   const actions = document.createElement("div");
@@ -405,6 +442,7 @@ function renderPanamaTransitEditorBody(existingId) {
       busanDeparture: depInput.value,
       panamaTransit: transitInput.value,
       unconfirmed: unconfirmedChk.checked,
+      routeType: routeSel.value === "cape" ? "cape" : "panama",
     };
     if (existing) entry.id = existing.id;
 

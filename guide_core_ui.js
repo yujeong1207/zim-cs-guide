@@ -243,6 +243,7 @@ function switchMainTab(tab) {
   if (tab === "poa") loadPoaTab();
   if (tab === "obl") loadOblTab();
   if (tab === "followup") loadFollowupTab();
+  if (tab === "caseShare") loadCaseShareTab();
   if (tab === "cod") loadCodTab();
   if (tab === "triangle") loadTriangleTab();
   if (tab === "doDesk") loadDoDeskTab();
@@ -254,6 +255,7 @@ function switchMainTab(tab) {
   if (tab === "memo") renderMemoTab();
   if (tab === "templates" && !currentType) initTypeSelect();
   if (tab === "ntf" && !currentNtfType) initNtfTypeSelect();
+  if (tab === "ntf") { initNtfAuthorSelect(); loadNtfArchiveTab(); }
   if (tab === "excelTool") renderExcelTool();
   if (tab === "anemail" && typeof initContactsTab === "function") initContactsTab(true);
 
