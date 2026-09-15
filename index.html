@@ -446,6 +446,18 @@
 
 <!-- ===== 📨 공문 발송(NTF) 탭 ===== -->
 <div class="tab-page" id="page-ntf">
+  <div class="content-card" style="margin-bottom:18px;">
+    <div class="content-card-head" style="cursor:default;">
+      <div class="content-card-title">🗂 저장된 공문 (팀 보관함)</div>
+    </div>
+    <div class="hint" style="margin:6px 0 10px;">🔴 실시간 공유돼요 — 팀원이 아래 "☁️ 팀 보관함에 저장" 버튼으로 저장한 공문을 여기서 검색하고, 언제든 다시 파일로 받아서 고객 응대에 쓸 수 있어요.</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+      <input id="ntfArchiveFilter" class="contacts-filter-input" placeholder="🔍 제목·유형·작성자로 검색" oninput="renderNtfArchiveList()" style="flex:1;min-width:200px;">
+      <button class="btn secondary-btn" onclick="loadNtfArchiveTab(true)">🔄 새로고침</button>
+    </div>
+    <div id="ntfArchiveListWrap" class="table-scroll-wrap"></div>
+  </div>
+
   <div class="container">
     <div class="card left">
       <div class="title">📨 공문 작성</div>
@@ -464,18 +476,6 @@
       <div class="tabs" id="ntfTabs"></div>
       <div id="ntfOutputs"></div>
     </div>
-  </div>
-
-  <div class="content-card" style="margin-top:18px;">
-    <div class="content-card-head" style="cursor:default;">
-      <div class="content-card-title">🗂 저장된 공문 (팀 보관함)</div>
-    </div>
-    <div class="hint" style="margin:6px 0 10px;">🔴 실시간 공유돼요 — 팀원이 위 "☁️ 팀 보관함에 저장" 버튼으로 저장한 공문을 여기서 검색하고, 언제든 다시 파일로 받아서 고객 응대에 쓸 수 있어요.</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
-      <input id="ntfArchiveFilter" class="contacts-filter-input" placeholder="🔍 제목·유형·작성자로 검색" oninput="renderNtfArchiveList()" style="flex:1;min-width:200px;">
-      <button class="btn secondary-btn" onclick="loadNtfArchiveTab(true)">🔄 새로고침</button>
-    </div>
-    <div id="ntfArchiveListWrap" class="table-scroll-wrap"></div>
   </div>
 
   <div class="pdf-convert-card">
