@@ -10,11 +10,19 @@ fetch_terminals.py가 만들어둔 terminal_data.json을 읽어서, Firestore의
   - 이 목록은 매달 말에 사람이 직접 터미널 사이트에서 골라서 만들어두는 것
   - 자동화가 할 일은 딱 하나: 이미 이 목록에 있는 배의 입항일/출항일이 바뀌었으면 갱신하는 것
 
-  - ⚠️ 매칭 기준은 "선박코드+항차+터미널"이 아니라 "선명(vesselName)"이에요.
+  - ⚠️ 매칭 기준은 "선박코드+항차"가 아니라 "선명(vesselName)"이에요.
     회사에서 raw에 적어두는 "코드"·"항차"는 터미널이 매번 새로 붙이는 임시 항차번호라
     조회할 때마다 달라지고(예: 어떤 조회에선 코드 YVE/항차 11E, 다른 조회에선 코드
     MKUE/항차 GE633E), 터미널마다 표기 방식도 다 달라요. 유일하게 안정적인 건 선명뿐이라,
     "선명이 같으면 같은 배"로 보고 매칭해요.
+
+  - ⚠️⚠️⚠️ 2026-09-15 추가 수정 ⚠️⚠️⚠️
+    선명만으로 매칭하면 문제가 하나 더 있어요 — AS CASPRIA처럼 같은 배가 부산(BPT)이랑
+    인천(HJIT)을 둘 다 콜링하는 경우, raw에는 같은 선명으로 된 문서가 2건(터미널만 다름)
+    있게 돼요. 그러면 "같은 선명이 raw에 여러 건"이라는 안전장치에 걸려서 둘 다 통째로
+    건너뛰어져 버려요 (BPT/한진인천 배들이 자동 갱신이 안 된다고 느껴졌던 원인). 그래서
+    최종 매칭은 "선명 + 터미널" 조합으로 해요 — 선명이 같아도 터미널까지 같아야 같은
+    문서로 보고, 선명은 같은데 터미널이 다르면 각자 따로 갱신해요.
 
 이 스크립트는 절대로:
   - 새 배를 추가하지 않아요 (raw에 없는 선명은 터미널에서 나왔어도 그냥 무시)
@@ -56,6 +64,22 @@ def init_firestore():
 def normalize_name(name):
     """선명 비교용 - 앞뒤 공백 지우고 대문자로 통일 (터미널마다 대소문자/공백이 다를 수 있어서)."""
     return re.sub(r"\s+", " ", str(name or "").strip()).upper()
+
+
+# raw에 예전 방식(예: "한진인천", "한진(인천)")으로 저장된 낡은 기록도 최신 코드("HJIT")와
+# 같은 터미널로 인식되도록 해두는 별칭표예요. 새로 들어오는 값은 이미 통일된 코드라
+# 대부분 안 거쳐도 되지만, raw 쪽 과거 데이터를 위한 안전장치예요.
+_TERMINAL_ALIASES = {
+    "한진인천": "HJIT",
+    "한진(인천)": "HJIT",
+    "인천": "HJIT",
+}
+
+
+def normalize_terminal(terminal):
+    """터미널 비교용 - 공백 지우고 대문자로 통일, 옛날 표기는 별칭표로 최신 코드로 맞춤."""
+    t = re.sub(r"\s+", "", str(terminal or "")).upper()
+    return _TERMINAL_ALIASES.get(t, t)
 
 
 def main():
@@ -116,7 +140,11 @@ def main():
         f"낡은 기록이라 제외 {skipped_old_record}건 (선명 기준 {len(raw_by_name)}종)"
     )
 
-    # 터미널에서 받아온 항목도 선명 기준으로 정리 (같은 배가 여러 터미널 결과에 겹칠 수 있어서 마지막 것으로 덮어씀)
+    # 터미널에서 받아온 항목도 선명 기준으로 정리.
+    # ⚠️ 2026-09-15 수정: 예전엔 같은 선명이 여러 터미널 결과에 겹치면 "마지막 것으로
+    # 덮어씀"이었는데, 이러면 AS CASPRIA처럼 BPT/한진인천을 둘 다 콜링하는 배는 둘 중
+    # 하나의 터미널 데이터가 통째로 사라져버려요. 그래서 이제 덮어쓰지 않고 리스트로
+    # 다 모아뒀다가, 아래 매칭 단계에서 터미널까지 같이 봐서 하나씩 짝지어요.
     fetched_by_name = {}
     for terminal_name, entries in results.items():
         for entry in entries:
@@ -124,9 +152,14 @@ def main():
             if not vessel_name:
                 continue
             key = normalize_name(vessel_name)
-            fetched_by_name[key] = entry
+            resolved_terminal = entry.get("terminal") or terminal_name
+            fetched_by_name.setdefault(key, []).append((resolved_terminal, entry))
 
-    log(f"터미널에서 받아온 배: {len(fetched_by_name)}종 (이 중 raw에 이미 있는 선명만 갱신 대상)")
+    fetched_entry_count = sum(len(v) for v in fetched_by_name.values())
+    log(
+        f"터미널에서 받아온 배: {len(fetched_by_name)}종 / {fetched_entry_count}건 "
+        f"(이 중 raw에 이미 있는 선명+터미널만 갱신 대상)"
+    )
 
     updated = 0
     skipped_not_in_raw = 0
@@ -137,65 +170,82 @@ def main():
     batch = db.batch()
     batch_count = 0
 
-    for name_key, entry in fetched_by_name.items():
+    for name_key, fetched_list in fetched_by_name.items():
         matches = raw_by_name.get(name_key)
         if not matches:
             # ⚠️ 핵심 - raw에 없는 선명은 절대 새로 만들지 않고 그냥 건너뜀
-            skipped_not_in_raw += 1
+            skipped_not_in_raw += len(fetched_list)
             continue
 
-        if len(matches) > 1:
-            # 같은 선명이 raw에 여러 건 있으면(같은 배가 이번 달에 두 번 입항 등) 자동으로
-            # 어느 쪽 날짜를 갱신해야 할지 확신할 수 없어서 건너뜀 - 사람이 직접 확인해야 함
-            skipped_ambiguous += 1
-            continue
+        for resolved_terminal, entry in fetched_list:
+            # ⚠️ 2026-09-15 수정 - 선명이 같은 raw 후보들 중에서, 터미널까지 같은 것만 골라냄.
+            # 예전엔 "선명이 raw에 여러 건"이면 무조건 다 건너뛰었는데, AS CASPRIA처럼
+            # BPT/한진인천을 둘 다 콜링하는 배는 이 방식이면 항상 둘 다 스킵되어버려서
+            # 실제로는 안전장치가 아니라 "절대 갱신 안 되는 배"를 만드는 버그였음.
+            entry_terminal = normalize_terminal(resolved_terminal)
+            terminal_matches = [
+                m for m in matches
+                if normalize_terminal(m[1].get("terminal")) == entry_terminal
+            ]
 
-        doc_ref, existing_data = matches[0]
-        new_arrival = entry.get("arrivalDate") or ""
-        new_departure = entry.get("departureDate") or ""
-        old_arrival = existing_data.get("arrivalDate") or ""
-        old_departure = existing_data.get("departureDate") or ""
+            if not terminal_matches:
+                # 선명은 raw에 있지만, 이 터미널로 등록된 건 없음 (신규 콜링 등) - 새로 안 만들고 건너뜀
+                skipped_not_in_raw += 1
+                continue
 
-        if old_arrival == new_arrival and old_departure == new_departure:
-            unchanged += 1
-            continue
+            if len(terminal_matches) > 1:
+                # 같은 선명 + 같은 터미널로 raw에 여러 건 있으면(같은 배가 같은 터미널을
+                # 이번 달에 두 번 콜링 등) 자동으로 어느 쪽인지 확신할 수 없어서 건너뜀 -
+                # 사람이 직접 확인해야 함
+                skipped_ambiguous += 1
+                continue
 
-        fields = {
-            "updatedAt": firestore.SERVER_TIMESTAMP,
-            "updatedBy": "auto_fetch",
-        }
-        if new_arrival:
-            fields["arrivalDate"] = new_arrival
-        if new_departure:
-            fields["departureDate"] = new_departure
+            doc_ref, existing_data = terminal_matches[0]
+            new_arrival = entry.get("arrivalDate") or ""
+            new_departure = entry.get("departureDate") or ""
+            old_arrival = existing_data.get("arrivalDate") or ""
+            old_departure = existing_data.get("departureDate") or ""
 
-        change_record = {
-            "vesselName": existing_data.get("vesselName", ""),
-            "terminal": existing_data.get("terminal", ""),
-            "oldArrivalDate": old_arrival,
-            "newArrivalDate": new_arrival or old_arrival,
-            "oldDepartureDate": old_departure,
-            "newDepartureDate": new_departure or old_departure,
-        }
-        changes_for_today.append(change_record)
+            if old_arrival == new_arrival and old_departure == new_departure:
+                unchanged += 1
+                continue
 
-        if dry_run:
-            log(
-                f"  [미리보기] {existing_data.get('vesselName')}: "
-                f"입항 {old_arrival} → {new_arrival or '(변경없음)'}, "
-                f"출항 {old_departure} → {new_departure or '(변경없음)'}"
-            )
-        else:
-            batch.update(doc_ref, fields)
-            batch_count += 1
+            fields = {
+                "updatedAt": firestore.SERVER_TIMESTAMP,
+                "updatedBy": "auto_fetch",
+            }
+            if new_arrival:
+                fields["arrivalDate"] = new_arrival
+            if new_departure:
+                fields["departureDate"] = new_departure
 
-        updated += 1
+            change_record = {
+                "vesselName": existing_data.get("vesselName", ""),
+                "terminal": existing_data.get("terminal", ""),
+                "oldArrivalDate": old_arrival,
+                "newArrivalDate": new_arrival or old_arrival,
+                "oldDepartureDate": old_departure,
+                "newDepartureDate": new_departure or old_departure,
+            }
+            changes_for_today.append(change_record)
 
-        if batch_count >= 400:
-            batch.commit()
-            log(f"  ...{updated}건 커밋 진행중")
-            batch = db.batch()
-            batch_count = 0
+            if dry_run:
+                log(
+                    f"  [미리보기] {existing_data.get('vesselName')} ({existing_data.get('terminal')}): "
+                    f"입항 {old_arrival} → {new_arrival or '(변경없음)'}, "
+                    f"출항 {old_departure} → {new_departure or '(변경없음)'}"
+                )
+            else:
+                batch.update(doc_ref, fields)
+                batch_count += 1
+
+            updated += 1
+
+            if batch_count >= 400:
+                batch.commit()
+                log(f"  ...{updated}건 커밋 진행중")
+                batch = db.batch()
+                batch_count = 0
 
     if not dry_run and batch_count > 0:
         batch.commit()
