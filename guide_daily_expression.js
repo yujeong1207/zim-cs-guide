@@ -358,19 +358,35 @@ function renderDailyExprQuiz() {
   // 이미 정답을 고른 상태 - 정답/발음/예문 공개
   area.innerHTML = `
     <div class="label" style="font-size:15px;">✅ 정답</div>
-    <div style="font-size:17px;font-weight:700;margin:8px 0 6px;line-height:1.6;">${escapeHtml(item.english)}
-      <button type="button" class="btn secondary-btn" style="padding:2px 10px;font-size:12px;margin-left:6px;vertical-align:middle;" onclick="speakDailyExpr(${JSON.stringify(item.id)}, 'english', this)">🔊 듣기</button>
-    </div>
+    <div id="dailyExprAnswerLine" style="font-size:17px;font-weight:700;margin:8px 0 6px;line-height:1.6;">${escapeHtml(item.english)}</div>
     <div class="hint" style="margin-bottom:10px;">발음: ${escapeHtml(item.pron)}</div>
     <div style="font-size:14px;color:#374151;margin-bottom:4px;">${escapeHtml(item.korean)}</div>
 
     <div class="label" style="margin-top:14px;">📝 예문</div>
-    <div style="font-size:14px;line-height:1.7;margin-top:4px;">
-      ${escapeHtml(item.example)}
-      <button type="button" class="btn secondary-btn" style="padding:2px 10px;font-size:12px;margin-left:6px;" onclick="speakDailyExpr(${JSON.stringify(item.id)}, 'example', this)">🔊</button>
-    </div>
+    <div id="dailyExprExampleLine" style="font-size:14px;line-height:1.7;margin-top:4px;">${escapeHtml(item.example)}</div>
     <div class="hint" style="margin-top:4px;">${escapeHtml(item.exampleKr)}</div>
   `;
+
+  // ⚠️ 버튼은 innerHTML 문자열(onclick="...")로 안 만들고 DOM으로 직접 붙여요.
+  //    Firestore 문서 id처럼 예측 불가능한 문자열을 onclick 속성 문자열 안에 그대로
+  //    끼워넣으면, 따옴표가 겹쳐서 HTML 자체가 깨지는 문제가 있었어요 (그래서 버튼이
+  //    안 눌리고 "Unexpected end of input" 에러가 났던 거예요). DOM으로 만들면 이런
+  //    충돌이 애초에 날 수가 없어요.
+  const answerListenBtn = document.createElement("button");
+  answerListenBtn.type = "button";
+  answerListenBtn.className = "btn secondary-btn";
+  answerListenBtn.style.cssText = "padding:2px 10px;font-size:12px;margin-left:6px;vertical-align:middle;";
+  answerListenBtn.textContent = "🔊 듣기";
+  answerListenBtn.onclick = () => speakDailyExpr(item.id, "english", answerListenBtn);
+  document.getElementById("dailyExprAnswerLine").appendChild(answerListenBtn);
+
+  const exampleListenBtn = document.createElement("button");
+  exampleListenBtn.type = "button";
+  exampleListenBtn.className = "btn secondary-btn";
+  exampleListenBtn.style.cssText = "padding:2px 10px;font-size:12px;margin-left:6px;";
+  exampleListenBtn.textContent = "🔊";
+  exampleListenBtn.onclick = () => speakDailyExpr(item.id, "example", exampleListenBtn);
+  document.getElementById("dailyExprExampleLine").appendChild(exampleListenBtn);
 }
 
 function answerDailyExprQuiz(isCorrect) {
