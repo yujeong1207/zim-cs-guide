@@ -122,6 +122,7 @@
       <button class="main-tab-btn" data-tab="panamaTransit" onclick="switchMainTab('panamaTransit')">🛳️ 파나마 통과 현황</button>
       <button class="main-tab-btn" data-tab="contacts" onclick="switchMainTab('contacts')">📞 연락처</button>
       <button class="main-tab-btn" data-tab="news" onclick="switchMainTab('news')">📰 오늘의 물류뉴스</button>
+      <button class="main-tab-btn" data-tab="dailyExpr" onclick="switchMainTab('dailyExpr')">🗣 오늘의 표현</button>
     </div>
   </div>
 
@@ -213,6 +214,16 @@
     <button class="btn secondary-btn" onclick="loadNewsTab()">🔄 새로고침</button>
   </div>
   <div id="newsListWrap"></div>
+</div>
+
+<!-- ===== 🗣 오늘의 표현 탭 ===== -->
+<div class="tab-page" id="page-dailyExpr">
+  <div class="hint" style="margin-bottom:14px;">💡 물류/비즈니스 영어 표현과 일상 영어 표현을 하루에 하나씩 퀴즈로 풀어봐요. 오늘의 표현은 날짜 기준으로 팀원 전체가 똑같이 봐요. 심심할 땐 "🔀 다른 표현 보기"로 계속 넘겨볼 수 있어요.</div>
+  <div style="margin-bottom:12px;display:flex;gap:8px;flex-wrap:wrap;">
+    <button class="btn secondary-btn" onclick="openDailyExprAddEditor()">➕ 새 표현 추가</button>
+    <button class="btn secondary-btn" onclick="loadDailyExprTab(true)">🔄 새로고침</button>
+  </div>
+  <div id="dailyExprWrap"></div>
 </div>
 
 <!-- ===== 🧮 계산기 탭 ===== -->
@@ -913,6 +924,16 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="dailyExprAddOverlay" style="display:none;" onclick="if(event.target===this) closeDailyExprAddEditor()">
+  <div class="admin-panel small-panel">
+    <div class="admin-header">
+      <div class="admin-title">🗣 새 표현 추가</div>
+      <button class="close-btn" onclick="closeDailyExprAddEditor()">✕ 닫기</button>
+    </div>
+    <div id="dailyExprAddBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="personVacationOverlay" style="display:none;" onclick="if(event.target===this) closePersonVacationEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -945,6 +966,7 @@
 <script src="guide_case_share.js"></script>
 <script src="guide_case_share_import.js"></script>
 <script src="guide_ntf_archive.js"></script>
+<script src="guide_daily_expression.js"></script>
 <script src="guide_cod.js"></script>
 <script src="guide_triangle.js"></script>
 

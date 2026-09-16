@@ -238,6 +238,7 @@ function switchMainTab(tab) {
   if (tab === "vessels") loadVesselTab();
   if (tab === "panamaTransit") loadPanamaTransitTab();
   if (tab === "news") loadNewsTab();
+  if (tab === "dailyExpr") loadDailyExprTab();
   if (tab === "ttlines") renderTTLinesTab();
   if (tab === "contacts") renderContactsTable();
   if (tab === "poa") loadPoaTab();
@@ -314,6 +315,11 @@ const DO_DESK_PAYMENT_ADD_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.1
 const DO_DESK_PAYMENT_UPDATE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/e8179eb32e734ab789e6ccbf2848a8bc/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=mTs3NcguQ4uJBCjuC1CUrJgQ4l7rXXQc3b1lQFbGMu8";
 const DO_DESK_PAYMENT_MERGE_URL = "https://defaultc3debccf0f644fc98686edeedbe9f5.13.environment.api.powerplatform.com:443/powerautomate/automations/direct/cu/05/workflows/a1f91acff2184f9898a9f48bffe8b9a7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=lKXS0ah9whsEpFBCO3eNXGGZztRNsaoC92JBwGOZKo0";
 const DO_DESK_PAYMENT_EMBED_BASE_URL = "https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=embedview&wdAllowInteractivity=True&wdHideGridlines=True&wdHideHeaders=True&wdDownloadButton=True&wdInConfigurator=True";
+// ⚠️ 위 embedview 주소는 "보기 전용"이라 실제 타이핑 편집이 안 돼요 (마이크로소프트가 외부 사이트로의
+//    편집 모드 프레이밍 자체를 막아둬서, 우리 쪽에서 URL을 바꾼다고 풀리는 제약이 아니에요).
+//    그래서 D/O 데스크에서는 iframe 임베드 대신, 아래 주소로 실제 파일을 새 탭에서 열게 안내함
+//    (이러면 원래 갖고 있는 편집 권한 그대로 자유롭게 타이핑해서 쓸 수 있어요).
+const DO_DESK_PAYMENT_FILE_OPEN_URL = "https://zim365-my.sharepoint.com/personal/park_minyoung_corp_zim_com/_layouts/15/Doc.aspx?sourcedoc={9fab18fd-0595-49b0-9aeb-ae700bf66d76}&action=default";
 // ⚠️ 실제 시트 탭 이름은 "수입" 뒤에 눈에 안 보이는 공백이 하나 있음 (Office Script 만들 때 발견한 것과 동일).
 // URL로 특정 셀에 점프시키려면 이 공백까지 정확히 일치해야 해서, 반드시 이 상수를 통해서만 시트 이름을 써야 함.
 const DO_DESK_PAYMENT_SHEET_NAME = "수입 ";
@@ -557,18 +563,6 @@ function cancelEditDoDeskPayment() {
   if (cancelBtn) cancelBtn.style.display = "none";
 }
 
-function refreshDoDeskPaymentEmbed() {
-  const iframe = document.getElementById("doDeskPaymentEmbed");
-  if (!iframe) return;
-  const scrollX = window.scrollX;
-  const scrollY = window.scrollY;
-  const lastRow = getDoDeskPaymentLastKnownRow();
-  const targetCell = lastRow ? ("C" + lastRow) : "A1";
-  iframe.src = DO_DESK_PAYMENT_EMBED_BASE_URL + "&_r=" + Date.now() + "#" + encodeURIComponent(DO_DESK_PAYMENT_SHEET_NAME) + "!" + targetCell;
-  // 임베드가 셀 위치로 다 이동하고 자리잡을 시간을 충분히 준 다음에만,
-  // 그 사이 바깥 페이지가 같이 스크롤됐으면 한 번만 되돌려놓음 (너무 빨리 되돌리면 임베드의 셀 이동 자체를 방해함)
-  setTimeout(() => window.scrollTo(scrollX, scrollY), 2000);
-}
 
 function loadDoDeskTab() {
   const wrap = document.getElementById("doDeskWrap");
@@ -629,19 +623,9 @@ function loadDoDeskTab() {
     </div>
 
     <hr style="margin:20px 0; border:none; border-top:1px solid #e5e7eb;">
-    <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 아래 화면에 바로 안 보이면 "🔄 새로고침"을 눌러주세요. 새로고침하면 자동으로 방금 넣은 행 근처가 맨 위에 오도록 열려요. 화면을 한 번 클릭한 다음 <b>Ctrl+F</b>로 검색할 수도 있어요.</div>
-    <div class="hint" style="margin-bottom:10px;">⚠️ 화면이 안 뜨거나 "액세스 권한이 없습니다"라고 나오면, 회사 마이크로소프트 계정으로 로그인이 안 되어 있거나 공유 대상에 포함되지 않은 경우예요. 그럴 땐 재무팀에 공유 대상 추가를 요청해주세요.</div>
-    <div style="margin-bottom:10px;">
-      <button type="button" class="btn secondary-btn" onclick="refreshDoDeskPaymentEmbed()">🔄 새로고침</button>
-    </div>
-    <div class="payment-embed-wrap">
-      <iframe
-        id="doDeskPaymentEmbed"
-        src="${DO_DESK_PAYMENT_EMBED_BASE_URL}#${encodeURIComponent(DO_DESK_PAYMENT_SHEET_NAME)}!A1"
-        width="100%" height="800" frameborder="0" scrolling="yes"
-        title="입금현황 - 수입 (BLCONFIRM.xlsx)">
-      </iframe>
-    </div>
+    <div class="hint" style="margin-bottom:10px;">방금 등록한 내용이 위 "최근 추가한 항목"에 바로 안 보이면 새로고침(F5) 해주세요.</div>
+    <div class="hint" style="margin-bottom:10px;">💡 칸 아무 데나 바로 타이핑하면서 자유롭게 쓰고 싶으시면, 여기서 보는 것보다 <b>실제 파일을 새 탭에서 열어서</b> 쓰시는 걸 추천해요 — 마이크로소프트 정책상 외부 사이트 안에 "편집 가능한" 형태로 끼워넣는 건 막혀있어서, 여기 페이지 안에서는 완전한 실시간 편집이 지원되지 않아요.</div>
+    <a href="${DO_DESK_PAYMENT_FILE_OPEN_URL}" target="_blank" rel="noopener" class="btn generate-btn" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">📂 실제 파일 열기 (새 탭 · 자유 편집)</a>
 
     <div class="label" style="margin:20px 0 8px;">📝 메모</div>
     <div class="hint" style="margin:0 0 8px;">시스템 코드, 처리 순서 등 자유롭게 적어두세요. 이 브라우저에만 저장돼요(다른 팀원한텐 안 보여요).</div>
