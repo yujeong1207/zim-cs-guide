@@ -359,7 +359,7 @@ function renderDailyExprQuiz() {
   area.innerHTML = `
     <div class="label" style="font-size:15px;">✅ 정답</div>
     <div style="font-size:17px;font-weight:700;margin:8px 0 6px;line-height:1.6;">${escapeHtml(item.english)}
-      <button type="button" class="btn secondary-btn" style="padding:2px 10px;font-size:12px;margin-left:6px;vertical-align:middle;" onclick="speakDailyExpr(${JSON.stringify(item.english)})">🔊 듣기</button>
+      <button type="button" class="btn secondary-btn" style="padding:2px 10px;font-size:12px;margin-left:6px;vertical-align:middle;" onclick="speakDailyExpr(${JSON.stringify(item.id)}, 'english', this)">🔊 듣기</button>
     </div>
     <div class="hint" style="margin-bottom:10px;">발음: ${escapeHtml(item.pron)}</div>
     <div style="font-size:14px;color:#374151;margin-bottom:4px;">${escapeHtml(item.korean)}</div>
@@ -367,7 +367,7 @@ function renderDailyExprQuiz() {
     <div class="label" style="margin-top:14px;">📝 예문</div>
     <div style="font-size:14px;line-height:1.7;margin-top:4px;">
       ${escapeHtml(item.example)}
-      <button type="button" class="btn secondary-btn" style="padding:2px 10px;font-size:12px;margin-left:6px;" onclick="speakDailyExpr(${JSON.stringify(item.example)})">🔊</button>
+      <button type="button" class="btn secondary-btn" style="padding:2px 10px;font-size:12px;margin-left:6px;" onclick="speakDailyExpr(${JSON.stringify(item.id)}, 'example', this)">🔊</button>
     </div>
     <div class="hint" style="margin-top:4px;">${escapeHtml(item.exampleKr)}</div>
   `;
@@ -408,18 +408,83 @@ function jumpToTodaysExpr() {
   renderDailyExprCard();
 }
 
-/* 브라우저 자체 음성 합성(Web Speech API)으로 실제 영어 발음을 들려줌 - 무료, 별도 API 불필요.
-   지원 안 하는 브라우저(일부 구형 환경)에서는 조용히 안내만 하고 넘어감. */
-function speakDailyExpr(text) {
-  if (!("speechSynthesis" in window)) {
-    alert("이 브라우저는 음성 재생을 지원하지 않아요. 위에 써있는 한글 발음을 참고해주세요.");
+/* 🔊 발음 듣기 - 두 단계로 동작해요:
+   1) 처음 준비한 100개(seedOrder 1~100)는 미리 만들어둔 mp3 파일이 레포 안에 있어서,
+      네트워크 요청 없이 바로 재생돼요 (제일 빠르고 확실해요, 프리즈마든 뭐든 무조건 재생됨).
+   2) 나중에 팀원이 "➕ 새 표현 추가"로 새로 넣은 표현은 미리 만든 파일이 없으니, 그때만
+      자동으로 Apps Script(구글 번역 음성합성 프록시)를 통해 즉석에서 만들어서 재생해요. */
+let dailyExprAudioCache = {}; // Apps Script로 새로 만든 음성은 이 탭을 켜놓은 동안 메모리에 캐시
+let dailyExprCurrentAudioEl = null;
+
+function localAudioPath_(item, field) {
+  // 처음 준비한 100개만 미리 만든 파일이 있어요 (seedOrder 1~100)
+  if (item.seedOrder >= 1 && item.seedOrder <= 100) {
+    return "audio/daily-expr/" + item.seedOrder + "_" + (field === "example" ? "ex" : "en") + ".mp3";
+  }
+  return null;
+}
+
+async function speakDailyExpr(itemId, field, btnEl) {
+  const item = DAILY_EXPR_LIST.find((e) => e.id === itemId);
+  if (!item) return;
+  const text = field === "example" ? item.example : item.english;
+
+  if (dailyExprCurrentAudioEl) {
+    dailyExprCurrentAudioEl.pause();
+    dailyExprCurrentAudioEl = null;
+  }
+
+  const originalLabel = btnEl ? btnEl.textContent : "";
+  const localPath = localAudioPath_(item, field);
+
+  if (localPath) {
+    // 미리 만들어둔 파일이 있는 경우 - 바로 재생 (제일 빠르고 안정적)
+    const audio = new Audio(localPath);
+    dailyExprCurrentAudioEl = audio;
+    if (btnEl) btnEl.textContent = "🔊 재생 중...";
+    audio.onended = () => { if (btnEl) btnEl.textContent = originalLabel; };
+    audio.onerror = () => {
+      // 혹시 파일이 없거나 깨졌으면, 조용히 온라인 방식으로 대체
+      if (btnEl) btnEl.textContent = originalLabel;
+      speakDailyExprOnline_(text, btnEl, originalLabel);
+    };
+    try { await audio.play(); } catch (e) { speakDailyExprOnline_(text, btnEl, originalLabel); }
     return;
   }
-  window.speechSynthesis.cancel(); // 이전에 재생 중이던 게 있으면 먼저 끊음
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = "en-US";
-  utter.rate = 0.92;
-  window.speechSynthesis.speak(utter);
+
+  // 미리 만든 파일이 없는(새로 추가된) 표현은 온라인 방식으로
+  await speakDailyExprOnline_(text, btnEl, originalLabel);
+}
+
+async function speakDailyExprOnline_(text, btnEl, originalLabel) {
+  if (!LOGISTICS_NEWS_API_URL) {
+    alert("이 표현은 아직 준비된 음성 파일이 없어요.");
+    return;
+  }
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = "⏳ 불러오는 중..."; }
+
+  try {
+    let audioBase64 = dailyExprAudioCache[text];
+    if (!audioBase64) {
+      const res = await fetch(LOGISTICS_NEWS_API_URL + "?action=tts&text=" + encodeURIComponent(text));
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || "알 수 없는 오류");
+      audioBase64 = data.audioBase64;
+      dailyExprAudioCache[text] = audioBase64;
+    }
+
+    const audio = new Audio("data:audio/mpeg;base64," + audioBase64);
+    dailyExprCurrentAudioEl = audio;
+    if (btnEl) btnEl.textContent = "🔊 재생 중...";
+    audio.onended = () => { if (btnEl) btnEl.textContent = originalLabel; };
+    audio.onerror = () => { if (btnEl) btnEl.textContent = originalLabel; };
+    await audio.play();
+  } catch (err) {
+    console.error("발음 재생 실패:", err);
+    alert("발음을 불러오지 못했어요. 네트워크 문제일 수 있어요 - 잠시 후 다시 시도해주세요.\n\n(" + err.message + ")");
+  } finally {
+    if (btnEl) { btnEl.disabled = false; if (btnEl.textContent === "⏳ 불러오는 중...") btnEl.textContent = originalLabel; }
+  }
 }
 
 /* ---- 새 표현 추가 모달 (⚙️ 관리 없이도 탭 안에서 바로 추가 가능) ---- */
