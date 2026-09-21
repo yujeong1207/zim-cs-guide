@@ -73,12 +73,11 @@ function triangleProgressHtml(t, info) {
   return '<span class="tri-progress-count">' + info.done + "/" + info.total + '</span><span class="tri-next tri-next-' + info.next.kind + '">' + escapeHtml(label) + "</span>";
 }
 
-/* "2026-09-21" → "9/21(월)" */
+/* "2026-09-21" → "9/21" (요일은 표시하지 않음) */
 function triangleFormatDate(str) {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || "");
   if (!m) return str || "";
-  const dt = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
-  return (dt.getMonth() + 1) + "/" + dt.getDate() + "(" + "일월화수목금토".charAt(dt.getDay()) + ")";
+  return Number(m[2]) + "/" + Number(m[3]);
 }
 
 function triangleDocToEntry(doc) {
