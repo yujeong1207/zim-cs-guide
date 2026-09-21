@@ -2791,14 +2791,14 @@ const DEFAULT_TT_LINES = [
         "code": "USIAH",
         "name": "Houston",
         "tt": 25,
-        "url": "https://www.apmterminals.com/track-and-trace/vessel-schedule?terminal=INNSA"
+        "url": "https://porthouston.com/toolbox/container-terminals/schedules-arrivals/"
       },
       {
         "id": "ttp_12",
         "code": "USMOB",
         "name": "Mobile",
         "tt": 29,
-        "url": "https://losangeles.trapac.com/"
+        "url": "https://www.apmterminals.com/track-and-trace/vessel-schedule"
       },
       {
         "id": "ttp_13",
