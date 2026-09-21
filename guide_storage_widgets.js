@@ -30,6 +30,24 @@ let HOLIDAYS = DATA.holidays;
 let EXCHANGE_RATES = DATA.exchangeRates;
 let TT_LINES = DATA.ttLines;
 
+/* 서비스라인 T/T 터미널 링크 정정 - 잘못 들어갔던 값(Houston=인도 INNSA 링크, Mobile=LA TraPac 링크)이
+   localStorage에 그대로 남아있는 사용자만 바로잡음. 값이 예전 잘못된 그대로일 때만 바꾸므로 여러 번
+   실행돼도 안전하고, 나중에 직접 수정한 링크는 건드리지 않음. */
+const TT_LINK_FIXES = [
+  { id: "ttp_11", wrong: "https://www.apmterminals.com/track-and-trace/vessel-schedule?terminal=INNSA", right: "https://porthouston.com/toolbox/container-terminals/schedules-arrivals/" },
+  { id: "ttp_12", wrong: "https://losangeles.trapac.com/", right: "https://www.apmterminals.com/track-and-trace/vessel-schedule" }
+];
+(function fixTtLinks() {
+  let changed = false;
+  (TT_LINES || []).forEach((line) => {
+    (line.ports || []).forEach((port) => {
+      const fix = TT_LINK_FIXES.find((f) => f.id === port.id && f.wrong === port.url);
+      if (fix) { port.url = fix.right; changed = true; }
+    });
+  });
+  if (changed) saveData();
+})();
+
 if (!DATA.faqProcedureMigrated) {
   migrateFaqProcedureToTopics();
   DATA.faqProcedureMigrated = true;
