@@ -2024,10 +2024,15 @@ input, select, textarea {
 .tri-group-head.pending td { background: #e6f1fb; color: #0c447c; }
 .tri-group-head.alldone td { background: #f4f4f2; color: #5f5e5a; }
 .tri-group-head.novsl.pending td { background: #f3f4f6; color: #4b5563; }
-.tri-group-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
+.tri-group-inner { display: flex; flex-direction: column; gap: 4px; }
+.tri-group-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px; }
 .tri-group-name { display: flex; align-items: center; gap: 8px; font-weight: 700; }
 .tri-group-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .tri-group-hint { color: #6b7280; }
+.tri-2nd-badge { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: #fde68a; color: #92400e; font-size: 11px; font-weight: 700; vertical-align: middle; }
+.tri-group-edit-btn { border: none; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0.6; }
+.tri-group-edit-btn:hover { opacity: 1; }
+.tri-group-remark { font-size: 12.5px; color: #4b5563; font-weight: 400; padding-left: 2px; white-space: pre-wrap; }
 .tri-quick-hint { font-size: 11px; color: #6b7280; white-space: nowrap; }
 
 /* ===== 💸 삼국간 운임지불 메시지 (삼국간 전용: tfm- 접두어) ===== */

@@ -15,6 +15,17 @@ let triangleCollapsedGroups = new Set(); // 직접 접은 그룹의 key 모음 (
 let triangleChipFilter = null; // 위 요약 칩으로 거는 필터: "check"(확인중) | "remit"(송금 대기) | "novsl"(배 미입력) | null
 let triangleHideDone = false; // "완료 건 숨기기"
 
+/* BL번호 안의 숫자를 뽑아 오름차순 정렬할 때 씀 (같은 그룹 안에서 번호 작은 게 위로 오게) */
+function triangleBlSortNum(bl) {
+  const m = /\d+/.exec(String(bl || ""));
+  return m ? parseInt(m[0], 10) : Number.MAX_SAFE_INTEGER;
+}
+function triangleCompareByBl(a, b) {
+  const na = triangleBlSortNum(a.blNumber), nb = triangleBlSortNum(b.blNumber);
+  if (na !== nb) return na - nb;
+  return String(a.blNumber || "").localeCompare(String(b.blNumber || ""));
+}
+
 function triangleGroupKey(vessel, shipper) {
   // "wu xiang 76"과 "WU XIANG 76"처럼 대소문자·띄어쓰기만 다른 건 같은 배로 취급
   const norm = (s) => (s || "").trim().replace(/\s+/g, " ").toUpperCase();
@@ -88,6 +99,8 @@ function triangleDocToEntry(doc) {
     vessel: d.vessel || "",
     shipper: d.shipper || "",
     onboardDate: d.onboardDate || "", // 온보드 날짜 "YYYY-MM-DD"
+    secondVessel: d.secondVessel || "", // 2ND VSL - 같은 배·화주 그룹 전체 공통 (미국행 등 2차 선적)
+    groupRemark: d.groupRemark || "",   // 그룹 공통 REMARK - 같은 배·화주 그룹 전체 공통
     popCharge: d.popCharge || "",
     mfstClose: d.mfstClose || "",
     invoiceRequest: d.invoiceRequest || "",
@@ -107,6 +120,8 @@ async function submitTriangleToServer(entry) {
       vessel: entry.vessel || "",
       shipper: entry.shipper || "",
       onboardDate: entry.onboardDate || "",
+      secondVessel: entry.secondVessel || "",
+      groupRemark: entry.groupRemark || "",
       popCharge: entry.popCharge || "",
       mfstClose: entry.mfstClose || "",
       invoiceRequest: entry.invoiceRequest || "",
@@ -132,6 +147,8 @@ async function updateTriangleOnServer(entry) {
       vessel: entry.vessel || "",
       shipper: entry.shipper || "",
       onboardDate: entry.onboardDate || "",
+      secondVessel: entry.secondVessel || "",
+      groupRemark: entry.groupRemark || "",
       popCharge: entry.popCharge || "",
       mfstClose: entry.mfstClose || "",
       invoiceRequest: entry.invoiceRequest || "",
@@ -143,6 +160,29 @@ async function updateTriangleOnServer(entry) {
     return { ok: true };
   } catch (err) {
     console.error("삼국간 서버 수정 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+
+/* "여러 BL 한번에 등록" 저장: 같은 값(common)에 BL번호만 다르게 해서 한 번에 여러 건을 만듦 (Firestore batch) */
+async function submitTriangleBulk(common, blNumbers) {
+  try {
+    await window.fbReady;
+    const batch = window.fbDb.batch();
+    const nowIso = new Date().toISOString();
+    blNumbers.forEach((bl) => {
+      const ref = window.fbDb.collection(TRIANGLE_COLLECTION).doc();
+      batch.set(ref, Object.assign({}, common, {
+        blNumber: bl,
+        doneStatus: common.doneStatus || "progress",
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        createdAtIso: nowIso,
+      }));
+    });
+    await batch.commit();
+    return { ok: true };
+  } catch (err) {
+    console.error("삼국간 일괄 등록 실패:", err);
     return { ok: false, error: String(err) };
   }
 }
@@ -178,6 +218,85 @@ function toggleTriangleGroup(key) {
   if (isOpen) { triangleExpandedGroups.delete(key); triangleCollapsedGroups.add(key); }
   else { triangleCollapsedGroups.delete(key); triangleExpandedGroups.add(key); }
   renderTriangleList();
+}
+
+/* ---- 그룹(같은 배·화주) 전체에 공통으로 적용되는 2ND VSL · REMARK 수정 ---- */
+let triangleGroupEditKey = null;
+
+function openTriangleGroupEditor(key) {
+  triangleGroupEditKey = key;
+  document.getElementById("triangleGroupEditOverlay").style.display = "flex";
+  renderTriangleGroupEditorBody();
+}
+
+function closeTriangleGroupEditor() {
+  document.getElementById("triangleGroupEditOverlay").style.display = "none";
+  triangleGroupEditKey = null;
+}
+
+function renderTriangleGroupEditorBody() {
+  const body = document.getElementById("triangleGroupEditBody");
+  body.innerHTML = "";
+  const entries = TRIANGLE_LIST.filter((t) => triangleEntryGroupKey(t) === triangleGroupEditKey);
+  const vessel = (entries[0] && entries[0].vessel) || "";
+  const shipper = (entries[0] && entries[0].shipper) || "";
+
+  const info = document.createElement("div");
+  info.className = "hint";
+  info.style.marginBottom = "10px";
+  info.textContent = "🚢 " + (vessel || "배 미입력") + (shipper ? " · " + shipper : "") + " · 이 그룹 " + entries.length + "건 전체에 적용돼요";
+  body.appendChild(info);
+
+  const secondInput = document.createElement("input");
+  secondInput.placeholder = "예: ADL 20E (미국행 등 2번째 배)";
+  secondInput.value = (entries.find((e) => (e.secondVessel || "").trim()) || {}).secondVessel || "";
+  body.appendChild(makeFollowupField("2ND VSL", secondInput));
+
+  const remarkInput = document.createElement("textarea");
+  remarkInput.rows = 3;
+  remarkInput.style.cssText = "width:100%;resize:vertical;box-sizing:border-box;";
+  remarkInput.placeholder = "이 배·화주 전체에 공통으로 적용되는 메모 (건별 REMARK와는 별개예요)";
+  remarkInput.value = (entries.find((e) => (e.groupRemark || "").trim()) || {}).groupRemark || "";
+  body.appendChild(makeFollowupField("그룹 공통 REMARK", remarkInput));
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+  const saveBtn = document.createElement("button");
+  saveBtn.className = "btn generate-btn";
+  saveBtn.textContent = "💾 저장하기";
+  saveBtn.onclick = async () => {
+    saveBtn.disabled = true;
+    saveBtn.textContent = "💾 저장 중...";
+    const result = await applyTriangleGroupFields(entries.map((e) => e.id), secondInput.value.trim(), remarkInput.value.trim());
+    saveBtn.disabled = false;
+    saveBtn.textContent = "💾 저장하기";
+    if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+    closeTriangleGroupEditor();
+  };
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn secondary-btn";
+  cancelBtn.textContent = "취소";
+  cancelBtn.onclick = () => closeTriangleGroupEditor();
+  actions.appendChild(saveBtn);
+  actions.appendChild(cancelBtn);
+  body.appendChild(actions);
+}
+
+/* 그룹에 속한 모든 건에 2ND VSL / 그룹 공통 REMARK를 한 번에 반영 (Firestore batch) */
+async function applyTriangleGroupFields(ids, secondVessel, groupRemark) {
+  if (!ids.length) return { ok: true };
+  try {
+    await window.fbReady;
+    const batch = window.fbDb.batch();
+    ids.forEach((id) => {
+      batch.update(window.fbDb.collection(TRIANGLE_COLLECTION).doc(id), { secondVessel, groupRemark });
+    });
+    await batch.commit();
+    return { ok: true };
+  } catch (err) {
+    console.error("그룹 정보 저장 실패:", err);
+    return { ok: false, error: String(err) };
+  }
 }
 
 function triangleMatchesChip(t, chip) {
@@ -324,42 +443,54 @@ function renderTriangleList() {
   const tbody = document.createElement("tbody");
   if (triangleQuickAddOpen) tbody.appendChild(buildTriangleQuickAddRow());
 
+  // 블록 단위로 그림: 그룹은 헤더 하나 + BL번호 오름차순으로 정렬한 상세 행들을 통째로, 그룹이 아닌 단일 건은 그 자리에 바로.
+  // (그룹이 처음 등장하는 위치는 기존처럼 list 순서를 따르고, 그룹 "안"의 행 순서만 BL번호 오름차순으로 바꿈)
   const renderedGroupKeys = new Set();
   list.forEach((t) => {
     const key = triangleEntryGroupKey(t);
     const groupSize = key ? (groupCounts[key] || 0) : 0;
     const inGroup = groupSize > 1;
 
-    if (inGroup) {
-      const groupEntries = list.filter((x) => triangleEntryGroupKey(x) === key);
-      const doneCount = groupEntries.filter((x) => x.doneStatus === "done").length;
-      const progressCount = groupEntries.length - doneCount;
-      const isOpen = triangleExpandedGroups.has(key) || (progressCount > 0 && !triangleCollapsedGroups.has(key));
-
-      if (!renderedGroupKeys.has(key)) {
-        renderedGroupKeys.add(key);
-        const vessel = (t.vessel || "").trim();
-        const shipper = (t.shipper || "").trim();
-        const dates = Array.from(new Set(groupEntries.map((x) => x.onboardDate).filter(Boolean))).sort();
-        const dateLabel = dates.length ? "온보드 " + triangleFormatDate(dates[0]) + (dates.length > 1 ? " 외" : "") : "";
-        const headerTr = document.createElement("tr");
-        headerTr.className = "tri-group-head " + (progressCount > 0 ? "pending" : "alldone") + (vessel ? "" : " novsl");
-        headerTr.innerHTML = '<td colspan="12" class="no-strike"><div class="tri-group-inner">'
-          + '<span class="tri-group-name"><span>' + (isOpen ? "▾" : "▸") + "</span>🚢 " + escapeHtml(vessel || "배 미입력") + (shipper ? " · " + escapeHtml(shipper) : "") + "</span>"
-          + '<span class="tri-group-meta">'
-          + (dateLabel ? "<span>" + escapeHtml(dateLabel) + "</span>" : "")
-          + (vessel ? "" : '<span class="tri-group-hint">VSL을 적으면 배별로 묶여요</span>')
-          + (progressCount > 0 ? '<span class="done-badge progress">진행중 ' + progressCount + "</span>" : "")
-          + (doneCount > 0 ? '<span class="done-badge done">완료 ' + doneCount + "</span>" : "")
-          + "</span></div></td>";
-        headerTr.onclick = () => toggleTriangleGroup(key);
-        tbody.appendChild(headerTr);
-      }
-      if (!isOpen) return; // 접혀있으면 상세 행은 건너뜀
+    if (!inGroup) {
+      tbody.appendChild(buildTriangleRow(t, false, false));
+      return;
     }
+    if (renderedGroupKeys.has(key)) return; // 그룹의 두 번째 이후 항목은 이미 위에서 통째로 그렸으니 건너뜀
+    renderedGroupKeys.add(key);
 
-    const isLast = inGroup && list.filter((x) => triangleEntryGroupKey(x) === key).slice(-1)[0] === t;
-    tbody.appendChild(buildTriangleRow(t, inGroup, isLast));
+    const groupEntries = list.filter((x) => triangleEntryGroupKey(x) === key).sort(triangleCompareByBl);
+    const doneCount = groupEntries.filter((x) => x.doneStatus === "done").length;
+    const progressCount = groupEntries.length - doneCount;
+    const isOpen = triangleExpandedGroups.has(key) || (progressCount > 0 && !triangleCollapsedGroups.has(key));
+
+    const vessel = (t.vessel || "").trim();
+    const shipper = (t.shipper || "").trim();
+    const dates = Array.from(new Set(groupEntries.map((x) => x.onboardDate).filter(Boolean))).sort();
+    const dateLabel = dates.length ? "온보드 " + triangleFormatDate(dates[0]) + (dates.length > 1 ? " 외" : "") : "";
+    const secondVessel = (groupEntries.find((x) => (x.secondVessel || "").trim()) || {}).secondVessel || "";
+    const groupRemark = (groupEntries.find((x) => (x.groupRemark || "").trim()) || {}).groupRemark || "";
+    const headerTr = document.createElement("tr");
+    headerTr.className = "tri-group-head " + (progressCount > 0 ? "pending" : "alldone") + (vessel ? "" : " novsl");
+    headerTr.innerHTML = '<td colspan="12" class="no-strike"><div class="tri-group-inner">'
+      + '<div class="tri-group-row">'
+      + '<span class="tri-group-name"><span>' + (isOpen ? "▾" : "▸") + "</span>🚢 " + escapeHtml(vessel || "배 미입력") + (shipper ? " · " + escapeHtml(shipper) : "")
+      + (secondVessel ? ' <span class="tri-2nd-badge">2ND ' + escapeHtml(secondVessel) + "</span>" : "") + "</span>"
+      + '<span class="tri-group-meta">'
+      + (dateLabel ? "<span>" + escapeHtml(dateLabel) + "</span>" : "")
+      + (vessel ? "" : '<span class="tri-group-hint">VSL을 적으면 배별로 묶여요</span>')
+      + (progressCount > 0 ? '<span class="done-badge progress">진행중 ' + progressCount + "</span>" : "")
+      + (doneCount > 0 ? '<span class="done-badge done">완료 ' + doneCount + "</span>" : "")
+      + '<button type="button" class="tri-group-edit-btn" title="2ND VSL · 그룹 공통 REMARK 수정" onclick="event.stopPropagation();openTriangleGroupEditor(\'' + key + '\')">✏️</button>'
+      + "</span></div>"
+      + (groupRemark ? '<div class="tri-group-remark">📝 ' + escapeHtml(groupRemark) + "</div>" : "")
+      + "</div></td>";
+    headerTr.onclick = () => toggleTriangleGroup(key);
+    tbody.appendChild(headerTr);
+
+    if (!isOpen) return; // 접혀있으면 상세 행은 건너뜀
+    groupEntries.forEach((entry, idx) => {
+      tbody.appendChild(buildTriangleRow(entry, true, idx === groupEntries.length - 1));
+    });
   });
   table.appendChild(tbody);
   wrap.appendChild(table);
@@ -471,10 +602,13 @@ async function saveTriangleQuickAdd() {
   if (first) first.focus();
 }
 
+let triangleBulkMode = false; // 새 건 등록 시 "여러 BL 한번에 등록" 모드 여부 (기존 건 수정에는 없음)
+
 function openTriangleEditor(existingId) {
   triangleDraft = existingId ? Object.assign({}, TRIANGLE_LIST.find((t) => t.id === existingId)) : {
-    id: null, blNumber: "", vessel: "", shipper: "", onboardDate: "", popCharge: "", mfstClose: "", invoiceRequest: "", remittance: "", polPodInform: "", remark: "", doneStatus: "progress",
+    id: null, blNumber: "", vessel: "", shipper: "", onboardDate: "", secondVessel: "", groupRemark: "", popCharge: "", mfstClose: "", invoiceRequest: "", remittance: "", polPodInform: "", remark: "", doneStatus: "progress",
   };
+  triangleBulkMode = false;
   document.getElementById("triangleEditTitle").textContent = existingId ? "✏️ 삼국간 건 수정" : "➕ 삼국간 건 등록";
   document.getElementById("triangleEditOverlay").style.display = "flex";
   renderTriangleEditorBody();
@@ -528,10 +662,35 @@ function renderTriangleEditorBody() {
   legendHint.textContent = "O 완료 · X 해당 없음 · 빈칸 아직 안 함 · CHECKING 확인 중 · 송금 칸은 신용거래면 \"신용\"";
   body.appendChild(legendHint);
 
-  const blInput = document.createElement("input");
-  blInput.placeholder = "예: ZIMUPKH003136318";
-  blInput.value = d.blNumber || "";
-  body.appendChild(makeFollowupField("BL번호", blInput));
+  let blInput; // input(단건) 또는 textarea(여러 건) - 아래에서 모드에 맞게 만듦
+
+  if (!d.id) {
+    const bulkToggle = document.createElement("button");
+    bulkToggle.type = "button";
+    bulkToggle.className = "btn secondary-btn";
+    bulkToggle.style.cssText = "padding:4px 10px;font-size:12px;margin-bottom:10px;";
+    bulkToggle.textContent = triangleBulkMode ? "↩️ 한 건만 입력" : "📋 같은 배로 여러 BL 한번에 등록";
+    bulkToggle.onclick = () => { triangleBulkMode = !triangleBulkMode; renderTriangleEditorBody(); };
+    body.appendChild(bulkToggle);
+  }
+
+  if (triangleBulkMode && !d.id) {
+    blInput = document.createElement("textarea");
+    blInput.rows = 4;
+    blInput.style.cssText = "width:100%;resize:vertical;box-sizing:border-box;";
+    blInput.placeholder = "BL번호를 줄바꿈 또는 쉼표로 구분해서 여러 개 입력하세요\n예:\nZIMUHAI80243306\nZIMUHAI80243307\nZIMUHAI80243308";
+    body.appendChild(makeFollowupField("BL번호 (여러 개)", blInput));
+    const bulkHint = document.createElement("div");
+    bulkHint.className = "hint";
+    bulkHint.style.marginTop = "-6px";
+    bulkHint.textContent = "아래 VSL·화주·온보드·상태값·REMARK는 여기 적은 BL번호 전체에 똑같이 적용돼요.";
+    body.appendChild(bulkHint);
+  } else {
+    blInput = document.createElement("input");
+    blInput.placeholder = "예: ZIMUPKH003136318";
+    blInput.value = d.blNumber || "";
+    body.appendChild(makeFollowupField("BL번호", blInput));
+  }
 
   const row0 = document.createElement("div");
   row0.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;";
@@ -548,6 +707,21 @@ function renderTriangleEditorBody() {
   onboardInput.value = d.onboardDate || "";
   row0.appendChild(makeFollowupField("온보드 날짜", onboardInput));
   body.appendChild(row0);
+
+  const row0b = document.createElement("div");
+  row0b.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;";
+  const secondVesselInput = document.createElement("input");
+  secondVesselInput.placeholder = "예: ADL 20E (미국행 등 2번째 배)";
+  secondVesselInput.value = d.secondVessel || "";
+  row0b.appendChild(makeFollowupField("2ND VSL (같은 배·화주 전체 공통)", secondVesselInput));
+  body.appendChild(row0b);
+
+  const groupRemarkInput = document.createElement("textarea");
+  groupRemarkInput.rows = 2;
+  groupRemarkInput.style.cssText = "width:100%;resize:vertical;box-sizing:border-box;";
+  groupRemarkInput.placeholder = "이 배·화주 전체에 공통으로 적용되는 메모 (아래 REMARK와는 별개예요)";
+  groupRemarkInput.value = d.groupRemark || "";
+  body.appendChild(makeFollowupField("그룹 공통 REMARK (같은 배·화주 전체 공통)", groupRemarkInput));
 
   const popField = makeTriangleStatusField("POP CHARGE", d.popCharge);
   body.appendChild(popField);
@@ -577,12 +751,12 @@ function renderTriangleEditorBody() {
   saveBtn.className = "btn generate-btn";
   saveBtn.textContent = "💾 저장하기";
   saveBtn.onclick = async () => {
-    const entry = {
-      id: d.id,
-      blNumber: blInput.value.trim(),
+    const common = {
       vessel: vesselInput.value.trim(),
       shipper: shipperInput.value.trim(),
       onboardDate: onboardInput.value.trim(),
+      secondVessel: secondVesselInput.value.trim(),
+      groupRemark: groupRemarkInput.value.trim(),
       popCharge: popField._input.value.trim(),
       mfstClose: mfstField._input.value.trim(),
       invoiceRequest: invoiceField._input.value.trim(),
@@ -591,6 +765,26 @@ function renderTriangleEditorBody() {
       remark: remarkInput.value.trim(),
       doneStatus: doneSel.value,
     };
+
+    // ---- 여러 BL 한번에 등록 ----
+    if (triangleBulkMode && !d.id) {
+      const blNumbers = Array.from(new Set(
+        blInput.value.split(/[\n,]+/).map((s) => s.trim()).filter(Boolean)
+      ));
+      if (blNumbers.length === 0) { alert("BL번호를 한 개 이상 입력해주세요."); return; }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = "💾 " + blNumbers.length + "건 저장 중...";
+      const result = await submitTriangleBulk(common, blNumbers);
+      saveBtn.disabled = false;
+      saveBtn.textContent = "💾 저장하기";
+      if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류") + " - 입력하신 내용은 그대로 남아있으니 다시 저장을 눌러주세요."); return; }
+      closeTriangleEditor();
+      return;
+    }
+
+    // ---- 한 건 등록/수정 ----
+    const entry = Object.assign({ id: d.id, blNumber: blInput.value.trim() }, common);
     if (!entry.blNumber) { alert("BL번호를 입력해주세요."); return; }
 
     saveBtn.disabled = true;
@@ -599,6 +793,18 @@ function renderTriangleEditorBody() {
     saveBtn.disabled = false;
     saveBtn.textContent = "💾 저장하기";
     if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
+
+    // 기존 건을 수정하면서 2ND VSL·그룹 공통 REMARK를 실제로 바꾼 경우에만, 같은 배·화주의 나머지 건에도 그대로 맞춰줌
+    // (건드리지 않았으면 다른 건에 있던 값을 빈 값으로 덮어쓰지 않도록 굳이 동기화하지 않음)
+    if (entry.id) {
+      const secondChanged = common.secondVessel !== (d.secondVessel || "");
+      const remarkChanged = common.groupRemark !== (d.groupRemark || "");
+      if (secondChanged || remarkChanged) {
+        const key = triangleGroupKey(entry.vessel, entry.shipper);
+        const siblingIds = TRIANGLE_LIST.filter((t) => t.id !== entry.id && triangleEntryGroupKey(t) === key).map((t) => t.id);
+        if (siblingIds.length) await applyTriangleGroupFields(siblingIds, common.secondVessel, common.groupRemark);
+      }
+    }
     closeTriangleEditor();
   };
   const deleteBtn = document.createElement("button");
