@@ -2034,7 +2034,7 @@ input, select, textarea {
 .tri-2nd-row { margin-top: 2px; padding: 1px 6px; border-radius: 999px; background: #fde68a; color: #92400e; font-size: 10.5px; font-weight: 700; display: inline-block; }
 .tri-group-edit-btn { border: none; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0.6; }
 .tri-group-edit-btn:hover { opacity: 1; }
-.tri-group-remark { font-size: 12.5px; color: #4b5563; font-weight: 400; padding-left: 2px; white-space: pre-wrap; }
+.tri-group-remark { margin-top: 2px; padding: 3px 9px; border-radius: 6px; background: #fff7ed; border-left: 3px solid #f59e0b; color: #78350f; font-weight: 700; font-size: 12.5px; white-space: pre-wrap; }
 .tri-quick-hint { font-size: 11px; color: #6b7280; white-space: nowrap; }
 
 /* ===== 💸 삼국간 운임지불 메시지 (삼국간 전용: tfm- 접두어) ===== */
