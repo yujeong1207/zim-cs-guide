@@ -1987,6 +1987,7 @@ input, select, textarea {
 .followup-table th:nth-child(9) { width: 18%; }
 
 .triangle-table td, .triangle-table th { padding: 5px 8px; line-height: 1.4; }
+.triangle-table th { font-size: 11.5px; white-space: nowrap; }
 
 /* ===== 🌏 삼국간 표 보기 개선 (삼국간 전용: tri- 접두어 / .triangle-table 안에서만 적용) ===== */
 .tri-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0 6px; }
@@ -2030,6 +2031,7 @@ input, select, textarea {
 .tri-group-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; }
 .tri-group-hint { color: #6b7280; }
 .tri-2nd-badge { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; background: #fde68a; color: #92400e; font-size: 11px; font-weight: 700; vertical-align: middle; }
+.tri-2nd-row { margin-top: 2px; padding: 1px 6px; border-radius: 999px; background: #fde68a; color: #92400e; font-size: 10.5px; font-weight: 700; display: inline-block; }
 .tri-group-edit-btn { border: none; background: none; cursor: pointer; font-size: 13px; padding: 2px 4px; opacity: 0.6; }
 .tri-group-edit-btn:hover { opacity: 1; }
 .tri-group-remark { font-size: 12.5px; color: #4b5563; font-weight: 400; padding-left: 2px; white-space: pre-wrap; }
@@ -2075,8 +2077,12 @@ input, select, textarea {
 .triangle-table th:nth-child(2) { width: 8%; }
 .triangle-table th:nth-child(3) { width: 8%; }
 .triangle-table th:nth-child(4) { width: 7%; }
-.triangle-table th:nth-child(n+5):nth-child(-n+9) { width: 5.6%; }
-.triangle-table th:nth-child(10) { width: 11%; }
+.triangle-table th:nth-child(5) { width: 5.4%; }
+.triangle-table th:nth-child(6) { width: 5.4%; }
+.triangle-table th:nth-child(7) { width: 8%; } /* 인보이스요청 - 글자가 길어서 다른 상태 칸보다 조금 더 넓게 줌 */
+.triangle-table th:nth-child(8) { width: 5.4%; }
+.triangle-table th:nth-child(9) { width: 5.4%; }
+.triangle-table th:nth-child(10) { width: 9.4%; }
 .triangle-table th:nth-child(11) { width: 14%; }
 .triangle-table th:nth-child(12) { width: 12%; }
 

@@ -247,11 +247,6 @@ function renderTriangleGroupEditorBody() {
   info.textContent = "🚢 " + (vessel || "배 미입력") + (shipper ? " · " + shipper : "") + " · 이 그룹 " + entries.length + "건 전체에 적용돼요";
   body.appendChild(info);
 
-  const secondInput = document.createElement("input");
-  secondInput.placeholder = "예: ADL 20E (미국행 등 2번째 배)";
-  secondInput.value = (entries.find((e) => (e.secondVessel || "").trim()) || {}).secondVessel || "";
-  body.appendChild(makeFollowupField("2ND VSL", secondInput));
-
   const remarkInput = document.createElement("textarea");
   remarkInput.rows = 3;
   remarkInput.style.cssText = "width:100%;resize:vertical;box-sizing:border-box;";
@@ -267,7 +262,7 @@ function renderTriangleGroupEditorBody() {
   saveBtn.onclick = async () => {
     saveBtn.disabled = true;
     saveBtn.textContent = "💾 저장 중...";
-    const result = await applyTriangleGroupFields(entries.map((e) => e.id), secondInput.value.trim(), remarkInput.value.trim());
+    const result = await applyTriangleGroupFields(entries.map((e) => e.id), remarkInput.value.trim());
     saveBtn.disabled = false;
     saveBtn.textContent = "💾 저장하기";
     if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
@@ -282,14 +277,14 @@ function renderTriangleGroupEditorBody() {
   body.appendChild(actions);
 }
 
-/* 그룹에 속한 모든 건에 2ND VSL / 그룹 공통 REMARK를 한 번에 반영 (Firestore batch) */
-async function applyTriangleGroupFields(ids, secondVessel, groupRemark) {
+/* 그룹에 속한 모든 건에 그룹 공통 REMARK를 한 번에 반영 (Firestore batch). 2ND VSL은 건마다 다를 수 있어서 여기서 다루지 않음 */
+async function applyTriangleGroupFields(ids, groupRemark) {
   if (!ids.length) return { ok: true };
   try {
     await window.fbReady;
     const batch = window.fbDb.batch();
     ids.forEach((id) => {
-      batch.update(window.fbDb.collection(TRIANGLE_COLLECTION).doc(id), { secondVessel, groupRemark });
+      batch.update(window.fbDb.collection(TRIANGLE_COLLECTION).doc(id), { groupRemark });
     });
     await batch.commit();
     return { ok: true };
@@ -358,7 +353,7 @@ function buildTriangleRow(t, grouped, isLastInGroup) {
   }).join("");
 
   tr.innerHTML = `<td${grouped ? ' style="padding-left:28px;"' : ""}><b>${escapeHtml(t.blNumber || "-")}</b></td>`
-    + `<td>${escapeHtml(t.vessel || "-")}</td>`
+    + `<td>${escapeHtml(t.vessel || "-")}${t.secondVessel ? '<div class="tri-2nd-row">2ND ' + escapeHtml(t.secondVessel) + '</div>' : ""}</td>`
     + `<td>${escapeHtml(t.shipper || "-")}</td>`
     + `<td style="white-space:nowrap;">${t.onboardDate ? escapeHtml(triangleFormatDate(t.onboardDate)) : "-"}</td>`
     + stepCells
@@ -394,7 +389,7 @@ function renderTriangleList() {
 
   let list = sorted;
   if (q) {
-    list = list.filter((t) => [t.blNumber, t.vessel, t.shipper, t.remark, t.remittance, t.onboardDate].filter(Boolean).join(" ").toLowerCase().includes(q));
+    list = list.filter((t) => [t.blNumber, t.vessel, t.shipper, t.secondVessel, t.remark, t.remittance, t.onboardDate].filter(Boolean).join(" ").toLowerCase().includes(q));
   }
   if (triangleChipFilter) list = list.filter((t) => t.doneStatus !== "done" && triangleMatchesChip(t, triangleChipFilter));
   if (triangleHideDone) list = list.filter((t) => t.doneStatus !== "done");
@@ -438,7 +433,7 @@ function renderTriangleList() {
   const table = document.createElement("table");
   table.className = "contacts-table triangle-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>BL번호</th><th>VSL</th><th>화주</th><th>온보드</th><th>POP CHARGE</th><th>MFST CLOSE</th><th>인보이스 발송요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>진행 · 다음 할 일</th><th>REMARK</th><th></th></tr>";
+  thead.innerHTML = "<tr><th>BL번호</th><th>VSL</th><th>화주</th><th>온보드</th><th>POP CHARGE</th><th>MFST CLOSE</th><th title=\"인보이스 발송요청\">인보이스요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>진행 · 다음 할 일</th><th>REMARK</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (triangleQuickAddOpen) tbody.appendChild(buildTriangleQuickAddRow());
@@ -467,20 +462,18 @@ function renderTriangleList() {
     const shipper = (t.shipper || "").trim();
     const dates = Array.from(new Set(groupEntries.map((x) => x.onboardDate).filter(Boolean))).sort();
     const dateLabel = dates.length ? "온보드 " + triangleFormatDate(dates[0]) + (dates.length > 1 ? " 외" : "") : "";
-    const secondVessel = (groupEntries.find((x) => (x.secondVessel || "").trim()) || {}).secondVessel || "";
     const groupRemark = (groupEntries.find((x) => (x.groupRemark || "").trim()) || {}).groupRemark || "";
     const headerTr = document.createElement("tr");
     headerTr.className = "tri-group-head " + (progressCount > 0 ? "pending" : "alldone") + (vessel ? "" : " novsl");
     headerTr.innerHTML = '<td colspan="12" class="no-strike"><div class="tri-group-inner">'
       + '<div class="tri-group-row">'
-      + '<span class="tri-group-name"><span>' + (isOpen ? "▾" : "▸") + "</span>🚢 " + escapeHtml(vessel || "배 미입력") + (shipper ? " · " + escapeHtml(shipper) : "")
-      + (secondVessel ? ' <span class="tri-2nd-badge">2ND ' + escapeHtml(secondVessel) + "</span>" : "") + "</span>"
+      + '<span class="tri-group-name"><span>' + (isOpen ? "▾" : "▸") + "</span>🚢 " + escapeHtml(vessel || "배 미입력") + (shipper ? " · " + escapeHtml(shipper) : "") + "</span>"
       + '<span class="tri-group-meta">'
       + (dateLabel ? "<span>" + escapeHtml(dateLabel) + "</span>" : "")
       + (vessel ? "" : '<span class="tri-group-hint">VSL을 적으면 배별로 묶여요</span>')
       + (progressCount > 0 ? '<span class="done-badge progress">진행중 ' + progressCount + "</span>" : "")
       + (doneCount > 0 ? '<span class="done-badge done">완료 ' + doneCount + "</span>" : "")
-      + '<button type="button" class="tri-group-edit-btn" title="2ND VSL · 그룹 공통 REMARK 수정" onclick="event.stopPropagation();openTriangleGroupEditor(\'' + key + '\')">✏️</button>'
+      + '<button type="button" class="tri-group-edit-btn" title="그룹 공통 REMARK 수정" onclick="event.stopPropagation();openTriangleGroupEditor(\'' + key + '\')">✏️</button>'
       + "</span></div>"
       + (groupRemark ? '<div class="tri-group-remark">📝 ' + escapeHtml(groupRemark) + "</div>" : "")
       + "</div></td>";
@@ -713,7 +706,7 @@ function renderTriangleEditorBody() {
   const secondVesselInput = document.createElement("input");
   secondVesselInput.placeholder = "예: ADL 20E (미국행 등 2번째 배)";
   secondVesselInput.value = d.secondVessel || "";
-  row0b.appendChild(makeFollowupField("2ND VSL (같은 배·화주 전체 공통)", secondVesselInput));
+  row0b.appendChild(makeFollowupField("2ND VSL (건마다 다를 수 있어요 - 나중에 각자 따로 고칠 수 있어요)", secondVesselInput));
   body.appendChild(row0b);
 
   const groupRemarkInput = document.createElement("textarea");
@@ -794,15 +787,15 @@ function renderTriangleEditorBody() {
     saveBtn.textContent = "💾 저장하기";
     if (!result.ok) { alert("저장에 실패했어요: " + (result.error || "알 수 없는 오류")); return; }
 
-    // 기존 건을 수정하면서 2ND VSL·그룹 공통 REMARK를 실제로 바꾼 경우에만, 같은 배·화주의 나머지 건에도 그대로 맞춰줌
+    // 기존 건을 수정하면서 그룹 공통 REMARK를 실제로 바꾼 경우에만, 같은 배·화주의 나머지 건에도 그대로 맞춰줌
     // (건드리지 않았으면 다른 건에 있던 값을 빈 값으로 덮어쓰지 않도록 굳이 동기화하지 않음)
+    // 2ND VSL은 건마다 다를 수 있는 값이라 여기서는 이 건만 저장하고, 다른 건에는 맞추지 않음
     if (entry.id) {
-      const secondChanged = common.secondVessel !== (d.secondVessel || "");
       const remarkChanged = common.groupRemark !== (d.groupRemark || "");
-      if (secondChanged || remarkChanged) {
+      if (remarkChanged) {
         const key = triangleGroupKey(entry.vessel, entry.shipper);
         const siblingIds = TRIANGLE_LIST.filter((t) => t.id !== entry.id && triangleEntryGroupKey(t) === key).map((t) => t.id);
-        if (siblingIds.length) await applyTriangleGroupFields(siblingIds, common.secondVessel, common.groupRemark);
+        if (siblingIds.length) await applyTriangleGroupFields(siblingIds, common.groupRemark);
       }
     }
     closeTriangleEditor();
