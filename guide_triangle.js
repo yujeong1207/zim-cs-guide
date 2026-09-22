@@ -14,6 +14,7 @@ let triangleExpandedGroups = new Set(); // 직접 펼친 그룹의 key 모음
 let triangleCollapsedGroups = new Set(); // 직접 접은 그룹의 key 모음 (직접 누르기 전에는 "진행중인 건이 있는 그룹은 펼침, 전부 완료된 그룹은 접힘")
 let triangleChipFilter = null; // 위 요약 칩으로 거는 필터: "check"(확인중) | "remit"(송금 대기) | "novsl"(배 미입력) | null
 let triangleHideDone = false; // "완료 건 숨기기"
+let triangleSelectedIds = new Set(); // 체크박스로 선택한 건들의 id - "BL번호 복사" 등에 씀
 
 /* BL번호 안의 숫자를 뽑아 오름차순 정렬할 때 씀 (같은 그룹 안에서 번호 작은 게 위로 오게) */
 function triangleBlSortNum(bl) {
@@ -24,6 +25,14 @@ function triangleCompareByBl(a, b) {
   const na = triangleBlSortNum(a.blNumber), nb = triangleBlSortNum(b.blNumber);
   if (na !== nb) return na - nb;
   return String(a.blNumber || "").localeCompare(String(b.blNumber || ""));
+}
+
+/* 그룹 안에서: 2ND VSL이 있는 건을 먼저 모아서 보여주고(나중에 따로 운임지불 메시지를 보내야 하니까), 그 안에서는 BL번호 오름차순 */
+function triangleCompareGrouped(a, b) {
+  const ha = (a.secondVessel || "").trim() ? 0 : 1;
+  const hb = (b.secondVessel || "").trim() ? 0 : 1;
+  if (ha !== hb) return ha - hb;
+  return triangleCompareByBl(a, b);
 }
 
 function triangleGroupKey(vessel, shipper) {
@@ -299,6 +308,7 @@ function triangleMatchesChip(t, chip) {
   if (chip === "check") return info.states.some((s) => s.kind === "check");
   if (chip === "remit") return info.states[TRIANGLE_REMIT_IDX].kind === "wait";
   if (chip === "novsl") return !(t.vessel || "").trim();
+  if (chip === "second") return !!(t.secondVessel || "").trim();
   return true;
 }
 
@@ -310,6 +320,37 @@ function setTriangleChipFilter(chip) {
 function toggleTriangleHideDone() {
   triangleHideDone = !triangleHideDone;
   renderTriangleList();
+}
+
+/* ---- 체크박스로 선택해서 BL번호 복사하기 (엑셀처럼 원하는 건만 골라서 복사) ---- */
+function toggleTriangleRowSelect(id) {
+  if (triangleSelectedIds.has(id)) triangleSelectedIds.delete(id);
+  else triangleSelectedIds.add(id);
+  renderTriangleList();
+}
+
+function toggleTriangleGroupSelectAll(key) {
+  const ids = TRIANGLE_LIST.filter((t) => triangleEntryGroupKey(t) === key).map((t) => t.id);
+  const allSelected = ids.length > 0 && ids.every((id) => triangleSelectedIds.has(id));
+  ids.forEach((id) => { if (allSelected) triangleSelectedIds.delete(id); else triangleSelectedIds.add(id); });
+  renderTriangleList();
+}
+
+function clearTriangleSelection() {
+  triangleSelectedIds.clear();
+  renderTriangleList();
+}
+
+function copySelectedTriangleBls() {
+  const selected = TRIANGLE_LIST.filter((t) => triangleSelectedIds.has(t.id)).sort(triangleCompareByBl);
+  if (selected.length === 0) return;
+  const text = selected.map((t) => t.blNumber || "").filter(Boolean).join("\n");
+  const okText = "BL번호 " + selected.length + "건 복사 완료 📋 (엑셀 등에 그대로 붙여넣을 수 있어요)";
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => alert(okText)).catch(() => legacyCopy(text));
+  } else {
+    legacyCopy(text);
+  }
 }
 
 async function loadTriangleTab(forceRefresh) {
@@ -339,11 +380,11 @@ function triangleCellClass(value) {
   return "triangle-cell-badge note";
 }
 
-function buildTriangleRow(t, grouped, isLastInGroup) {
+function buildTriangleRow(t, grouped, isLastInGroup, isFirstAfter2nd) {
   const isDone = t.doneStatus === "done";
   const info = triangleEntryInfo(t);
   const tr = document.createElement("tr");
-  tr.className = (isDone ? "row-done" : "") + (isLastInGroup ? " tri-group-last" : "");
+  tr.className = (isDone ? "row-done" : "") + (isLastInGroup ? " tri-group-last" : "") + (isFirstAfter2nd ? " tri-2nd-divider" : "");
   tr.dataset.triangleId = t.id;
 
   const stepCells = info.states.map((st0) => {
@@ -352,7 +393,9 @@ function buildTriangleRow(t, grouped, isLastInGroup) {
     return '<td class="no-strike tri-step-cell"><span class="tri-pill ' + st.kind + '"' + (st.raw ? ' title="' + escapeHtml(st.raw) + '"' : "") + ">" + escapeHtml(st.label) + "</span></td>";
   }).join("");
 
-  tr.innerHTML = `<td${grouped ? ' style="padding-left:28px;"' : ""}><b>${escapeHtml(t.blNumber || "-")}</b></td>`
+  const checked = triangleSelectedIds.has(t.id);
+  tr.innerHTML = `<td class="no-strike"><input type="checkbox" class="tri-select-box" onclick="event.stopPropagation();toggleTriangleRowSelect('${t.id}')"${checked ? " checked" : ""}></td>`
+    + `<td${grouped ? ' style="padding-left:16px;"' : ""}><b>${escapeHtml(t.blNumber || "-")}</b></td>`
     + `<td>${escapeHtml(t.vessel || "-")}${t.secondVessel ? '<div class="tri-2nd-row">2ND ' + escapeHtml(t.secondVessel) + '</div>' : ""}</td>`
     + `<td>${escapeHtml(t.shipper || "-")}</td>`
     + `<td style="white-space:nowrap;">${t.onboardDate ? escapeHtml(triangleFormatDate(t.onboardDate)) : "-"}</td>`
@@ -382,9 +425,9 @@ function renderTriangleList() {
   const sorted = TRIANGLE_LIST.slice().sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
   // 위 요약 칩 숫자 - 검색/필터와 상관없이 "진행중인 전체 건" 기준
-  const counts = { check: 0, remit: 0, novsl: 0 };
+  const counts = { check: 0, remit: 0, novsl: 0, second: 0 };
   sorted.filter((t) => t.doneStatus !== "done").forEach((t) => {
-    ["check", "remit", "novsl"].forEach((c) => { if (triangleMatchesChip(t, c)) counts[c]++; });
+    ["check", "remit", "novsl", "second"].forEach((c) => { if (triangleMatchesChip(t, c)) counts[c]++; });
   });
 
   let list = sorted;
@@ -404,6 +447,7 @@ function renderTriangleList() {
   bar.innerHTML = chipBtn("check", "check", "확인중", counts.check)
     + chipBtn("remit", "remit", "송금 대기", counts.remit)
     + chipBtn("novsl", "novsl", "배 미입력", counts.novsl)
+    + chipBtn("second", "second", "2ND 배 있음", counts.second)
     + '<button type="button" class="tri-chip' + (triangleHideDone ? " active" : "") + '" onclick="toggleTriangleHideDone()">완료 건 숨기기</button>';
   wrap.appendChild(bar);
 
@@ -415,6 +459,15 @@ function renderTriangleList() {
     + '<span class="tri-pill check">확인중</span><span>CHECKING</span>'
     + '<span class="tri-pill na">신용</span><span>송금 칸의 신용거래 (송금 체크 불필요)</span>';
   wrap.appendChild(legend);
+
+  if (triangleSelectedIds.size > 0) {
+    const selBar = document.createElement("div");
+    selBar.className = "tri-select-bar";
+    selBar.innerHTML = '<span>☑️ ' + triangleSelectedIds.size + '건 선택됨</span>'
+      + '<button type="button" class="btn generate-btn" style="padding:5px 12px;font-size:12.5px;" onclick="copySelectedTriangleBls()">📋 BL번호 복사</button>'
+      + '<button type="button" class="btn secondary-btn" style="padding:5px 12px;font-size:12.5px;" onclick="clearTriangleSelection()">선택 해제</button>';
+    wrap.appendChild(selBar);
+  }
 
   if (list.length === 0) {
     const empty = document.createElement("div");
@@ -433,7 +486,7 @@ function renderTriangleList() {
   const table = document.createElement("table");
   table.className = "contacts-table triangle-table sticky-table";
   const thead = document.createElement("thead");
-  thead.innerHTML = "<tr><th>BL번호</th><th>VSL</th><th>화주</th><th>온보드</th><th>POP CHARGE</th><th>MFST CLOSE</th><th title=\"인보이스 발송요청\">인보이스요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>진행 · 다음 할 일</th><th>REMARK</th><th></th></tr>";
+  thead.innerHTML = "<tr><th></th><th>BL번호</th><th>VSL</th><th>화주</th><th>온보드</th><th>POP CHARGE</th><th>MFST CLOSE</th><th title=\"인보이스 발송요청\">인보이스요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>진행 · 다음 할 일</th><th>REMARK</th><th></th></tr>";
   table.appendChild(thead);
   const tbody = document.createElement("tbody");
   if (triangleQuickAddOpen) tbody.appendChild(buildTriangleQuickAddRow());
@@ -453,7 +506,7 @@ function renderTriangleList() {
     if (renderedGroupKeys.has(key)) return; // 그룹의 두 번째 이후 항목은 이미 위에서 통째로 그렸으니 건너뜀
     renderedGroupKeys.add(key);
 
-    const groupEntries = list.filter((x) => triangleEntryGroupKey(x) === key).sort(triangleCompareByBl);
+    const groupEntries = list.filter((x) => triangleEntryGroupKey(x) === key).sort(triangleCompareGrouped);
     const doneCount = groupEntries.filter((x) => x.doneStatus === "done").length;
     const progressCount = groupEntries.length - doneCount;
     const isOpen = triangleExpandedGroups.has(key) || (progressCount > 0 && !triangleCollapsedGroups.has(key));
@@ -463,11 +516,14 @@ function renderTriangleList() {
     const dates = Array.from(new Set(groupEntries.map((x) => x.onboardDate).filter(Boolean))).sort();
     const dateLabel = dates.length ? "온보드 " + triangleFormatDate(dates[0]) + (dates.length > 1 ? " 외" : "") : "";
     const groupRemark = (groupEntries.find((x) => (x.groupRemark || "").trim()) || {}).groupRemark || "";
+    const groupIds = groupEntries.map((x) => x.id);
+    const allSelected = groupIds.length > 0 && groupIds.every((id) => triangleSelectedIds.has(id));
+    const someSelected = !allSelected && groupIds.some((id) => triangleSelectedIds.has(id));
     const headerTr = document.createElement("tr");
     headerTr.className = "tri-group-head " + (progressCount > 0 ? "pending" : "alldone") + (vessel ? "" : " novsl");
-    headerTr.innerHTML = '<td colspan="12" class="no-strike"><div class="tri-group-inner">'
+    headerTr.innerHTML = '<td colspan="13" class="no-strike"><div class="tri-group-inner">'
       + '<div class="tri-group-row">'
-      + '<span class="tri-group-name"><span>' + (isOpen ? "▾" : "▸") + "</span>🚢 " + escapeHtml(vessel || "배 미입력") + (shipper ? " · " + escapeHtml(shipper) : "") + "</span>"
+      + '<span class="tri-group-name"><input type="checkbox" class="tri-select-box" data-group-key="' + escapeHtml(key) + '"' + (allSelected ? " checked" : "") + ' onclick="event.stopPropagation();toggleTriangleGroupSelectAll(\'' + key + '\')" title="이 그룹 전체 선택"><span>' + (isOpen ? "▾" : "▸") + "</span>🚢 " + escapeHtml(vessel || "배 미입력") + (shipper ? " · " + escapeHtml(shipper) : "") + "</span>"
       + '<span class="tri-group-meta">'
       + (dateLabel ? "<span>" + escapeHtml(dateLabel) + "</span>" : "")
       + (vessel ? "" : '<span class="tri-group-hint">VSL을 적으면 배별로 묶여요</span>')
@@ -479,10 +535,15 @@ function renderTriangleList() {
       + "</div></td>";
     headerTr.onclick = () => toggleTriangleGroup(key);
     tbody.appendChild(headerTr);
+    const groupCb = headerTr.querySelector(".tri-select-box");
+    if (groupCb) groupCb.indeterminate = someSelected;
 
     if (!isOpen) return; // 접혀있으면 상세 행은 건너뜀
     groupEntries.forEach((entry, idx) => {
-      tbody.appendChild(buildTriangleRow(entry, true, idx === groupEntries.length - 1));
+      const hasSecond = !!(entry.secondVessel || "").trim();
+      const prevHadSecond = idx > 0 && !!(groupEntries[idx - 1].secondVessel || "").trim();
+      const isFirstAfter2nd = idx > 0 && prevHadSecond && !hasSecond; // 2ND 있는 건들 바로 다음, 없는 건이 시작되는 지점
+      tbody.appendChild(buildTriangleRow(entry, true, idx === groupEntries.length - 1, isFirstAfter2nd));
     });
   });
   table.appendChild(tbody);
@@ -507,6 +568,7 @@ function toggleTriangleQuickAdd() {
 function buildTriangleQuickAddRow() {
   const tr = document.createElement("tr");
   tr.className = "quick-add-row";
+  tr.appendChild(document.createElement("td")); // 체크박스 칸 자리 맞추기 (빠른 등록 줄엔 체크박스 없음)
 
   const mk = (id, placeholder, bold, draftKey, type) => {
     const td = document.createElement("td");
