@@ -456,7 +456,10 @@
     <button class="btn generate-btn" onclick="toggleTriangleQuickAdd()">➕ 빠른 등록 (표에 바로 입력)</button>
     <button class="btn secondary-btn" onclick="openTriangleEditor(null)">📝 자세히 입력</button>
     <button class="btn secondary-btn" onclick="loadTriangleTab()">🔄 새로고침</button>
+    <button class="btn secondary-btn" onclick="toggleTriangleFreightPanel()">💸 운임지불 메시지</button>
   </div>
+
+  <div id="triangleFreightPanel" style="display:none;"></div>
 
   <input id="triangleFilter" class="contacts-filter-input" placeholder="🔍 BL번호·REMARK로 검색" oninput="renderTriangleList()" style="margin-top:14px;">
   <div id="triangleListWrap" class="table-scroll-wrap"></div>
@@ -969,6 +972,7 @@
 <script src="guide_daily_expression.js"></script>
 <script src="guide_cod.js"></script>
 <script src="guide_triangle.js"></script>
+<script src="triangle_freight_msg.js"></script>
 
 </body>
 </html>
