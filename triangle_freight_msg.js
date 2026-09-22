@@ -46,6 +46,7 @@ function tfmFreshState() {
     active: 0,        // 지금 보고 있는 묶음
     shipper: "",      // S/ (화주)
     strByKey: {},     // 묶음별로 고친 STR
+    subjectByKey: {},  // 묶음별로 고친 제목
   };
 }
 let tfmManualRowSeq = 0;
@@ -318,11 +319,15 @@ function tfmBuildGroups(rows) {
     const vsl = [first.vessel, first.voyage, first.leg].filter(Boolean).join("/");
     const shippers = uniq(g.rows.map((r) => r.shipper));
     const pops = uniq(g.rows.map((r) => r.pop));
+    const pols = uniq(g.rows.map((r) => r.pol));
+    const pods = uniq(g.rows.map((r) => r.pod));
     return {
       key,
       rows: g.rows,
       mvsl: vsl + (first.pod ? " - " + first.pod : ""),
-      defaultStr: uniq(g.rows.map((r) => r.pol)).join(", ") + " / " + uniq(g.rows.map((r) => r.pod)).join(", "),
+      defaultStr: pols.join(", ") + " / " + pods.join(", "),
+      vvl: [first.vessel, [first.voyage, first.leg].filter(Boolean).join("")].filter(Boolean).join(" "), // 제목용: "ADL 20E"
+      routeText: pols.join(", ") + " - " + pods.join(", "), // 제목용: "VNHAI - USNYC"
       totals,
       currencies: Object.keys(totals),
       shippers,
@@ -343,6 +348,14 @@ function tfmCurrentStr(group) {
   return Object.prototype.hasOwnProperty.call(tfmState.strByKey, group.key) ? tfmState.strByKey[group.key] : group.defaultStr;
 }
 
+/* 제목: "3RD"는 차수가 아니라 삼국간(3rd country) 거래라서 고정으로 붙는 말이에요. 배/항차/POL-POD는 표에서 자동으로 채워요. */
+function tfmDefaultSubject(group) {
+  return "3RD POP CONFIRMATION NOTICE - O/FRT PAYABLE AT " + TFM_POP + " (" + group.routeText + ") / " + group.vvl;
+}
+function tfmCurrentSubject(group) {
+  return Object.prototype.hasOwnProperty.call(tfmState.subjectByKey, group.key) ? tfmState.subjectByKey[group.key] : tfmDefaultSubject(group);
+}
+
 /* ---------------------------------------------------------------- 메시지 만들기 */
 function tfmBuildMessage(group, shipper, strText) {
   const cell = "border:1px solid #000000;padding:3px 8px;font-size:11pt;text-align:left;vertical-align:middle;";
@@ -355,7 +368,7 @@ function tfmBuildMessage(group, shipper, strText) {
     ["POP", TFM_POP, ""],
     ["Total Customer Paid", totalText, gray],
   ];
-  let summaryHtml = '<table style="border-collapse:collapse;margin:0 0 16px 0;width:520px;">';
+  let summaryHtml = '<table style="border-collapse:collapse;margin:0;width:520px;">';
   summaryRows.forEach((r) => {
     summaryHtml += "<tr>"
       + '<td style="' + cell + r[2] + 'width:200px;">' + escapeHtml(r[0]) + "</td>"
@@ -376,7 +389,9 @@ function tfmBuildMessage(group, shipper, strText) {
     + '<p style="' + p + '">' + escapeHtml(TFM_INTRO_1) + "</p>"
     + '<p style="' + p + '">' + escapeHtml(TFM_INTRO_2) + "</p>"
     + '<p style="' + p + '">STR : ' + escapeHtml(strText) + "<br>S/ " + escapeHtml(shipper) + "</p>"
-    + summaryHtml + detailHtml + "</div>";
+    + summaryHtml
+    + '<div style="height:16px;line-height:16px;font-size:1px;">&nbsp;</div>' // 표 사이 여백 - 메일에서는 table의 margin이 무시되는 경우가 많아서 별도 spacer로 넣음
+    + detailHtml + "</div>";
 
   const plain = [
     TFM_INTRO_1, "", TFM_INTRO_2, "",
@@ -484,6 +499,9 @@ function tfmResultsHtml() {
   }
 
   html += '<div class="tfm-fields">'
+    + '<div class="tfm-field-full"><div class="label">제목 <span class="tfm-sub">(표에서 항로·배·항차를 채웠어요 — 직접 고칠 수 있어요)</span></div>'
+    + '<div class="tfm-subject-row"><input id="tfmSubjectInput" value="' + escapeHtml(tfmCurrentSubject(g)) + '" oninput="tfmOnSubjectInput(this.value)">'
+    + '<button type="button" class="btn secondary-btn" style="padding:8px 14px;font-size:12.5px;white-space:nowrap;" onclick="copyTfmSubject()">📋 제목 복사</button></div></div>'
     + '<div><div class="label">STR <span class="tfm-sub">(표의 POL / POD로 미리 채웠어요)</span></div><input id="tfmStrInput" value="' + escapeHtml(tfmCurrentStr(g)) + '" oninput="tfmOnStrInput(this.value)"></div>'
     + '<div><div class="label">S/ <span class="tfm-sub">' + (g.shippers.length === 1 ? "(엑셀의 Shipper 값으로 자동으로 채웠어요 — 고칠 수 있어요)" : "(화주 — 직접 입력)") + '</span></div><input id="tfmShipperInput" placeholder="예: LX PANTOS VIETNAM CO., LTD" value="' + escapeHtml(st.shipper) + '" oninput="tfmOnShipperInput(this.value)"></div>'
     + "</div>";
@@ -518,6 +536,24 @@ function tfmOnStrInput(v) {
 function tfmOnShipperInput(v) {
   tfmState.shipper = v;
   updateTfmPreview();
+}
+
+function tfmOnSubjectInput(v) {
+  const g = tfmActiveGroup();
+  if (!g) return;
+  tfmState.subjectByKey[g.key] = v;
+}
+
+/* 제목은 메일 제목란에 들어가는 거라 본문 복사(표 포함)와는 따로 복사해요 */
+function copyTfmSubject() {
+  const g = tfmActiveGroup();
+  if (!g) return;
+  const text = tfmCurrentSubject(g);
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => alert("제목 복사 완료 💖")).catch(() => legacyCopy(text));
+  } else {
+    legacyCopy(text);
+  }
 }
 
 function setTfmGroup(i) {

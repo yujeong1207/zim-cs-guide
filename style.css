@@ -2042,6 +2042,10 @@ input, select, textarea {
 .tfm-fields { display: flex; flex-wrap: wrap; gap: 12px; margin: 12px 0; }
 .tfm-fields > div { flex: 1; min-width: 240px; }
 .tfm-fields input { width: 100%; box-sizing: border-box; }
+.tfm-fields > .tfm-field-full { flex: 1 1 100%; }
+.tfm-subject-row { display: flex; gap: 8px; align-items: stretch; }
+.tfm-subject-row input { flex: 1; }
+.tfm-subject-row button { flex-shrink: 0; }
 .tfm-sub { font-weight: 400; color: #9ca3af; font-size: 12px; }
 .tfm-map-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .tfm-map-item { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; min-width: 150px; }
