@@ -126,4 +126,4 @@ populateOblNameSelect();
 loadCachedPaymentData();
 initRefContactsFirestoreSync(); // 참고자료 > 연락처: Firestore 실시간 구독 시작 (팀원 추가/수정이 새로고침 없이 반영됨)
 initMailTemplatesFirestoreSync(); // 화주 응대 모음(메일 템플릿): Firestore 실시간 구독 시작
-
+if (typeof loadResourcesShareTab === "function") loadResourcesShareTab(); // 🔗 자료 모음: 탭에 안 들어가도 전체 검색에 걸리도록 미리 구독 시작
