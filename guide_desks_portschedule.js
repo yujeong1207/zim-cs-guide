@@ -1160,7 +1160,13 @@ function checkPaymentStatusForBlDesk() {
       const ready = data.issued.toUpperCase() === "O";
       const statusText = ready ? "✅ BL 발행 가능" : "❌ BL 발행 불가";
       const statusClass = ready ? "ready" : "not-ready";
-      return `<div class="payment-row ${statusClass}">${bl} — ${statusText}</div>`;
+      const extraBits = [];
+      if (data.depositDate) extraBits.push("입금일 " + escapeHtml(data.depositDate));
+      if (data.csTeam) extraBits.push("CS TEAM 메모: " + escapeHtml(data.csTeam));
+      const extraHtml = extraBits.length
+        ? `<div class="payment-row-extra" style="margin-top:2px;font-size:12.5px;color:#6b7280;">${extraBits.join(" · ")}</div>`
+        : "";
+      return `<div class="payment-row ${statusClass}">${bl} — ${statusText}${extraHtml}</div>`;
     })
     .join("");
 }
