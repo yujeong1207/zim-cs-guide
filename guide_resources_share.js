@@ -20,6 +20,57 @@ function resGenId(prefix) {
     : (prefix + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
 }
 
+/* ---- Firestore는 "배열 안에 배열"을 저장할 수 없어요 (nested array 금지) ----
+   표(table)의 rows는 [["a","b"],["c","d"]] 처럼 배열 안에 배열이 들어있는 구조라
+   그대로 저장하면 실패해요. 그래서 저장할 때는 각 행을 {cells:[...]} 객체로 한 번
+   감싸서 보내고(encode), 불러올 때 다시 원래 배열 형태로 풀어줘요(decode).
+   renderTableEditor/buildStepTableEl 등 화면에 그리는 함수들은 전부 원래(배열) 형태를
+   기대하기 때문에, Firestore로 나갈 때만 감싸고 들어올 때 바로 풀어줘요. */
+function resourcesShareEncodeSubItems(subItems) {
+  if (!Array.isArray(subItems)) return [];
+  return subItems.map((s) => {
+    const copy = { id: s.id || resGenId("rsi"), name: s.name || "" };
+    if (Array.isArray(s.subItems) && s.subItems.length) {
+      copy.subItems = resourcesShareEncodeSubItems(s.subItems);
+    } else {
+      copy.steps = (s.steps || []).map((st) => {
+        if (st && typeof st === "object" && st.type === "table") {
+          return {
+            type: "table",
+            caption: st.caption || "",
+            headers: st.headers || [],
+            rows: (st.rows || []).map((row) => ({ cells: row || [] })),
+          };
+        }
+        return st; // 문자열, 링크 객체({type:"link",...})는 중첩배열이 아니라 그대로 저장 가능
+      });
+    }
+    return copy;
+  });
+}
+function resourcesShareDecodeSubItems(subItems) {
+  if (!Array.isArray(subItems)) return [];
+  return subItems.map((s) => {
+    const copy = { id: s.id || resGenId("rsi"), name: s.name || "" };
+    if (Array.isArray(s.subItems) && s.subItems.length) {
+      copy.subItems = resourcesShareDecodeSubItems(s.subItems);
+    } else {
+      copy.steps = (s.steps || []).map((st) => {
+        if (st && typeof st === "object" && st.type === "table") {
+          return {
+            type: "table",
+            caption: st.caption || "",
+            headers: st.headers || [],
+            rows: (st.rows || []).map((row) => (row && Array.isArray(row.cells)) ? row.cells : (Array.isArray(row) ? row : [])),
+          };
+        }
+        return st;
+      });
+    }
+    return copy;
+  });
+}
+
 function resourcesShareDocToEntry(doc) {
   const d = doc.data();
   return {
@@ -29,7 +80,7 @@ function resourcesShareDocToEntry(doc) {
     title: d.title || "",
     description: d.description || "",
     link: d.link || "",
-    subItems: Array.isArray(d.subItems) ? d.subItems : [],
+    subItems: resourcesShareDecodeSubItems(Array.isArray(d.subItems) ? d.subItems : []),
     author: d.author || "",
     createdAt: d.createdAt && d.createdAt.toDate ? d.createdAt.toDate().toISOString() : (d.createdAtIso || ""),
     updatedAt: d.updatedAt && d.updatedAt.toDate ? d.updatedAt.toDate().toISOString() : (d.updatedAtIso || ""),
@@ -43,7 +94,7 @@ function resourcesShareEntryPayload(entry) {
     title: entry.title || "",
     description: entry.description || "",
     link: entry.link || "",
-    subItems: entry.subItems || [],
+    subItems: resourcesShareEncodeSubItems(entry.subItems || []),
   };
 }
 
@@ -427,24 +478,36 @@ function renderResourceShareEditorBody() {
   body.appendChild(actions);
 }
 
-/* ---- 예전 자료(로컬저장, DEFAULT_RESOURCES/RESOURCES) 한 번만 Firestore로 옮기기 ----
-   버튼을 눌러 실행. 한 번 성공하면 이 브라우저에 표시를 남겨서 다시 누르면 경고해줘요
-   (그래도 실수로 두 번 누르면 자료가 중복 등록되니 꼭 한 사람만, 한 번만 눌러주세요). */
+/* ---- 예전 자료(로컬저장, DEFAULT_RESOURCES/RESOURCES)를 Firestore로 옮기기 ----
+   이미 Firestore에 같은 제목의 자료가 있으면 자동으로 건너뛰고, 빠진 것만 채워 넣어요.
+   그래서 실패한 게 있어서(예: 표 저장 오류) 다시 눌러도 중복 걱정 없이 안전해요. */
 async function migrateResourcesToFirestoreOnce() {
-  if (localStorage.getItem(RESOURCES_SHARE_MIGRATE_FLAG) === "1") {
-    if (!confirm("이 브라우저에서는 이미 옮긴 기록이 있어요. 그래도 다시 실행하면 자료가 중복 등록될 수 있어요. 정말 다시 실행할까요?")) return;
-  }
   const total = (typeof RESOURCES !== "undefined" && Array.isArray(RESOURCES)) ? RESOURCES.length : 0;
   if (!total) { alert("옮길 예전 자료가 없어요 (RESOURCES가 비어있어요)."); return; }
-  if (!confirm("예전 자료 " + total + "건을 Firestore로 옮길까요?\n\n⚠️ 이 작업은 팀 전체에서 딱 한 번만 하면 돼요. 이미 다른 팀원이 옮겼다면 다시 누르지 마세요 (자료가 중복돼요).\n⚠️ 사진 첨부가 달려있던 자료는 용량 문제로 사진 없이 옮겨져요. 옮긴 뒤 확인해서 필요하면 링크로 대체해주세요.")) return;
+  if (!confirm("예전 자료 " + total + "건을 확인해서, 아직 Firestore에 없는 것만 옮길까요?\n(제목이 이미 있는 자료는 자동으로 건너뛰어서 중복 걱정 안 하셔도 돼요.)")) return;
 
   const btn = document.getElementById("resourcesMigrateBtn");
-  if (btn) { btn.disabled = true; btn.textContent = "옮기는 중... (닫지 마세요)"; }
+  if (btn) { btn.disabled = true; btn.textContent = "기존 자료 확인하는 중..."; }
 
   await window.fbReady;
+  const existingTitles = new Set();
+  try {
+    const snap = await window.fbDb.collection(RESOURCES_SHARE_COLLECTION).get();
+    snap.docs.forEach((doc) => {
+      const t = (doc.data().title || "").trim();
+      if (t) existingTitles.add(t);
+    });
+  } catch (err) {
+    console.error("기존 자료 목록 확인 실패:", err);
+  }
+
+  if (btn) btn.textContent = "옮기는 중... (닫지 마세요)";
   let okCount = 0;
+  let skipCount = 0;
   const failedTitles = [];
   for (const r of RESOURCES) {
+    const t = (r.title || "").trim();
+    if (t && existingTitles.has(t)) { skipCount++; continue; }
     try {
       const payload = resourcesShareEntryPayload(r);
       const size = new Blob([JSON.stringify(payload)]).size;
@@ -458,22 +521,17 @@ async function migrateResourcesToFirestoreOnce() {
       payload.createdAtIso = new Date().toISOString();
       payload.updatedAtIso = new Date().toISOString();
       await window.fbDb.collection(RESOURCES_SHARE_COLLECTION).add(payload);
+      if (t) existingTitles.add(t);
       okCount++;
     } catch (err) {
       console.error("마이그레이션 실패:", r.title, err);
-      failedTitles.push(r.title || r.id);
+      failedTitles.push((r.title || r.id) + " (" + (err && err.message ? err.message : err) + ")");
     }
   }
 
   localStorage.setItem(RESOURCES_SHARE_MIGRATE_FLAG, "1");
-  if (btn) btn.style.display = "none";
-  alert(okCount + " / " + total + "건 옮겼어요."
-    + (failedTitles.length ? ("\n\n실패/건너뜀 (" + failedTitles.length + "건):\n" + failedTitles.join("\n")) : ""));
+  if (btn) { btn.disabled = false; btn.textContent = "☁️ 예전 자료 옮기기 (빠진 것만)"; }
+  alert("새로 옮김: " + okCount + "건 / 이미 있어서 건너뜀: " + skipCount + "건"
+    + (failedTitles.length ? ("\n\n실패 (" + failedTitles.length + "건):\n" + failedTitles.join("\n")) : ""));
   loadResourcesShareTab(true);
 }
-
-/* 이 브라우저에서 이미 옮긴 적이 있으면 마이그레이션 버튼을 처음부터 숨겨둠 */
-(function hideMigrateBtnIfDone() {
-  const btn = document.getElementById("resourcesMigrateBtn");
-  if (btn && localStorage.getItem(RESOURCES_SHARE_MIGRATE_FLAG) === "1") btn.style.display = "none";
-})();
