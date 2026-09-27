@@ -62,18 +62,20 @@ async function refreshPaymentData() {
     if (!res.ok) throw new Error("서버 응답 오류 (" + res.status + ")");
 
     const raw = await res.json();
-    // raw는 Office Script가 이미 3개 컬럼만 골라서 반환한 결과예요.
-    // 순서: [BL NO, BL발행, 입금처리유무]
-    //          0       1          2
+    // raw는 Office Script가 이미 5개 컬럼만 골라서 반환한 결과예요.
+    // 순서: [입금일, BL NO, BL발행, 입금처리유무, CS TEAM]
+    //          0       1       2         3           4
     const rows = Array.isArray(raw) ? raw.slice(1) : []; // 첫 행(헤더) 제외
 
     paymentDataCache = {};
     rows.forEach((r) => {
-      const blNo = String(r[0] || "").trim().toUpperCase();
+      const blNo = String(r[1] || "").trim().toUpperCase();
       if (!blNo) return;
       paymentDataCache[blNo] = {
-        issued: String(r[1] || "").trim(),
-        paid: String(r[2] || "").trim(),
+        depositDate: String(r[0] || "").trim(),
+        issued: String(r[2] || "").trim(),
+        paid: String(r[3] || "").trim(),
+        csTeam: String(r[4] || "").trim(),
       };
     });
 
