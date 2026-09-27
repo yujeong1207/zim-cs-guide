@@ -1299,9 +1299,9 @@ function renderSearchResults(query) {
     const full = t.title + " " + (t.groups || []).map((g) => g.name + " " + (g.items || []).map((it) => it.question + " " + it.answer).join(" ")).join(" ");
     if (full.toLowerCase().includes(q)) results.push({ kind: "faqTopic", label: "🗂 FAQ 그룹", title: t.title, snippet: snippetHtml(full, query), category: t.category, id: t.id });
   });
-  RESOURCES.forEach((r) => {
+  (typeof RESOURCES_SHARE_LIST !== "undefined" ? RESOURCES_SHARE_LIST : []).forEach((r) => {
     const subText = r.subItems && r.subItems.length ? flattenProcNodeText({ subItems: r.subItems }) : "";
-    const full = r.title + " " + (r.description || "") + " " + subText;
+    const full = r.title + " " + (r.description || "") + " " + (r.group || "") + " " + subText;
     if (full.toLowerCase().includes(q)) {
       let snippet = r.description ? escapeHtml(r.description) : "";
       const matchPath = r.subItems && r.subItems.length ? findProcMatchPath(r.subItems, q) : null;
@@ -1676,4 +1676,3 @@ function jumpToResult(kind, id, path, query) {
     switchMainTab(id);
   }
 }
-
