@@ -33,8 +33,9 @@ function ensureCaseShareEditorStyles() {
   style.id = "caseShareEditorStyles";
   style.textContent =
     ".case-share-editable:empty:before{content:attr(data-placeholder);color:#9ca3af;}" +
-    ".case-share-editable ul{margin:4px 0 4px 20px;padding:0;}" +
-    ".case-share-editable li{margin:2px 0;}" +
+    ".case-share-editable ul,.case-share-body ul{margin:4px 0 4px 20px;padding:0;}" +
+    ".case-share-editable li,.case-share-body li{margin:2px 0;}" +
+    ".case-share-editable p,.case-share-body p{margin:0 0 8px;}" +
     ".case-share-toolbar button{font-weight:700;}";
   document.head.appendChild(style);
 }
@@ -191,6 +192,7 @@ function caseShareCategoryBadgeStyle(category) {
 function renderCaseShareList() {
   const wrap = document.getElementById("caseShareListWrap");
   if (!wrap) return;
+  ensureCaseShareEditorStyles();
 
   const list = caseShareFilteredList();
 
@@ -269,6 +271,7 @@ function buildCaseShareCard(c) {
   card.appendChild(head);
 
   const bodyEl = document.createElement("div");
+  bodyEl.className = "case-share-body";
   bodyEl.style.cssText = "margin-top:10px;white-space:pre-wrap;line-height:1.7;font-size:13.5px;color:#374151;"
     + (isExpanded ? "" : "display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;");
   bodyEl.innerHTML = caseShareBodyToHtml(c.body || "");
