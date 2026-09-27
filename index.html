@@ -186,7 +186,7 @@
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
     <button class="btn generate-btn" onclick="openResourceShareEditor(null)">➕ 자료 추가</button>
     <button class="btn secondary-btn" onclick="loadResourcesShareTab(true)">🔄 새로고침</button>
-    <button class="btn secondary-btn" id="resourcesMigrateBtn" onclick="migrateResourcesToFirestoreOnce()">☁️ 예전 자료 옮기기 (최초 1회만)</button>
+    <button class="btn secondary-btn" id="resourcesMigrateBtn" onclick="migrateResourcesToFirestoreOnce()">☁️ 예전 자료 옮기기 (빠진 것만)</button>
     <select id="resourceShareCategoryFilter" class="poa-date-input" style="max-width:150px;" onchange="renderResourcesShareList()"></select>
   </div>
   <input id="resourceShareFilter" class="contacts-filter-input" placeholder="🔍 제목·설명·그룹·표 안 내용으로 검색" oninput="renderResourcesShareList()" style="margin-top:14px;">
