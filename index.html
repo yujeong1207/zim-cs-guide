@@ -117,7 +117,7 @@
   <div class="tab-group" data-group="reference">
     <button class="tab-group-btn" onclick="toggleTabGroup('reference')">📚 참고자료 <span class="tab-group-caret">▾</span></button>
     <div class="tab-group-dropdown" id="tabGroupDropdown-reference">
-      <button class="main-tab-btn" data-tab="resources" onclick="switchMainTab('resources')">🔗 자료 모음</button>
+      <button class="main-tab-btn" data-tab="resources" onclick="switchMainTab('resources'); loadResourcesShareTab();">🔗 자료 모음</button>
       <button class="main-tab-btn" data-tab="vessels" onclick="switchMainTab('vessels')">🚢 모선 일정</button>
       <button class="main-tab-btn" data-tab="panamaTransit" onclick="switchMainTab('panamaTransit')">🛳️ 파나마 통과 현황</button>
       <button class="main-tab-btn" data-tab="contacts" onclick="switchMainTab('contacts')">📞 연락처</button>
@@ -180,10 +180,21 @@
   <div id="faqList"></div>
 </div>
 
-<!-- ===== 자료 모음 탭 ===== -->
+<!-- ===== 자료 모음 탭 (Firestore 실시간 공유) ===== -->
 <div class="tab-page" id="page-resources">
-  <div class="cat-filter" id="resCatFilter"></div>
-  <div id="resList"></div>
+  <div class="hint" style="margin-bottom:10px;">외부 링크·규정표처럼 두고두고 찾아보는 자료예요. 🔴 <b>실시간 공유돼요</b> — 팀원 누구나 바로 등록·수정할 수 있고, 나라별 표처럼 행·열이 있는 표도 직접 만들 수 있어요.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn generate-btn" onclick="openResourceShareEditor(null)">➕ 자료 추가</button>
+    <button class="btn secondary-btn" onclick="loadResourcesShareTab(true)">🔄 새로고침</button>
+    <button class="btn secondary-btn" id="resourcesMigrateBtn" onclick="migrateResourcesToFirestoreOnce()">☁️ 예전 자료 옮기기 (최초 1회만)</button>
+    <select id="resourceShareCategoryFilter" class="poa-date-input" style="max-width:150px;" onchange="renderResourcesShareList()"></select>
+  </div>
+  <input id="resourceShareFilter" class="contacts-filter-input" placeholder="🔍 제목·설명·그룹·표 안 내용으로 검색" oninput="renderResourcesShareList()" style="margin-top:14px;">
+  <div id="resourceShareListWrap" style="margin-top:14px;"></div>
+
+  <!-- 예전 방식(로컬 저장) 화면 요소 - 더는 안 쓰지만, 혹시 다른 코드에서 참조해도 안전하도록 숨겨서 남겨둠 -->
+  <div class="cat-filter" id="resCatFilter" style="display:none;"></div>
+  <div id="resList" style="display:none;"></div>
 </div>
 
 <!-- ===== 모선 입출항 일정 탭 ===== -->
@@ -909,6 +920,16 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="resourceShareEditOverlay" style="display:none;" onclick="if(event.target===this) closeResourceShareEditor()">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="resourceShareEditTitle">🔗 자료</div>
+      <button class="close-btn" onclick="closeResourceShareEditor()">✕ 닫기</button>
+    </div>
+    <div id="resourceShareEditBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="codEditOverlay" style="display:none;" onclick="if(event.target===this) closeCodEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -974,6 +995,7 @@
 <script src="panama_transit_script.js"></script>
 <script src="guide_tabs_mail.js"></script>
 <script src="guide_admin.js"></script>
+<script src="guide_resources_share.js"></script>
 <script src="guide_import_convert.js"></script>
 <script src="guide_finalize.js"></script>
 <script src="guide_followup.js"></script>
