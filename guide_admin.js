@@ -1553,6 +1553,11 @@ function createMultiImageFieldControl(getImages, setImages) {
         };
         item.appendChild(img);
         item.appendChild(removeBtn);
+        const tokenCap = document.createElement("div");
+        tokenCap.className = "multi-image-token";
+        tokenCap.textContent = "{{이미지" + (i + 1) + "}}";
+        tokenCap.title = "문구에 이렇게 적으면 그 자리에 이 이미지가 들어가요";
+        item.appendChild(tokenCap);
         grid.appendChild(item);
       });
       wrap.appendChild(grid);
@@ -2926,7 +2931,7 @@ function renderOutputRows(wrap) {
     const imageHint = document.createElement("div");
     imageHint.className = "hint";
     imageHint.style.marginBottom = "4px";
-    imageHint.textContent = "메일 본문 맨 아래에 이미지가 순서대로 같이 들어가요 (여러 장 추가 가능). \"복사하기\"로 붙여넣을 때만 이미지가 포함되고, \"메일 앱 열기\"에는 이미지가 안 들어가요.";
+    imageHint.textContent = "기본은 메일 본문 맨 아래에 순서대로 들어가요 (여러 장 가능). QR 코드처럼 문장 옆에 넣고 싶으면 문구 안에 {{이미지1}}처럼 적어주세요 - 그 자리에 들어가고 맨 아래에는 안 붙어요. \"복사하기\"로 붙여넣을 때만 이미지가 포함되고, \"메일 앱 열기\"에는 이미지가 안 들어가요.";
     block.appendChild(imageHint);
 
     if (!out.images) out.images = out.image ? [out.image] : []; // 예전 단일 이미지 필드가 있으면 자동으로 옮겨줌

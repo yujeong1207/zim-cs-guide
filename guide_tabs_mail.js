@@ -818,11 +818,32 @@ function generate() {
     }
 
     const outImages = (out.images && out.images.length) ? out.images : (out.image ? [out.image] : []);
-    if (outImages.length > 0) {
-      outImages.forEach((src) => {
+
+    // 🔗 문구 안의 http(s) 주소는 복사해서 붙여넣었을 때 바로 누를 수 있게 링크로 만들어줌
+    htmlFull = htmlFull.replace(/(https?:\/\/[^\s<>"']+)/g, (url) => {
+      const clean = url.replace(/[.,)]+$/, "");
+      const tail = url.slice(clean.length);
+      return '<a href="' + clean + '" target="_blank" rel="noopener noreferrer">' + clean + "</a>" + tail;
+    });
+
+    // 🖼️ 문구 안에 {{이미지1}}, {{이미지2}}처럼 적어두면 그 자리에 이미지를 바로 넣어줌 (QR 코드처럼 문장 옆에 붙어야 하는 이미지용).
+    //    이렇게 자리를 정해준 이미지는 맨 아래에 또 붙지 않고, 자리를 안 정한 이미지만 예전처럼 본문 맨 아래에 붙어요.
+    const usedImageIdx = new Set();
+    const imgTokenRe = /\{\{이미지(\d+)\}\}/g;
+    htmlFull = htmlFull.replace(imgTokenRe, (m, n) => {
+      const i = Number(n) - 1;
+      if (!outImages[i]) return "";
+      usedImageIdx.add(i);
+      return '<img src="' + outImages[i] + '" style="vertical-align:middle;max-width:100%;" alt="이미지 ' + n + '">';
+    });
+    plainFull = plainFull.replace(imgTokenRe, (m, n) => (outImages[Number(n) - 1] ? "[이미지 " + n + "]" : ""));
+
+    const bottomImages = outImages.filter((src, i) => !usedImageIdx.has(i));
+    if (bottomImages.length > 0) {
+      bottomImages.forEach((src) => {
         htmlFull += '<br><img src="' + src + '" style="max-width:100%;margin-top:10px;" alt="첨부 이미지">';
       });
-      plainFull += "\n[이미지 " + outImages.length + "장 첨부됨 - 미리보기 화면에서 확인해주세요]";
+      plainFull += "\n[이미지 " + bottomImages.length + "장 첨부됨 - 미리보기 화면에서 확인해주세요]";
     }
 
     generatedOutputs[idx] = {

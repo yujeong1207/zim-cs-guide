@@ -127,6 +127,11 @@ function compressImageFile(file, maxWidth, quality) {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
+        // QR 코드·로고처럼 작은 PNG는 그대로 둠 - JPEG로 바꾸면 흐려지고, 투명 배경이 검게 변해요
+        if (file.type === "image/png" && img.width <= maxWidth && file.size <= 150 * 1024) {
+          resolve(e.target.result);
+          return;
+        }
         let w = img.width, h = img.height;
         if (w > maxWidth) { h = Math.round(h * (maxWidth / w)); w = maxWidth; }
         const canvas = document.createElement("canvas");
