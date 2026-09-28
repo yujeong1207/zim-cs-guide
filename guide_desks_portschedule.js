@@ -96,6 +96,9 @@ function subtractDaysFromDateStr(dateStr, days) {
 }
 
 let portScheduleSubTab = "raw"; // "raw" | "calendar"
+// 🔒 노션용 캘린더에 하선제출을 보여줄지 - 노션 페이지는 고객에게 공개되니까 기본은 항상 꺼짐.
+//    일부러 저장(localStorage 등)을 안 해서, 페이지를 새로 열면 무조건 다시 꺼진 상태로 시작해요.
+let portScheduleShowDischarge = false;
 
 function switchPortScheduleSubTab(tab) {
   portScheduleSubTab = tab;
@@ -247,7 +250,10 @@ function loadPortScheduleTab() {
       <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
         <input type="date" id="portScheduleCalStartInput" onchange="renderPortScheduleCalendar()">
         <span class="hint" style="margin:0;">※ 되도록 일요일로 골라주세요</span>
-        <button type="button" id="portScheduleHideFeedbackBtn" class="btn secondary-btn" onclick="togglePortScheduleFeedbackFab()" style="margin-left:auto;">📷 캡처할 때 "의견 남기기" 버튼 숨기기</button>
+        <label style="display:flex; align-items:center; gap:4px; font-size:13px; cursor:pointer; margin-left:auto;">
+          <input type="checkbox" id="portScheduleShowDischargeChk" ${portScheduleShowDischarge ? "checked" : ""} onchange="togglePortScheduleDischarge(this.checked)"> 🔒 하선제출 표시 (내부용)
+        </label>
+        <button type="button" id="portScheduleHideFeedbackBtn" class="btn secondary-btn" onclick="togglePortScheduleFeedbackFab()">📷 캡처할 때 "의견 남기기" 버튼 숨기기</button>
       </div>
       <div id="portScheduleCalendarWrap"></div>
     </div>
@@ -282,6 +288,9 @@ function loadPortScheduleTab() {
             manager: d.manager || "",
             cargoDeadlineDate: d.cargoDeadlineDate || "",
             cargoDeadlineTime: d.cargoDeadlineTime || "",
+            // 하선제출 - raw 표·수정 폼에서만 쓰고, 노션용 캘린더(buildPortScheduleCellHtml)에는 일부러 안 넣음
+            dischargeDeadlineDate: d.dischargeDeadlineDate || "",
+            dischargeDeadlineTime: d.dischargeDeadlineTime || "",
             anSendDate: d.anSendDate || "",
           };
         });
@@ -324,6 +333,11 @@ function buildPortScheduleCellHtml(items) {
       const timePart = p.cargoDeadlineTime ? " " + escapeHtml(p.cargoDeadlineTime) : " (시간 미정)";
       extra += `<div class="port-cal-line">적하목록 제출: ${formatMMDD(p.cargoDeadlineDate)}${timePart}</div>`;
     }
+    // 🔒 하선제출은 고객에게 안내하지 않는 내부 정보라, 스위치를 켰을 때만 회색 내부용 표시로 보여줌
+    if (portScheduleShowDischarge && p.dischargeDeadlineDate) {
+      const dTime = p.dischargeDeadlineTime ? " " + escapeHtml(p.dischargeDeadlineTime) : " (시간 미정)";
+      extra += `<div class="port-cal-line-internal">🔒 하선제출(내부): ${formatMMDD(p.dischargeDeadlineDate)}${dTime}</div>`;
+    }
     const divider = i > 0 ? '<div class="port-cal-divider"></div>' : "";
     return `${divider}<div class="port-cal-vessel"><div class="port-cal-vessel-name">${linePrefix}${vesselPart}${terminalPart}</div>${extra}</div>`;
   }).join("");
@@ -336,7 +350,16 @@ function togglePortScheduleFeedbackFab() {
   if (!fab || !btn) return;
   const hidden = fab.style.display === "none";
   fab.style.display = hidden ? "" : "none";
+  // 캡처하려고 버튼을 숨기는 순간, 하선제출 표시가 켜져 있으면 자동으로 꺼서 노션에 실수로 안 올라가게 함
+  if (!hidden && portScheduleShowDischarge) togglePortScheduleDischarge(false);
   btn.textContent = hidden ? '📷 캡처할 때 "의견 남기기" 버튼 숨기기' : '👁️ "의견 남기기" 버튼 다시 보이기';
+}
+
+function togglePortScheduleDischarge(on) {
+  portScheduleShowDischarge = !!on;
+  const chk = document.getElementById("portScheduleShowDischargeChk");
+  if (chk) chk.checked = portScheduleShowDischarge;
+  renderPortScheduleCalendar();
 }
 
 function renderPortScheduleCalendar() {
@@ -355,7 +378,11 @@ function renderPortScheduleCalendar() {
     byDate[p.arrivalDate].push(p);
   });
 
-  let html = `<div style="font-weight:700; margin-bottom:10px; color:#1155cc; font-size:14px;">${startDate.getMonth() + 1}월 수입 입항 캘린더 (2주)</div>`;
+  let html = "";
+  if (portScheduleShowDischarge) {
+    html += `<div class="port-cal-internal-warning">🔒 지금 하선제출(내부용)이 표시되고 있어요. 이 상태로 캡처해서 노션에 올리지 마세요!</div>`;
+  }
+  html += `<div style="font-weight:700; margin-bottom:10px; color:#1155cc; font-size:14px;">${startDate.getMonth() + 1}월 수입 입항 캘린더 (2주)</div>`;
   html += `<div style="overflow-x:auto;"><table class="port-schedule-calendar">`;
   // 일요일·토요일은 주말이라 배경색을 다르게 줌 (원본 엑셀 색감이랑 맞춤)
   html += `<tr>${weekdayLabels.map((w, i) => `<th class="${i === 0 || i === 6 ? "port-cal-weekend-th" : ""}">${w}</th>`).join("")}</tr>`;
@@ -510,6 +537,7 @@ function renderPortScheduleRows() {
       <td>${escapeHtml(r.line)}</td>
       <td>${escapeHtml(r.manager)}</td>
       <td>${escapeHtml(r.cargoDeadlineDate)} ${escapeHtml(r.cargoDeadlineTime)}</td>
+      <td>${escapeHtml(r.dischargeDeadlineDate)} ${escapeHtml(r.dischargeDeadlineTime)}</td>
       <td>${escapeHtml(r.anSendDate)}</td>
       <td class="poa-row-actions">
         <button type="button" class="poa-edit-btn" title="수정" onclick="openPortScheduleEditForm('${escapeHtml(r.id)}')">✏️</button>
@@ -523,9 +551,9 @@ function renderPortScheduleRows() {
       <table class="port-schedule-table">
         <tr>
           <th>선명</th><th>코드</th><th>항차</th><th>입항일</th><th>출항일</th>
-          <th>터미널</th><th>LINE</th><th>마감자</th><th>적하목록 제출</th><th>AN발송예정</th><th>관리</th>
+          <th>터미널</th><th>LINE</th><th>마감자</th><th>적하목록 제출</th><th>하선제출</th><th>AN발송예정</th><th>관리</th>
         </tr>
-        ${rows || '<tr><td colspan="11" style="text-align:center; padding:20px;">검색 결과가 없어요.</td></tr>'}
+        ${rows || '<tr><td colspan="12" style="text-align:center; padding:20px;">검색 결과가 없어요.</td></tr>'}
       </table>
     </div>
   `;
@@ -565,6 +593,8 @@ function openPortScheduleEditForm(id) {
         <input id="psf-manager" type="text" placeholder="마감자" value="${v("manager")}" />
         <input id="psf-cargoDeadlineDate" type="date" value="${v("cargoDeadlineDate")}" />
         <input id="psf-cargoDeadlineTime" type="text" placeholder="적하목록 제출 시간 (예: 오후 3:00)" value="${v("cargoDeadlineTime")}" />
+        <input id="psf-dischargeDeadlineDate" type="date" title="하선제출일" value="${v("dischargeDeadlineDate")}" />
+        <input id="psf-dischargeDeadlineTime" type="text" placeholder="하선제출 시간 (예: 오후 3:00)" value="${v("dischargeDeadlineTime")}" />
         <input id="psf-anSendDate" type="date" value="${v("anSendDate")}" />
       </div>
       <div class="hint" style="margin:6px 0 0;">💡 입항일을 바꾸면 AN발송예정일(입항일 -2일)이 자동으로 같이 바뀌어요. 직접 다른 날짜로 고치고 싶으면 그 칸을 따로 수정하시면 돼요.</div>
@@ -605,6 +635,8 @@ async function savePortScheduleForm(id) {
     manager: val("psf-manager"),
     cargoDeadlineDate: val("psf-cargoDeadlineDate"),
     cargoDeadlineTime: val("psf-cargoDeadlineTime"),
+    dischargeDeadlineDate: val("psf-dischargeDeadlineDate"),
+    dischargeDeadlineTime: val("psf-dischargeDeadlineTime"),
     anSendDate: val("psf-anSendDate") || (arrivalDate ? subtractDaysFromDateStr(arrivalDate, 2) : ""),
   };
 
@@ -878,6 +910,8 @@ const PORT_SCHEDULE_HEADER_ALIASES = {
   manager: ["마감자"],
   cargoDeadlineDate: ["적하목록 제출일"],
   cargoDeadlineTime: ["적하목록 제출 시간"],
+  dischargeDeadlineDate: ["하선제출일", "하선 제출일"],
+  dischargeDeadlineTime: ["하선제출 시간", "하선 제출 시간"],
   anSendDate: ["an 발송 예정일", "an발송예정일"],
 };
 
@@ -979,6 +1013,10 @@ function processPortScheduleFile(file) {
           cargoDeadlineTime: parsePortScheduleTime(get("cargoDeadlineTime")),
           anSendDate,
         });
+        // 하선제출 칸이 있는 파일일 때만 반영 (칸이 없는 파일을 올려도 손으로 입력해둔 하선제출이 안 지워지게)
+        const last = entries[entries.length - 1];
+        if (colMap.dischargeDeadlineDate >= 0) last.dischargeDeadlineDate = parsePortScheduleDate(get("dischargeDeadlineDate"));
+        if (colMap.dischargeDeadlineTime >= 0) last.dischargeDeadlineTime = parsePortScheduleTime(get("dischargeDeadlineTime"));
       }
 
       if (entries.length === 0) throw new Error("반영할 데이터가 없어요 (빈 파일이거나 형식이 안 맞을 수 있어요).");
