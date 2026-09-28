@@ -677,12 +677,13 @@ const CROSS_CHECK_CARRIER_LABELS = {
   msc: "MSC",
   zim: "ZIM",
   interasia: "인터아시아",
-  namsung: "남성해운"
+  namsung: "남성해운",
+  tsline: "TS LINE"
 };
 
 function freshCrossCheckState() {
   return {
-    carrier: "msc", // 'msc' | 'zim' | 'interasia' | 'namsung'
+    carrier: "msc", // 'msc' | 'zim' | 'interasia' | 'namsung' | 'tsline'
     manifestFileName: null, manifestSheets: null, manifestKrpusSet: null,
     oursFileName: null, oursContainers: null, oursPod: null
   };
@@ -892,7 +893,8 @@ function scanManifestAoaInto(set, aoa, targetPod, opts) {
    - ZIM: 시트 1개, "POD"·"Container"가 같이 있는 헤더 행, 오퍼레이터 "Line"이 GSL/ZIM인 것만
    - 인터아시아: "ZIM"·"GSL" 시트 두 개를 각각 읽어서 합침 (시트 자체가 선사별로 나뉘어 있음)
    - 남성해운(STARSHIP): "CNTR LIST" 시트가 있으면 그걸, 없으면 유일한 시트를 사용.
-     POD 헤더 이름이 겹쳐서 애매하니 "Opr" 바로 앞 칸을 POD로 확정, 오퍼레이터 GSL/ZIM만 */
+     POD 헤더 이름이 겹쳐서 애매하니 "Opr" 바로 앞 칸을 POD로 확정, 오퍼레이터 GSL/ZIM만
+   - TS LINE: 시트 1개, 위쪽 제목줄 아래 "Container Id"·"POD"·"Carrier" 헤더 행 기준, Carrier가 ZIM/GSL인 것만 */
 function recomputeCrossCheck() {
   if (crossCheckState.manifestSheets && crossCheckState.oursPod) {
     const sheets = crossCheckState.manifestSheets;
@@ -925,6 +927,14 @@ function recomputeCrossCheck() {
       scanManifestAoaInto(set, sheets[sheetName], crossCheckState.oursPod, {
         headerTest: (row) => row.includes("Opr") && row.includes("Container No"),
         cntrHeader: "Container No", opHeader: "Opr", allowedOps: ["ZIM", "GSL"], podRelativeToOp: true
+      });
+    } else if (carrier === "tsline") {
+      // 시트 이름이 파일마다 다를 수 있어서, 헤더 행을 찾을 수 있는 시트를 전부 훑음 (보통 Sheet1 하나)
+      Object.keys(sheets).forEach((sheetName) => {
+        scanManifestAoaInto(set, sheets[sheetName], crossCheckState.oursPod, {
+          headerTest: (row) => row.includes("Container Id") && row.includes("POD") && row.includes("Carrier"),
+          podHeader: "POD", cntrHeader: "Container Id", opHeader: "Carrier", allowedOps: ["ZIM", "GSL"], podHeaderIsFirstMatch: true
+        });
       });
     }
 
@@ -1802,4 +1812,3 @@ async function downloadExcelResult() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
