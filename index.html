@@ -93,6 +93,7 @@
       <button class="main-tab-btn" data-tab="faqs" onclick="switchMainTab('faqs')">❓ FAQ</button>
       <button class="main-tab-btn" data-tab="templates" onclick="switchMainTab('templates')">✉️ 메일 템플릿</button>
       <button class="main-tab-btn" data-tab="ntf" onclick="switchMainTab('ntf')">📨 공문 발송</button>
+      <button class="main-tab-btn" data-tab="toneCheck" onclick="switchMainTab('toneCheck')">✍️ 답장 다듬기</button>
     </div>
   </div>
 
@@ -423,6 +424,25 @@
   <div id="followupImportListWrap" class="table-scroll-wrap"></div>
 </div>
 
+<!-- ===== ✍️ 답장 다듬기 탭 ===== -->
+<div class="tab-page" id="page-toneCheck">
+  <div class="tone-intro">
+    <div class="tone-intro-title">💌 답장 다듬기를 만든 이유</div>
+    <div class="tone-intro-text">바쁜 하루를 보내다 보면 누구나 답장이 짧아지고, 문장 끝이 조금 딱딱해지기 쉬워요. 우리가 전하는 내용은 늘 정확한데, 한두 마디 때문에 고객에게 마음이 덜 전해진다면 너무 아깝잖아요.<br>그래서 보내기 전에 한 번 더 살펴볼 수 있는 작은 도구를 만들었어요. 누가 썼는지 평가하려는 게 아니라, 우리 답장이 조금 더 따뜻하게 닿을 수 있도록 <b>같이 다듬어보자</b>는 마음이에요 🙂</div>
+    <div class="tone-intro-pills">
+      <span>🔒 붙여넣은 답장은 어디에도 저장되지 않아요</span>
+      <span>🌱 표시된 곳이 있어도 틀렸다는 뜻은 아니에요</span>
+      <span>💜 "이 말도 바꾸면 좋겠다" 싶은 표현은 언제든 알려주세요</span>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
+    <button class="btn secondary-btn tone-soft-btn" onclick="document.getElementById('toneCheckInput').value=''; renderToneCheck();">🧹 비우기</button>
+    <button class="btn secondary-btn tone-soft-btn" onclick="openToneRulesManager()">⚙️ 표현 목록 관리 (관리 PIN)</button>
+  </div>
+  <textarea id="toneCheckInput" class="tone-input" rows="9" placeholder="여기에 보내려는 답장을 붙여넣어 주세요" oninput="renderToneCheck()"></textarea>
+  <div id="toneCheckResult" style="margin-top:14px;"></div>
+</div>
+
 <!-- ===== 💬 SR 응대 매뉴얼 (수입 CS) 탭 ===== -->
 <div class="tab-page" id="page-srManualImport">
   <div class="hint" style="margin-bottom:10px;">수입 SR 유형별 <b>처리 방법(내부용)</b>과 <b>고객 응대 문구</b>예요. 문구 칸을 클릭하면 내 말투로 바로 고친 뒤 복사할 수 있어요 (저장은 안 돼요). <span class="sr-ph">[대괄호]</span> 부분만 바꿔 쓰시면 되고, 복사할 땐 노란 표시 없이 복사돼요. 원본 문구 자체를 바꾸려면 각 케이스의 "⚙️ 수정"(관리 PIN)에서 고치면 팀 전체에 반영돼요.</div>
@@ -639,6 +659,14 @@
     <div class="howto-body">
       <div class="howto-title">업무가이드 <span class="howto-badge">업무 절차 · FAQ · 메일 템플릿 · 공문 발송</span></div>
       <div class="howto-desc">상단 "📋 업무가이드"를 누르면 드롭다운으로 4개 메뉴가 펼쳐져요. 업무 절차나 FAQ는 화면 오른쪽 위 "🔍 전체 검색"창에 키워드만 치면 바로 찾아져요 (표 안 내용까지 다 검색돼요). 메일 템플릿은 유형을 고르고 빈칸만 채우면 바로 답장 문구가 완성돼요.</div>
+    </div>
+  </div>
+
+  <div class="howto-item">
+    <div class="howto-icon">✍️</div>
+    <div class="howto-body">
+      <div class="howto-title">답장 다듬기 <span class="howto-badge">업무가이드 안 · 저장 안 됨</span></div>
+      <div class="howto-desc">보내기 전에 답장을 붙여넣으면 딱딱하게 들릴 수 있는 표현("~하시기 바랍니다", "불가합니다" 등)을 찾아서 부드러운 표현을 추천해주고, 공감 한마디나 다음 안내처럼 더하면 좋은 부분도 알려줘요. 답장은 브라우저 안에서만 확인하고 <b>어디에도 저장되지 않아요.</b> SR 응대 매뉴얼의 답장 칸에서 "✍️ 답장 다듬기" 버튼을 누르면 바로 넘어와요.</div>
     </div>
   </div>
 
@@ -913,6 +941,16 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="toneRulesOverlay" style="display:none;" onclick="if(event.target===this) closeToneRulesManager()">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div class="admin-title">⚙️ 답장 다듬기 표현 목록</div>
+      <button class="close-btn" onclick="closeToneRulesManager()">✕ 닫기</button>
+    </div>
+    <div id="toneRulesBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="srManualImportEditOverlay" style="display:none;" onclick="if(event.target===this) closeSrManualImportEditor()">
   <div class="admin-panel">
     <div class="admin-header">
@@ -1026,6 +1064,7 @@
 <script src="guide_case_share.js"></script>
 <script src="guide_case_share_import.js"></script>
 <script src="guide_sr_manual_import.js"></script>
+<script src="guide_tone_check.js"></script>
 <script src="guide_ntf_archive.js"></script>
 <script src="guide_daily_expression.js"></script>
 <script src="guide_cod.js"></script>

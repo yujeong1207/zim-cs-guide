@@ -1231,7 +1231,7 @@ function renderBlDeskCreditResult() {
 }
 
 const TAB_GROUPS = {
-  work: ["procedures", "faqs", "templates", "ntf"],
+  work: ["procedures", "faqs", "templates", "ntf", "toneCheck"],
   csboard: ["followup", "caseShare", "cod", "triangle"],
   "csboard-import": ["followupImport", "caseShareImport", "srManualImport"],
   reference: ["resources", "vessels", "contacts", "news"],

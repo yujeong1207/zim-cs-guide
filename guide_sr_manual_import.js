@@ -15,6 +15,22 @@ const SR_MANUAL_IMPORT_CATEGORY_ORDER = [
   "입항일·스케줄", "B/L 타입", "AN", "터미널", "프리타임·DET", "운임·로컬비용", "기타 문의", "선적지(POL)", "내부·회신 불필요",
 ];
 
+// 유형별 아이콘 + 파스텔 색 (사이트 다른 배지들과 같은 톤). 목록에 없는 유형은 기본값으로 표시돼요
+const SR_MANUAL_IMPORT_CATEGORY_STYLE = {
+  "입항일·스케줄": { icon: "🚢", bg: "#e0f2fe", fg: "#0369a1" },
+  "B/L 타입": { icon: "📄", bg: "#ede9fe", fg: "#6d28d9" },
+  "AN": { icon: "📨", bg: "#dbeafe", fg: "#1d4ed8" },
+  "터미널": { icon: "🏗️", bg: "#ffedd5", fg: "#c2410c" },
+  "프리타임·DET": { icon: "⏰", bg: "#fef9c3", fg: "#a16207" },
+  "운임·로컬비용": { icon: "💰", bg: "#dcfce7", fg: "#15803d" },
+  "기타 문의": { icon: "💡", bg: "#fce7f3", fg: "#be185d" },
+  "선적지(POL)": { icon: "🌏", bg: "#ccfbf1", fg: "#0f766e" },
+  "내부·회신 불필요": { icon: "🔒", bg: "#f1f5f9", fg: "#475569" },
+};
+function srManualImportCatStyle(cat) {
+  return SR_MANUAL_IMPORT_CATEGORY_STYLE[cat] || { icon: "🗂️", bg: "#eef2ff", fg: "#4338ca" };
+}
+
 let SR_MANUAL_IMPORT_LIST = [];
 let srManualImportUnsubscribe = null;
 let srManualImportLoaded = false;
@@ -101,7 +117,7 @@ function renderSrManualImportTab() {
   const cats = srManualImportCategories();
   if (srManualImportCategory !== "__all" && !cats.includes(srManualImportCategory)) srManualImportCategory = "__all";
   const chip = (value, label, count) =>
-    `<button type="button" class="sr-manual-chip${srManualImportCategory === value ? " active" : ""}" onclick="setSrManualImportCategory('${escapeHtml(value)}')">${escapeHtml(label)} <span class="sr-manual-chip-count">${count}</span></button>`;
+    `<button type="button" class="sr-manual-chip${srManualImportCategory === value ? " active" : ""}" onclick="setSrManualImportCategory('${escapeHtml(value)}')">${value === "__all" ? "✨" : srManualImportCatStyle(value).icon} ${escapeHtml(label)} <span class="sr-manual-chip-count">${count}</span></button>`;
   chipsWrap.innerHTML = chip("__all", "전체", byQuery.length) +
     cats.map((c) => chip(c, c, byQuery.filter((x) => x.category === c).length)).join("");
 
@@ -136,7 +152,7 @@ function buildSrManualImportCardHtml(c, isOpen) {
   const id = escapeHtml(c.id);
   const head = `
     <div class="sr-manual-head" onclick="toggleSrManualImportCard('${id}')">
-      <span class="sr-manual-cat">${escapeHtml(c.category)}</span>
+      <span class="sr-manual-cat" style="background:${srManualImportCatStyle(c.category).bg};color:${srManualImportCatStyle(c.category).fg};">${srManualImportCatStyle(c.category).icon} ${escapeHtml(c.category)}</span>
       <span class="sr-manual-title">${escapeHtml(c.title || "(제목 없음)")}</span>
       ${c.sr ? `<span class="sr-manual-srno">${escapeHtml(c.sr)}</span>` : ""}
       <button type="button" class="btn secondary-btn sr-manual-edit-btn" title="원본 문구 수정 (관리 PIN)" onclick="event.stopPropagation(); openSrManualImportEditor('${id}')">⚙️ 수정</button>
@@ -151,8 +167,9 @@ function buildSrManualImportCardHtml(c, isOpen) {
   const replies = c.replies.map((r, i) => `
     <div class="sr-manual-reply">
       <div class="sr-manual-reply-head">
-        <span class="sr-manual-reply-label">${escapeHtml(r.label)}</span>
+        <span class="sr-manual-reply-label">💌 ${escapeHtml(r.label)}</span>
         <button type="button" class="btn secondary-btn" onclick="resetSrManualImportReply('${id}', ${i})" title="고친 내용을 지우고 원래 문구로">↺ 원래대로</button>
+        <button type="button" class="btn secondary-btn" onclick="sendSrManualImportReplyToToneCheck('${id}', ${i})" title="지금 칸의 문구(내가 고친 내용 포함)를 답장 다듬기로 보내기">✍️ 답장 다듬기</button>
         <button type="button" class="btn copy-btn" id="srCopyBtn_${id}_${i}" onclick="copySrManualImportReply('${id}', ${i})">📋 복사</button>
       </div>
       <div class="preview-html sr-manual-reply-body" id="srReply_${id}_${i}" contenteditable="true">${srManualImportTextToHtml(r.text)}</div>
@@ -165,7 +182,7 @@ function buildSrManualImportCardHtml(c, isOpen) {
       ${head}
       <div class="sr-manual-body">
         <div class="sr-manual-steps">
-          <div class="sr-manual-section-title">처리 방법 (내부용)</div>
+          <div class="sr-manual-section-title">📝 처리 방법 (내부용)</div>
           <ul>${steps}</ul>
         </div>
         <div class="sr-manual-replies">
@@ -210,6 +227,11 @@ function copySrManualImportReply(id, idx) {
   } else {
     legacyCopy(plain);
   }
+}
+
+function sendSrManualImportReplyToToneCheck(id, idx) {
+  const el = document.getElementById(`srReply_${id}_${idx}`);
+  if (el && typeof openToneCheckWithText === "function") openToneCheckWithText(el.innerText);
 }
 
 /* ---------- 관리 PIN 확인 (메일 템플릿 관리와 같은 PIN / 같은 방식) ---------- */
