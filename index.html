@@ -111,6 +111,7 @@
     <div class="tab-group-dropdown" id="tabGroupDropdown-csboard-import">
       <button class="main-tab-btn" data-tab="followupImport" onclick="switchMainTab('followupImport')">📌 팔로우업 보드</button>
       <button class="main-tab-btn" data-tab="caseShareImport" onclick="switchMainTab('caseShareImport')">📚 케이스 공유</button>
+      <button class="main-tab-btn" data-tab="srManualImport" onclick="switchMainTab('srManualImport')">💬 SR 응대 매뉴얼</button>
     </div>
   </div>
 
@@ -420,6 +421,18 @@
 
   <input id="followupImportFilter" class="contacts-filter-input" placeholder="🔍 고객·건명·메모·담당으로 검색" oninput="renderFollowupImportList()" style="margin-top:14px;">
   <div id="followupImportListWrap" class="table-scroll-wrap"></div>
+</div>
+
+<!-- ===== 💬 SR 응대 매뉴얼 (수입 CS) 탭 ===== -->
+<div class="tab-page" id="page-srManualImport">
+  <div class="hint" style="margin-bottom:10px;">수입 SR 유형별 <b>처리 방법(내부용)</b>과 <b>고객 응대 문구</b>예요. 문구 칸을 클릭하면 내 말투로 바로 고친 뒤 복사할 수 있어요 (저장은 안 돼요). <span class="sr-ph">[대괄호]</span> 부분만 바꿔 쓰시면 되고, 복사할 땐 노란 표시 없이 복사돼요. 원본 문구 자체를 바꾸려면 각 케이스의 "⚙️ 수정"(관리 PIN)에서 고치면 팀 전체에 반영돼요.</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <button class="btn secondary-btn" onclick="openSrManualImportEditor(null)">➕ 새 케이스 추가 (관리 PIN)</button>
+    <input type="file" id="srManualImportSeedInput" accept=".json,application/json" style="display:none;" onchange="handleSrManualImportSeedFile(event)">
+  </div>
+  <input id="srManualImportFilter" class="contacts-filter-input" placeholder="🔍 SKIP, 서렌더, 전기료, 중수량처럼 키워드로 검색" oninput="renderSrManualImportTab()" style="margin-top:14px;">
+  <div id="srManualImportCategoryChips" class="sr-manual-chips"></div>
+  <div id="srManualImportListWrap" style="margin-top:12px;"></div>
 </div>
 
 <!-- ===== 📚 케이스 공유 (수입 CS) 탭 ===== -->
@@ -900,6 +913,16 @@
   </div>
 </div>
 
+<div class="admin-overlay" id="srManualImportEditOverlay" style="display:none;" onclick="if(event.target===this) closeSrManualImportEditor()">
+  <div class="admin-panel">
+    <div class="admin-header">
+      <div class="admin-title" id="srManualImportEditTitle">⚙️ SR 응대 매뉴얼 수정</div>
+      <button class="close-btn" onclick="closeSrManualImportEditor()">✕ 닫기</button>
+    </div>
+    <div id="srManualImportEditBody"></div>
+  </div>
+</div>
+
 <div class="admin-overlay" id="caseShareImportEditOverlay" style="display:none;" onclick="if(event.target===this) closeCaseShareImportEditor()">
   <div class="admin-panel small-panel">
     <div class="admin-header">
@@ -1002,6 +1025,7 @@
 <script src="guide_followup_import.js"></script>
 <script src="guide_case_share.js"></script>
 <script src="guide_case_share_import.js"></script>
+<script src="guide_sr_manual_import.js"></script>
 <script src="guide_ntf_archive.js"></script>
 <script src="guide_daily_expression.js"></script>
 <script src="guide_cod.js"></script>

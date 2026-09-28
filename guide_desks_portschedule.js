@@ -1232,7 +1232,8 @@ function renderBlDeskCreditResult() {
 
 const TAB_GROUPS = {
   work: ["procedures", "faqs", "templates", "ntf"],
-  csboard: ["followup", "cod", "triangle"],
+  csboard: ["followup", "caseShare", "cod", "triangle"],
+  "csboard-import": ["followupImport", "caseShareImport", "srManualImport"],
   reference: ["resources", "vessels", "contacts", "news"],
   schedule: ["vacations", "teamEvents"],
   tools: ["calc", "memo", "excelTool"],
@@ -1394,6 +1395,13 @@ function renderSearchResults(query) {
   TEMPLATES.forEach((t) => {
     const full = t.label + " " + (t.guide || "");
     if (full.toLowerCase().includes(q)) results.push({ kind: "template", label: "✉️ 메일 템플릿", title: t.label, snippet: t.guide ? snippetHtml(t.guide, query) : "", category: null, id: t.id });
+  });
+  (typeof SR_MANUAL_IMPORT_LIST !== "undefined" ? SR_MANUAL_IMPORT_LIST : []).forEach((c) => {
+    const replyText = c.replies.map((r) => r.text).join(" ");
+    const full = [c.title, c.category, c.sr, c.steps.join(" "), replyText].join(" ");
+    if (full.toLowerCase().includes(q)) {
+      results.push({ kind: "srManualImport", label: "💬 SR 응대 매뉴얼 (수입)", title: c.title, snippet: snippetHtml(c.steps.join(" ") + " " + replyText, query), category: null, id: c.id });
+    }
   });
   NTF_TEMPLATES.forEach((t) => {
     const full = t.label + " " + (t.guide || "");
@@ -1716,6 +1724,8 @@ function jumpToResult(kind, id, path, query) {
         setTimeout(() => el.classList.remove("contact-row-highlight"), 2000);
       }
     }, 50);
+  } else if (kind === "srManualImport") {
+    jumpToSrManualImportCase(id);
   } else if (kind === "mainTab") {
     switchMainTab(id);
   }

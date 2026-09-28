@@ -247,6 +247,7 @@ function switchMainTab(tab) {
   if (tab === "caseShare") loadCaseShareTab();
   if (tab === "followupImport") loadFollowupImportTab();
   if (tab === "caseShareImport") loadCaseShareImportTab();
+  if (tab === "srManualImport") loadSrManualImportTab();
   if (tab === "cod") loadCodTab();
   if (tab === "triangle") loadTriangleTab();
   if (tab === "doDesk") loadDoDeskTab();
