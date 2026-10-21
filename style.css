@@ -175,7 +175,8 @@ body {
   flex-shrink: 0;
 }
 
-.tab-page { display: none; padding: 20px; }
+/* 아래쪽 여백(100px): 오른쪽 아래에 떠 있는 "의견 남기기" 버튼이 맨 아래 줄의 오른쪽 끝(🗑 · ＋ · 수정 버튼)을 가리지 않게, 끝까지 스크롤하면 마지막 줄이 버튼 위로 올라와요 */
+.tab-page { display: none; padding: 20px 20px 100px; }
 .tab-page.active { display: block; }
 
 .container {
@@ -2160,7 +2161,7 @@ input, select, textarea {
   .tab-group-dropdown { max-width: none; z-index: 200; box-shadow: 0 10px 30px rgba(0,0,0,0.18); }
   .tab-group-dropdown .main-tab-btn { width: 100%; font-size: 14px; padding: 11px 14px; }
 
-  .tab-page { padding: 12px; }
+  .tab-page { padding: 12px 12px 90px; }
 
   /* 표는 짜부러뜨리지 않고 가로 스크롤로 - 컬럼 폭 최소치를 정해서 읽을 수 있는 크기는 유지 */
   .table-scroll-wrap .followup-table { min-width: 1100px; }
@@ -2423,3 +2424,37 @@ input, select, textarea {
 .ps-status.bad { color: #b91c1c; font-weight: 600; }
 .ps-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: #6b7280; margin: 4px 0 8px; }
 .ps-badge { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #3730a3; font-size: 11px; font-weight: 700; }
+
+/* ---- 📁 파일 보관함 (SharePoint 링크 모음) ---- */
+.tf-panel { border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; padding: 14px; }
+.tf-title { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+.tf-sub { font-weight: 400; font-size: 12.5px; color: #6b7280; margin-left: 6px; }
+.tf-row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 10px; align-items: end; }
+.tf-row label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: #4b5563; font-weight: 600; }
+.tf-row input, .tf-row select { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; min-width: 120px; box-sizing: border-box; }
+.tf-wide { flex: 1 1 280px; }
+.tf-wide input { width: 100%; }
+.tf-status { min-height: 20px; font-size: 13px; margin: 8px 0 2px; }
+.tf-status.ok { color: #166534; }
+.tf-status.warn { color: #92400e; }
+.tf-status.bad { color: #b91c1c; font-weight: 600; }
+.tf-filters { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 12px; }
+#tfCats { display: flex; gap: 6px; flex-wrap: wrap; }
+.tf-chip { border: 1px solid #d1d5db; background: #fff; border-radius: 999px; padding: 4px 12px; font-size: 13px; cursor: pointer; }
+.tf-chip.on { background: #eef2ff; border-color: #a5b4fc; color: #3730a3; font-weight: 700; }
+.tf-table { table-layout: fixed; width: 100%; min-width: 900px; }
+.tf-table td { vertical-align: middle; padding: 4px 6px; }
+.tf-in { width: 100%; box-sizing: border-box; border: 1px solid transparent; background: transparent; border-radius: 6px; padding: 6px 7px; font-size: 13.5px; font-family: inherit; }
+.tf-in:hover { border-color: #e5e7eb; background: #fff; }
+.tf-in:focus { outline: none; border-color: #6366f1; background: #fff; }
+a.tf-name { font-size: 14.5px; font-weight: 600; color: #1f2937; text-decoration: none; word-break: break-all; }
+a.tf-name:hover { color: #4338ca; text-decoration: underline; }
+.tf-host { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: #f3f4f6; color: #6b7280; font-size: 11px; }
+.tf-date { color: #6b7280; font-size: 12.5px; white-space: nowrap; }
+.tf-actions { white-space: nowrap; }
+.tf-btn { padding: 4px 10px; font-size: 12.5px; margin-right: 4px; text-decoration: none; display: inline-block; }
+.tf-del { border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 15px; padding: 2px 6px; }
+.tf-del:hover { color: #dc2626; }
+.tf-edit { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; padding: 6px 0; }
+.tf-edit label { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: #4b5563; font-weight: 600; flex: 1 1 300px; }
+.tf-edit .tf-in { border-color: #d1d5db; background: #fff; padding: 8px 10px; }

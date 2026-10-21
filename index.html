@@ -120,6 +120,7 @@
     <button class="tab-group-btn" onclick="toggleTabGroup('reference')">📚 참고자료 <span class="tab-group-caret">▾</span></button>
     <div class="tab-group-dropdown" id="tabGroupDropdown-reference">
       <button class="main-tab-btn" data-tab="resources" onclick="switchMainTab('resources'); loadResourcesShareTab();">🔗 자료 모음</button>
+      <button class="main-tab-btn" data-tab="teamFiles" onclick="switchMainTab('teamFiles')">📁 파일 보관함</button>
       <button class="main-tab-btn" data-tab="vessels" onclick="switchMainTab('vessels')">🚢 모선 일정</button>
       <button class="main-tab-btn" data-tab="panamaTransit" onclick="switchMainTab('panamaTransit')">🛳️ 파나마 통과 현황</button>
       <button class="main-tab-btn" data-tab="contacts" onclick="switchMainTab('contacts')">📞 연락처</button>
@@ -197,6 +198,12 @@
   <!-- 예전 방식(로컬 저장) 화면 요소 - 더는 안 쓰지만, 혹시 다른 코드에서 참조해도 안전하도록 숨겨서 남겨둠 -->
   <div class="cat-filter" id="resCatFilter" style="display:none;"></div>
   <div id="resList" style="display:none;"></div>
+</div>
+
+<!-- ===== 파일 보관함 탭 (SharePoint 링크 모음) ===== -->
+<div class="tab-page" id="page-teamFiles">
+  <div class="hint" style="margin-bottom:10px;">공문·양식처럼 자주 찾는 파일을 <b>SharePoint에 두고, 여기에는 링크만</b> 모아두는 곳이에요. 🔴 <b>실시간 공유돼요</b> — 누구나 등록하고, 분류·메모를 고칠 수 있어요. 파일은 SharePoint에만 있고 여기서 삭제해도 원본은 지워지지 않아요. 링크는 회사 계정으로 로그인한 상태에서 열려요.</div>
+  <div id="teamFilesWrap"></div>
 </div>
 
 <!-- ===== 모선 입출항 일정 탭 ===== -->
@@ -1051,6 +1058,7 @@
 <script src="guide_daily_expression.js"></script>
 <script src="guide_cod.js"></script>
 <script src="guide_triangle.js"></script>
+<script src="guide_team_files.js"></script>
 <script src="triangle_freight_msg.js"></script>
 
 </body>
