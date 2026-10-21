@@ -90,6 +90,43 @@ def decide_an_send_date(old_an, old_arrival, new_arrival):
     return None, True
 
 
+def decide_date(fetched, current, manual, last_auto):
+    """입항일/출항일 하나를 어떻게 할지 정해요. (터미널이 준 값 fetched, 지금 저장된 값 current,
+    사람이 직접 고친 값인지 manual, 터미널이 지난번에 준 값 last_auto)
+
+    돌려주는 dict (없는 키는 '건드리지 않음'):
+      value  : 새로 저장할 날짜
+      auto   : "터미널이 마지막으로 준 값"으로 기록할 값
+      manual : 직접 고침 표시를 바꿀 때만 (True/False)
+      note   : 'followed'(직접 고친 값을 터미널의 새 값으로 바꿈) | 'kept'(직접 고친 값 유지)
+
+    ⚠️ 기준은 "내가 고친 값과 터미널 값이 같은지"가 아니라 "터미널이 지난번과 다른 값을 줬는지"예요.
+       배가 당겨졌다 늦춰졌다 해도 터미널이 값을 바꿀 때마다 그걸 따라가고,
+       터미널이 같은 값(틀린 값)을 계속 줄 때만 직접 고친 값을 지켜요.
+    """
+    res = {}
+    if not fetched:
+        return res  # 터미널이 이번에 값을 안 줬으면 아무것도 안 함
+    if fetched != last_auto:
+        res["auto"] = fetched
+    if not manual:
+        if fetched != current:
+            res["value"] = fetched
+        return res
+    # 사람이 직접 고쳐둔 값
+    terminal_moved = bool(last_auto) and fetched != last_auto
+    if terminal_moved:
+        if fetched != current:
+            res["value"] = fetched
+        res["manual"] = False
+        res["note"] = "followed"
+    elif fetched == current:
+        res["manual"] = False  # 터미널도 같은 값이 됐으니 직접 고침 표시는 필요 없어요
+    else:
+        res["note"] = "kept"
+    return res
+
+
 def normalize_name(name):
     """선명 비교용 - 앞뒤 공백 지우고 대문자로 통일 (터미널마다 대소문자/공백이 다를 수 있어서)."""
     return re.sub(r"\s+", " ", str(name or "").strip()).upper()
@@ -108,6 +145,11 @@ _TERMINAL_ALIASES = {
 def normalize_terminal(terminal):
     """터미널 비교용 - 공백 지우고 대문자로 통일, 옛날 표기는 별칭표로 최신 코드로 맞춤."""
     t = re.sub(r"\s+", "", str(terminal or "")).upper()
+    # raw에는 "BPT감만", "BPT신선대"처럼 부두 이름을 붙여 적은 것도 있는데, 터미널 사이트(BPT)에서는
+    # 신선대/감만이 한 표에 같이 나와요. 그래서 BPT로 시작하면 모두 같은 "BPT"로 봐요.
+    # (안 그러면 "BPT감만"으로 적힌 배는 자동 갱신 대상에서 통째로 빠져요)
+    if t.startswith("BPT"):
+        return "BPT"
     return _TERMINAL_ALIASES.get(t, t)
 
 
@@ -195,6 +237,7 @@ def main():
     skipped_ambiguous = 0  # 같은 선명이 raw에 여러 건이면(예: 같은 배가 다른 항차로 두 번) 자동 판단 안 함
     unchanged = 0
     changes_for_today = []  # "오늘 갱신 내역"에 남길 목록
+    kept_for_today = []     # 직접 고친 값이라 터미널 값으로 안 바꾼 것(터미널은 같은 값을 계속 줌)
 
     batch = db.batch()
     batch_count = 0
@@ -234,24 +277,41 @@ def main():
             new_departure = entry.get("departureDate") or ""
             old_arrival = existing_data.get("arrivalDate") or ""
             old_departure = existing_data.get("departureDate") or ""
+            old_an = existing_data.get("anSendDate") or ""
 
-            if old_arrival == new_arrival and old_departure == new_departure:
+            arr = decide_date(new_arrival, old_arrival, bool(existing_data.get("arrivalManual")), existing_data.get("arrivalAuto") or "")
+            dep = decide_date(new_departure, old_departure, bool(existing_data.get("departureManual")), existing_data.get("departureAuto") or "")
+
+            # 터미널이 마지막으로 준 값 / 직접 고침 표시는 날짜가 안 바뀌어도 조용히 기록해 둬요
+            # (다음에 터미널이 값을 "바꿨는지" 알아보려면 이 기록이 필요해요)
+            quiet = {}
+            for prefix, d in (("arrival", arr), ("departure", dep)):
+                if "auto" in d:
+                    quiet[prefix + "Auto"] = d["auto"]
+                if "manual" in d:
+                    quiet[prefix + "Manual"] = d["manual"]
+
+            changed_arrival = arr.get("value")
+            changed_departure = dep.get("value")
+
+            # AN 발송 예정일(입항일 - 2일)도 입항일이 실제로 바뀌면 같이 맞춰요
+            new_an, an_kept_manual = decide_an_send_date(old_an, old_arrival, changed_arrival or "")
+
+            if not changed_arrival and not changed_departure and not arr.get("note") and not dep.get("note"):
+                if quiet and not dry_run:
+                    batch.update(doc_ref, quiet)
+                    batch_count += 1
                 unchanged += 1
                 continue
 
-            fields = {
-                "updatedAt": firestore.SERVER_TIMESTAMP,
-                "updatedBy": "auto_fetch",
-            }
-            if new_arrival:
-                fields["arrivalDate"] = new_arrival
-            if new_departure:
-                fields["departureDate"] = new_departure
-
-            # AN 발송 예정일(입항일 - 2일)도 입항일이 바뀌면 같이 맞춰요.
-            # (예전엔 입항일/출항일만 갱신해서, 입항일이 바뀌어도 AN 발송 예정일은 그대로 남았어요)
-            old_an = existing_data.get("anSendDate") or ""
-            new_an, an_kept_manual = decide_an_send_date(old_an, old_arrival, new_arrival)
+            fields = dict(quiet)
+            if changed_arrival or changed_departure:
+                fields["updatedAt"] = firestore.SERVER_TIMESTAMP
+                fields["updatedBy"] = "auto_fetch"
+            if changed_arrival:
+                fields["arrivalDate"] = changed_arrival
+            if changed_departure:
+                fields["departureDate"] = changed_departure
             if new_an:
                 fields["anSendDate"] = new_an
 
@@ -259,27 +319,38 @@ def main():
                 "vesselName": existing_data.get("vesselName", ""),
                 "terminal": existing_data.get("terminal", ""),
                 "oldArrivalDate": old_arrival,
-                "newArrivalDate": new_arrival or old_arrival,
+                "newArrivalDate": changed_arrival or old_arrival,
                 "oldDepartureDate": old_departure,
-                "newDepartureDate": new_departure or old_departure,
+                "newDepartureDate": changed_departure or old_departure,
                 "oldAnSendDate": old_an,
                 "newAnSendDate": new_an or old_an,
                 "anKeptManual": an_kept_manual,  # 사람이 직접 정한 AN 발송 예정일이라 안 바꿨다는 표시
+                # followed = 터미널이 일정을 바꿔서 직접 고친 값을 새 값으로 교체 / kept = 직접 고친 값 유지(터미널은 같은 값을 계속 줌)
+                "arrivalNote": arr.get("note", ""),
+                "departureNote": dep.get("note", ""),
+                "terminalArrivalDate": new_arrival,
+                "terminalDepartureDate": new_departure,
             }
-            changes_for_today.append(change_record)
+            if changed_arrival or changed_departure or arr.get("note") == "followed" or dep.get("note") == "followed":
+                changes_for_today.append(change_record)
+            else:
+                kept_for_today.append(change_record)
 
             if dry_run:
                 log(
                     f"  [미리보기] {existing_data.get('vesselName')} ({existing_data.get('terminal')}): "
-                    f"입항 {old_arrival} → {new_arrival or '(변경없음)'}, "
-                    f"출항 {old_departure} → {new_departure or '(변경없음)'}, "
+                    f"입항 {old_arrival} → {changed_arrival or '(변경없음)'}{' [직접 고친 값 유지]' if arr.get('note') == 'kept' else ''}"
+                    f"{' [직접 고친 값을 터미널 새 값으로]' if arr.get('note') == 'followed' else ''}, "
+                    f"출항 {old_departure} → {changed_departure or '(변경없음)'}{' [직접 고친 값 유지]' if dep.get('note') == 'kept' else ''}"
+                    f"{' [직접 고친 값을 터미널 새 값으로]' if dep.get('note') == 'followed' else ''}, "
                     f"AN발송 {old_an or '-'} → {new_an or ('(직접 정한 값이라 유지)' if an_kept_manual else '(변경없음)')}"
                 )
             else:
                 batch.update(doc_ref, fields)
                 batch_count += 1
 
-            updated += 1
+            if changed_arrival or changed_departure:
+                updated += 1
 
             if batch_count >= 400:
                 batch.commit()
@@ -305,6 +376,7 @@ def main():
             "ranAtIso": datetime.datetime.now().isoformat(),
             "totalUpdated": updated,
             "changes": changes_for_today,
+            "keptManual": kept_for_today,
         })
         log(f"'오늘 자동 갱신 내역' 기록 완료 (port_schedule_updates/latest, {len(changes_for_today)}건)")
     else:
