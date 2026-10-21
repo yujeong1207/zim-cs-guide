@@ -161,12 +161,17 @@ function renderPortScheduleAutoUpdateBanner(data) {
   const rows = changes.map((c) => {
     const arrivalChanged = c.oldArrivalDate !== c.newArrivalDate;
     const departureChanged = c.oldDepartureDate !== c.newDepartureDate;
+    const anChanged = (c.oldAnSendDate || "") !== (c.newAnSendDate || "");
+    const anCell = anChanged
+      ? `<span class="port-schedule-update-old">${escapeHtml(c.oldAnSendDate || "-")}</span> → <b>${escapeHtml(c.newAnSendDate || "-")}</b>`
+      : (c.anKeptManual ? `${escapeHtml(c.oldAnSendDate || "-")} <span title="직접 정해둔 날짜라 그대로 뒀어요">(직접 입력값 유지)</span>` : escapeHtml(c.newAnSendDate || c.oldAnSendDate || "-"));
     return `
       <tr>
         <td>${escapeHtml(c.vesselName || "-")}</td>
         <td>${escapeHtml(c.terminal || "-")}</td>
         <td>${arrivalChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldArrivalDate || "-")}</span> → <b>${escapeHtml(c.newArrivalDate || "-")}</b>` : escapeHtml(c.newArrivalDate || "-")}</td>
         <td>${departureChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldDepartureDate || "-")}</span> → <b>${escapeHtml(c.newDepartureDate || "-")}</b>` : escapeHtml(c.newDepartureDate || "-")}</td>
+        <td>${anCell}</td>
       </tr>`;
   }).join("");
 
@@ -177,7 +182,7 @@ function renderPortScheduleAutoUpdateBanner(data) {
       </div>
       <div id="portScheduleUpdateDetail" style="display:none;">
         <table class="contacts-table" style="margin-top:8px;">
-          <tr><th>선명</th><th>터미널</th><th>입항일</th><th>출항일</th></tr>
+          <tr><th>선명</th><th>터미널</th><th>입항일</th><th>출항일</th><th>AN 발송 예정</th></tr>
           ${rows}
         </table>
       </div>
@@ -669,8 +674,13 @@ const TERMINAL_UPDATE_HEADER_ALIASES = {
 
 /* 별칭 목록을 "순서대로" 검사해서, 제일 먼저 매칭되는 컬럼을 씀 (우선순위 보장) */
 function findFirstMatchingColumn(cellsLower, aliases) {
+  // ⚠️ 띄어쓰기는 무시하고 비교해요. BPT 표의 헤더는 "입항 예정일시"(띄어쓰기 있음)인데
+  //    아래 별칭은 "입항예정일시"라서, 예전엔 이게 안 맞아서 아직 비어 있는 "입항일시" 칸을 읽고
+  //    입항일이 갱신 안 되던 문제가 있었어요.
+  const squash = (x) => String(x || "").replace(/\s+/g, "");
+  const cells = cellsLower.map(squash);
   for (const alias of aliases) {
-    const idx = cellsLower.indexOf(alias);
+    const idx = cells.indexOf(squash(alias));
     if (idx >= 0) return idx;
   }
   return -1;
@@ -683,9 +693,15 @@ function findTerminalUpdateHeaderRow(aoa) {
     const vesselCol = findFirstMatchingColumn(cellsLower, TERMINAL_UPDATE_HEADER_ALIASES.vesselName);
     const arrivalCol = findFirstMatchingColumn(cellsLower, TERMINAL_UPDATE_HEADER_ALIASES.arrival);
     if (vesselCol >= 0 && arrivalCol >= 0) {
+      // 입항일 칸이 비어 있을 때 대신 읽을 칸 (BPT처럼 "입항 예정일시"/"입항일시"가 따로 있는 표용)
+      // ※ 그냥 "입항" 칸은 일부 터미널에서 항차번호가 들어 있어서 일부러 뺐어요
+      const altCols = ["입항예정일시", "입항일시"]
+        .map((a) => findFirstMatchingColumn(cellsLower, [a]))
+        .filter((i) => i >= 0 && i !== arrivalCol);
       const colMap = {
         vesselName: vesselCol,
         arrival: arrivalCol,
+        arrivalAlts: altCols,
         departure: findFirstMatchingColumn(cellsLower, TERMINAL_UPDATE_HEADER_ALIASES.departure),
       };
       return { headerRowIdx: r, colMap };
@@ -803,7 +819,10 @@ function processPortScheduleTerminalFile(file, terminalName) {
         const vesselName = String(get("vesselName") || "").trim().replace(/\s*\([^()]*\)\s*$/, "").trim();
         if (!vesselName) continue;
 
-        const arrivalDate = parsePortScheduleDate(get("arrival"));
+        let arrivalDate = parsePortScheduleDate(get("arrival"));
+        if (!arrivalDate && colMap.arrivalAlts) {
+          for (const ci of colMap.arrivalAlts) { arrivalDate = parsePortScheduleDate(row[ci]); if (arrivalDate) break; }
+        }
         const departureDate = parsePortScheduleDate(get("departure"));
 
         // 같은 배 이름이어도, "같은 배가 매달 반복 입항"하는 경우가 많아서
@@ -843,7 +862,13 @@ function processPortScheduleTerminalFile(file, terminalName) {
           if (existing.terminal && existing.terminal !== terminalName) {
             terminalMismatch.push({ vesselName, existingTerminal: existing.terminal });
           } else {
-            updated.push({ id: existing.id, vesselName, arrivalDate, departureDate });
+            // AN 발송 예정일(입항일 - 2일)도 같이 맞춤 - 비어 있거나 예전 입항일 기준 자동값일 때만 (직접 정한 값은 유지)
+            let anSendDate = "";
+            if (arrivalDate && arrivalDate !== existing.arrivalDate) {
+              const autoOld = existing.arrivalDate ? subtractDaysFromDateStr(existing.arrivalDate, 2) : "";
+              if (!existing.anSendDate || existing.anSendDate === autoOld) anSendDate = subtractDaysFromDateStr(arrivalDate, 2);
+            }
+            updated.push({ id: existing.id, vesselName, arrivalDate, departureDate, anSendDate });
           }
         }
       }
@@ -856,6 +881,7 @@ function processPortScheduleTerminalFile(file, terminalName) {
           const fields = { terminal: terminalName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
           if (u.arrivalDate) fields.arrivalDate = u.arrivalDate;
           if (u.departureDate) fields.departureDate = u.departureDate;
+          if (u.anSendDate) fields.anSendDate = u.anSendDate;
           batch.update(docRef, fields);
         });
         await batch.commit();
