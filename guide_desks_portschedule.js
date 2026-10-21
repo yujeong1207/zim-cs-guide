@@ -1716,6 +1716,7 @@ function jumpToResult(kind, id, path, query) {
     setTimeout(() => {
       const filterEl = document.getElementById("triangleFilter");
       if (filterEl) filterEl.value = "";
+      if (typeof triangleRevealEntry === "function") triangleRevealEntry(id);
       renderTriangleList();
       const el = document.querySelector('[data-triangle-id="' + id + '"]');
       if (el) {
