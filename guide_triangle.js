@@ -1,16 +1,14 @@
 /* =========================================================================
-   🌏 삼국간 (수출 CS) - 배(VSL)·화주 한 줄로 보는 진행 체크표
+   🌏 삼국간 (수출 CS) - 배(VSL)·화주 한 줄로 보는 진행 체크표 (표에서 바로 고치는 방식)
 
    ■ 데이터는 예전과 똑같이 "BL번호 1건 = Firestore 문서 1개"(triangle_trade)로 저장돼요.
      → 기존 데이터, 통합검색, 운임지불 메시지 등 다른 기능은 그대로 쓸 수 있어요.
-   ■ 화면만 바뀌었어요: 같은 배+화주의 BL들을 한 줄로 묶고,
-     POP / MFST / 인보이스 / 송금 / POL·POD 단계는 그 줄(= 배·화주) 단위로 한 번만 체크해요.
-     (칸을 누르면 그 줄에 속한 BL 전부에 한꺼번에 반영돼요)
-   ■ 입력 방법은 딱 두 가지예요
-     1) 엑셀 붙여넣기(또는 파일 올리기): B/L No · Vsl/Voy/Leg · Payer 열을 읽어서 자동 등록
-        - 숫자가 9로 시작하는 BL은 자동 제외
-        - Payer 코드로 화주 자동 입력 (처음 보는 코드만 한 번 연결하면 다음부터 자동)
-     2) 수기 입력: 배·화주는 목록에서 고르고, BL은 붙여넣기
+   ■ 같은 배+화주의 BL들을 한 줄로 묶어서 보여주고, 그 줄의 칸을 눌러 바로 고쳐요
+     (배 · 화주 · 온보드 · 2ND 배 · 단계 5개 · BL 목록 · REMARK 전부 표에서 직접).
+     고친 값은 그 줄에 속한 BL 전부에 한꺼번에 반영돼요.
+   ■ 새로 추가하는 방법은 딱 두 가지예요
+     1) 표 맨 아래 빈 줄에 직접 쓰기 (배·화주·BL을 쓰면 새 줄로 저장돼요)
+     2) 엑셀 붙여넣기 / 파일 올리기 (B/L No · Vsl/Voy/Leg · Payer 열을 읽어서 자동 등록)
    ========================================================================= */
 const TRIANGLE_COLLECTION = "triangle_trade"; // Firestore 컬렉션 이름
 
@@ -21,6 +19,19 @@ let triangleHideDone = false;    // "완료 건 숨기기"
 let triangleOpenGroups = new Set(); // BL 목록을 펼친 줄의 key 모음
 let triangleRenderPending = false;  // 입력 중이라 미뤄둔 다시 그리기가 있는지
 let triangleBound = false;
+let triangleArmedDelete = null;     // 🗑 한 번 눌러서 "한 번 더 누르면 삭제" 대기 중인 줄
+let triangleDraft = { vessel: "", shipper: "", onboard: "", second: "", bls: "", remark: "" }; // 맨 아래 빈 줄(저장 전)
+let triangleStatus = { text: "", kind: "" };
+let triangleStatusTimer = null;
+
+/* 표 위에 잠깐 보이는 안내/오류 메시지 (kind: ok | warn | bad) */
+function triangleSay(text, kind) {
+  triangleStatus = { text: text || "", kind: kind || "" };
+  const el = document.getElementById("triangleStatus");
+  if (el) { el.textContent = triangleStatus.text; el.className = "tx-status " + triangleStatus.kind; }
+  if (triangleStatusTimer) clearTimeout(triangleStatusTimer);
+  if (text) triangleStatusTimer = setTimeout(() => triangleSay("", ""), 8000);
+}
 
 /* =========================================================================
    Payer 코드 → 화주 연결
@@ -90,24 +101,34 @@ function triangleCompareByBl(a, b) {
 function triangleNormText(s) { return String(s || "").trim().replace(/\s+/g, " ").toUpperCase(); }
 function triangleCompact(s) { return String(s || "").replace(/\s+/g, "").toUpperCase(); }
 function triangleGroupKey(vessel, shipper) { return triangleNormText(vessel) + "‖" + triangleNormText(shipper); }
+function triangleBlKey(bl) { return String(bl || "").trim().toUpperCase(); }
 
-/* "RM1 11W" 와 "rm1  11w" 와 "RM111W" 처럼 띄어쓰기·대소문자만 다른 배는 같은 배로 보고, 이미 있는 표기를 그대로 써요 */
+/* 이미 있는 배 이름(2ND 배 포함)인지 */
+function triangleVesselKnown(v) {
+  const c = triangleCompact(v);
+  return TRIANGLE_LIST.some((x) => triangleCompact(x.vessel) === c || (x.secondVessel && triangleCompact(x.secondVessel) === c));
+}
+/* "RM1 11W" 와 "rm1  11w" 처럼 띄어쓰기·대소문자만 다른 배는 같은 배로 보고, 이미 있는 표기를 그대로 써요 */
 function triangleCanonVessel(v) {
   const t = triangleNormText(v);
   if (!t) return "";
   const c = triangleCompact(t);
   const f = TRIANGLE_LIST.find((x) => triangleCompact(x.vessel) === c);
-  return f ? String(f.vessel).trim() : t;
+  if (f) return String(f.vessel).trim();
+  const g = TRIANGLE_LIST.find((x) => x.secondVessel && triangleCompact(x.secondVessel) === c);
+  return g ? String(g.secondVessel).trim() : t;
 }
 function triangleVesselOptions() {
   const seen = new Map();
   TRIANGLE_LIST.forEach((t) => {
-    const v = String(t.vessel || "").trim();
-    if (!v) return;
-    const k = triangleCompact(v);
-    const ts = t.createdAt || "";
-    const cur = seen.get(k);
-    if (!cur || ts > cur.ts) seen.set(k, { v, ts });
+    [t.vessel, t.secondVessel].forEach((raw) => {
+      const v = String(raw || "").trim();
+      if (!v) return;
+      const k = triangleCompact(v);
+      const ts = t.createdAt || "";
+      const cur = seen.get(k);
+      if (!cur || ts > cur.ts) seen.set(k, { v, ts });
+    });
   });
   return Array.from(seen.values()).sort((a, b) => b.ts.localeCompare(a.ts)).map((x) => x.v);
 }
@@ -123,6 +144,29 @@ function triangleCanonShipper(s) {
   const lc = t.toLowerCase();
   const f = triangleShipperOptions().find((x) => x.toLowerCase() === lc);
   return f || t;
+}
+
+/* 칸에 쓴 값 검사 - 반환: { value, isNew } 또는 { error } */
+function triangleCheckVessel(raw, allowEmpty) {
+  const v = triangleNormText(raw);
+  if (!v) return allowEmpty ? { value: "" } : { error: "배 이름을 입력해 주세요" };
+  const canon = triangleCanonVessel(v);
+  const known = triangleVesselKnown(canon);
+  if (!known && !GRID_VESSEL_FORMAT.test(canon)) return { error: '배는 "선명 항차+방향" 형식으로 써 주세요 (예: RM1 11W, ZIM ARIES 12E)' };
+  return { value: canon, isNew: !known };
+}
+function triangleCheckShipper(raw) {
+  const s = String(raw || "").trim().replace(/\s+/g, " ").toUpperCase();
+  if (!s) return { error: "화주를 입력해 주세요" };
+  const canon = triangleCanonShipper(s);
+  const known = triangleShipperOptions().some((x) => x.toLowerCase() === canon.toLowerCase());
+  return { value: canon, isNew: !known };
+}
+
+function triangleParseBls(text) {
+  const out = [];
+  String(text || "").toUpperCase().split(/[\s,;]+/).filter(Boolean).forEach((b) => { if (out.indexOf(b) < 0) out.push(b); });
+  return out;
 }
 
 /* =========================================================================
@@ -150,21 +194,12 @@ function triangleStepState(step, value) {
   // 그 외에 직접 적은 글자는 "확인이 필요한 메모"로 보고 눈에 띄게 원문 그대로 보여줌
   return { kind: "check", label: raw.length > 6 ? raw.slice(0, 6) + "…" : raw, raw };
 }
-
 function triangleEntryInfo(t) {
-  const states = TRIANGLE_STEPS.map((s) => triangleStepState(s, t[s.key]));
-  return { states };
+  return { states: TRIANGLE_STEPS.map((s) => triangleStepState(s, t[s.key])) };
 }
 function triangleEntryComplete(t) {
   if (t.doneStatus === "done") return true; // 예전에 "처리완료"를 눌러둔 건도 완료로 인정
   return triangleEntryInfo(t).states.every((s) => s.kind === "done" || s.kind === "na");
-}
-
-/* "2026-09-21" → "9/21" */
-function triangleFormatDate(str) {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str || "");
-  if (!m) return str || "";
-  return Number(m[2]) + "/" + Number(m[3]);
 }
 
 function triangleDocToEntry(doc) {
@@ -188,17 +223,6 @@ function triangleDocToEntry(doc) {
   };
 }
 
-async function deleteTriangleFromServer(id) {
-  try {
-    await window.fbReady;
-    await window.fbDb.collection(TRIANGLE_COLLECTION).doc(id).delete();
-    return { ok: true };
-  } catch (err) {
-    console.error("삼국간 서버 삭제 실패:", err);
-    return { ok: false, error: String(err) };
-  }
-}
-
 /* 여러 문서에 같은 값을 한꺼번에 반영 (Firestore batch는 한 번에 500개까지라 나눠서 처리) */
 async function triangleBatchUpdate(ids, patch) {
   if (!ids.length) return { ok: true };
@@ -215,6 +239,22 @@ async function triangleBatchUpdate(ids, patch) {
     return { ok: false, error: String(err) };
   }
 }
+async function triangleBatchDelete(ids) {
+  if (!ids.length) return { ok: true };
+  try {
+    await window.fbReady;
+    for (let i = 0; i < ids.length; i += 400) {
+      const batch = window.fbDb.batch();
+      ids.slice(i, i + 400).forEach((id) => batch.delete(window.fbDb.collection(TRIANGLE_COLLECTION).doc(id)));
+      await batch.commit();
+    }
+    return { ok: true };
+  } catch (err) {
+    console.error("삼국간 삭제 실패:", err);
+    return { ok: false, error: String(err) };
+  }
+}
+async function deleteTriangleFromServer(id) { return triangleBatchDelete([id]); }
 
 /* =========================================================================
    배·화주 줄(그룹) 만들기
@@ -226,7 +266,7 @@ function triangleBuildGroups(list) {
     if (!map.has(key)) map.set(key, { key, entries: [] });
     map.get(key).entries.push(t);
   });
-  return Array.from(map.values()).map(triangleDecorateGroup);
+  return Array.from(map.values()).map((g) => triangleDecorateGroup(g));
 }
 
 function triangleDecorateGroup(g) {
@@ -248,6 +288,10 @@ function triangleDecorateGroup(g) {
   g.done = g.entries.every(triangleEntryComplete);
   g.latest = g.entries.reduce((m, e) => ((e.createdAt || "") > m ? e.createdAt : m), "");
   return g;
+}
+
+function triangleEntriesOfGroup(key) {
+  return TRIANGLE_LIST.filter((t) => triangleGroupKey(t.vessel, t.shipper) === key);
 }
 
 function triangleMatchesChip(g, chip) {
@@ -286,14 +330,10 @@ function renderTriangleList() {
   const ae = document.activeElement;
   if (ae && wrap.contains(ae) && ae.dataset && ae.dataset.dirty === "1") { triangleRenderPending = true; return; }
   triangleRenderPending = false;
+  const focusToken = gridCaptureFocus(wrap); // 다시 그린 뒤에 커서를 같은 칸으로 되돌리려고
 
   const qEl = document.getElementById("triangleFilter");
   const q = (qEl ? qEl.value : "").trim().toLowerCase();
-
-  if (TRIANGLE_LIST.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">아직 등록된 삼국간 건이 없어요. 위 "➕ 새 건 추가"로 첫 건을 등록해보세요.</div>';
-    return;
-  }
 
   let groups = triangleBuildGroups(TRIANGLE_LIST);
 
@@ -321,9 +361,12 @@ function renderTriangleList() {
     return a.shipper.localeCompare(b.shipper, "ko");
   });
 
+  const esc = escapeHtml;
   const chip = (cls, key, label, n) =>
     '<button type="button" class="tri-chip ' + cls + (triangleChipFilter === key ? " active" : "") + '" onclick="setTriangleChipFilter(\'' + key + '\')">' + label + '<span class="n">' + n + "</span></button>";
-  let html = '<div class="tri-bar">'
+
+  let html = '<div id="triangleStatus" class="tx-status ' + esc(triangleStatus.kind) + '">' + esc(triangleStatus.text) + "</div>";
+  html += '<div class="tri-bar">'
     + chip("check", "check", "확인중", counts.check)
     + chip("remit", "remit", "송금 대기", counts.remit)
     + chip("second", "second", "2ND 배 있음", counts.second)
@@ -335,73 +378,97 @@ function renderTriangleList() {
     + '<span class="tri-pill wait">대기</span><span>빈칸, 아직 안 함</span>'
     + '<span class="tri-pill check">확인중</span><span>CHECKING</span>'
     + '<span class="tri-pill na">신용</span><span>송금 불필요</span>'
-    + '<span class="tx-legend-tip">👆 칸을 누르면 대기 → O → X → (신용) → 확인중 순서로 바뀌고, 그 줄의 모든 BL에 한꺼번에 반영돼요</span></div>';
+    + '<span class="tx-legend-tip">👆 단계 칸을 누르면 대기 → O → X → (신용) → 확인중 순서로 바뀌어요 · 나머지 칸은 눌러서 바로 고쳐요 (Enter 아래 칸, Esc 되돌리기)</span></div>';
 
-  if (groups.length === 0) {
-    html += '<div class="empty-state">' + (q ? "❌ \"" + escapeHtml(qEl ? qEl.value : "") + "\"는 목록에 없어요." : "조건에 맞는 줄이 없어요.") + "</div>";
-    wrap.innerHTML = html;
-    return;
+  if (TRIANGLE_LIST.length === 0) {
+    html += '<div class="empty-state">아직 등록된 삼국간 건이 없어요. 표 맨 아래 빈 줄에 배·화주·BL을 쓰거나, 위 "➕ 엑셀로 새 건 추가"를 써보세요.</div>';
+  } else if (groups.length === 0) {
+    html += '<div class="empty-state">' + (q ? "❌ \"" + esc(qEl ? qEl.value : "") + "\"는 목록에 없어요." : "조건에 맞는 줄이 없어요.") + "</div>";
   }
 
-  html += '<table class="contacts-table triangle-table tx-table sticky-table"><thead><tr>'
-    + '<th></th><th>배(VSL)</th><th>화주</th><th>온보드</th><th>POP CHARGE</th><th>MFST CLOSE</th>'
-    + '<th title="인보이스 발송요청">인보이스요청</th><th>송금 완료</th><th>POL/POD 인폼</th><th>BL</th><th>REMARK</th><th></th></tr></thead><tbody>';
+  html += '<datalist id="txDlVessel">' + triangleVesselOptions().map((v) => '<option value="' + esc(v) + '">').join("") + "</datalist>"
+    + '<datalist id="txDlShipper">' + triangleShipperOptions().map((v) => '<option value="' + esc(v) + '">').join("") + "</datalist>";
+
+  html += '<table class="contacts-table triangle-table tx-table sticky-table"><colgroup>'
+    + '<col style="width:30px"><col style="width:176px"><col style="width:132px"><col style="width:104px"><col style="width:132px">'
+    + '<col style="width:84px"><col style="width:84px"><col style="width:90px"><col style="width:84px"><col style="width:90px">'
+    + '<col style="width:84px"><col style="width:210px"><col style="width:44px"></colgroup>'
+    + "<thead><tr><th></th><th>배(VSL)</th><th>화주</th><th>온보드</th><th>2ND 배</th>"
+    + "<th>POP CHARGE</th><th>MFST CLOSE</th><th title=\"인보이스 발송요청\">인보이스요청</th><th>송금 완료</th><th>POL/POD 인폼</th>"
+    + "<th>BL</th><th>REMARK</th><th></th></tr></thead><tbody>";
 
   let lastVessel = null;
   groups.forEach((g) => {
-    const gk = escapeHtml(g.key);
+    const gk = esc(g.key);
     const vk = triangleCompact(g.vessel);
     const firstOfVessel = vk !== lastVessel;
     lastVessel = vk;
     const autoOpen = !!q && g.entries.some((e) => String(e.blNumber).toLowerCase().includes(q));
     const open = triangleOpenGroups.has(g.key) || autoOpen;
+    const armed = triangleArmedDelete === g.key;
+    const cell = (field, val, ph, list, extraCls, title) =>
+      '<td class="no-strike"><input type="text" class="tx-input ' + (extraCls || "") + '" data-act="field" data-field="' + field + '" data-gk="' + gk + '" value="' + esc(val) + '" placeholder="' + ph + '" autocomplete="off"'
+      + (list ? ' list="' + list + '"' : "") + (title ? ' title="' + esc(title) + '"' : "") + "></td>";
 
     html += '<tr class="tx-row' + (g.done ? " row-done" : "") + (firstOfVessel ? " tx-vfirst" : "") + '" data-gk="' + gk + '">'
       + '<td class="no-strike tx-caret" data-act="toggle-bl" data-gk="' + gk + '">' + (open ? "▾" : "▸") + "</td>"
-      + '<td class="no-strike tx-vsl">' + (firstOfVessel
-        ? "<b" + (g.vessel ? "" : ' class="tx-miss"') + ">" + escapeHtml(g.vessel || "배 미입력") + "</b>"
-        : '<span class="tx-branch">└</span>') + "</td>"
-      + '<td class="no-strike">' + escapeHtml(g.shipper || "-") + (g.second ? '<div class="tri-2nd-row">2ND ' + escapeHtml(g.second) + "</div>" : "") + "</td>"
-      + '<td class="no-strike" style="white-space:nowrap;">' + (g.onboard ? escapeHtml(triangleFormatDate(g.onboard)) + (g.dateMixed ? "*" : "") : '<span class="tx-miss">미입력</span>') + "</td>";
+      + cell("vessel", g.vessel, "배 미입력", "txDlVessel", "tx-vin" + (firstOfVessel ? "" : " tx-rep") + (g.vessel ? "" : " tx-warnph"))
+      + cell("shipper", g.shipper, "화주 미입력", "txDlShipper", g.shipper ? "" : "tx-warnph")
+      + cell("onboard", g.onboard ? gridFmtDate(g.onboard) : "", "미입력", "", g.onboard ? (g.dateMixed ? "tx-mixed" : "") : "tx-warnph",
+        g.dateMixed ? "BL마다 온보드가 달라요. 여기서 고치면 이 줄 전체가 같은 날짜로 바뀌어요" : "")
+      + cell("second", g.second, "없음", "txDlVessel", "");
 
     g.states.forEach((st0, i) => {
       const st = (g.done && st0.kind === "wait") ? { kind: "na", label: "—", raw: "" } : st0;
       const tip = st.kind === "mixed" ? "BL마다 값이 달라요. 누르면 이 줄 전체를 O로 맞춰요" : (st.raw ? st.raw : "누르면 바뀌어요");
-      html += '<td class="no-strike tri-step-cell tx-step" tabindex="0" data-act="step" data-gk="' + gk + '" data-step="' + i + '" title="' + escapeHtml(tip) + '">'
-        + '<span class="tri-pill ' + st.kind + '">' + escapeHtml(st.label) + "</span></td>";
+      html += '<td class="no-strike tri-step-cell tx-step" tabindex="0" data-act="step" data-gk="' + gk + '" data-step="' + i + '" title="' + esc(tip) + '">'
+        + '<span class="tri-pill ' + st.kind + '">' + esc(st.label) + "</span></td>";
     });
 
     html += '<td class="no-strike"><button type="button" class="tx-bl-btn" data-act="toggle-bl" data-gk="' + gk + '">' + g.entries.length + "건 " + (open ? "▴" : "▾") + "</button></td>"
-      + '<td class="no-strike"><input type="text" class="tx-input tx-remark" data-act="remark" data-gk="' + gk + '" value="' + escapeHtml(g.remark) + '" placeholder="-"></td>'
-      + '<td class="no-strike" style="white-space:nowrap;"><button type="button" class="btn secondary-btn tx-edit-btn" data-act="edit" data-gk="' + gk + '" title="배·화주·온보드·2ND 수정">✏️</button></td>'
+      + cell("remark", g.remark, "-", "", "tx-remark")
+      + '<td class="no-strike tx-trash' + (armed ? " armed" : "") + '" data-act="del-group" data-gk="' + gk + '" title="이 줄 전체 삭제 (두 번 누르면 삭제돼요)">🗑</td>'
       + "</tr>";
 
     if (open) {
-      html += '<tr class="tx-ex-row"><td></td><td colspan="11" class="no-strike"><div class="tx-ex">'
-        + '<div class="tx-ex-head"><b>BL ' + g.entries.length + "건</b>"
+      const blText = g.entries.map((e) => e.blNumber).filter(Boolean).join("\n");
+      const perBl = g.entries.filter((e) => e.remark).map((e) => e.blNumber + ": " + e.remark);
+      html += '<tr class="tx-ex-row"><td></td><td colspan="12" class="no-strike"><div class="tx-ex">'
+        + '<div class="tx-ex-head"><b>BL <span class="tx-cnt">' + g.entries.length + "</span>건</b>"
+        + '<span class="tx-sub">한 줄에 하나씩 · 고치거나 붙여넣고 칸 밖을 누르면 저장돼요</span>'
         + '<button type="button" class="btn secondary-btn tx-mini" data-act="copy-bls" data-gk="' + gk + '">📋 BL 전체 복사</button></div>'
-        + '<div class="tx-bl-list">'
-        + g.entries.map((e) => '<div class="tx-bl-line" data-triangle-id="' + e.id + '"><span class="tx-bl-no">' + escapeHtml(e.blNumber || "-") + "</span>"
-          + (e.remark ? '<span class="tx-bl-remark" title="' + escapeHtml(e.remark) + '">' + escapeHtml(e.remark) + "</span>" : "")
-          + '<button type="button" class="tx-del" data-act="del-bl" data-id="' + e.id + '" title="이 BL 삭제">✕</button></div>').join("")
-        + "</div>"
-        + '<div class="tx-add-bl"><textarea class="tx-input tx-bl-input" rows="1" data-act="bl-input" data-gk="' + gk + '" placeholder="BL 추가 (엑셀에서 복사해 붙여넣기, 여러 줄 가능)"></textarea>'
-        + '<button type="button" class="btn generate-btn tx-mini" data-act="add-bls" data-gk="' + gk + '">추가</button></div>'
+        + '<textarea class="tx-input tx-bl-text" rows="1" data-act="bl-edit" data-gk="' + gk + '" spellcheck="false">' + esc(blText) + "</textarea>"
+        + (perBl.length ? '<div class="tx-sub" style="margin-top:6px;">BL별로 적혀 있던 메모: ' + esc(perBl.join(" · ")) + "</div>" : "")
         + "</div></td></tr>";
     }
   });
 
+  // 맨 아래 빈 줄 - 여기에 쓰면 새 줄이 돼요
+  const d = triangleDraft;
+  const dcell = (field, val, ph, list) =>
+    '<td class="no-strike"><input type="text" class="tx-input" data-act="draft" data-field="' + field + '" value="' + esc(val) + '" placeholder="' + ph + '" autocomplete="off"' + (list ? ' list="' + list + '"' : "") + "></td>";
+  html += '<tr class="tx-draft"><td class="no-strike tx-caret">＋</td>'
+    + dcell("vessel", d.vessel, "새 줄: 배 (예: RM1 11W)", "txDlVessel")
+    + dcell("shipper", d.shipper, "화주", "txDlShipper")
+    + dcell("onboard", d.onboard ? gridFmtDate(d.onboard) : "", "온보드 10/17", "")
+    + dcell("second", d.second, "2ND 배", "txDlVessel")
+    + '<td colspan="5" class="no-strike tx-draft-hint">← 배·화주를 쓰고 오른쪽에 BL을 붙여넣으면 새 줄로 저장돼요</td>'
+    + dcell("bls", d.bls, "BL 붙여넣기", "")
+    + dcell("remark", d.remark, "REMARK", "")
+    + "<td></td></tr>";
+
   html += "</tbody></table>"
     + '<div class="hint" style="margin-top:8px;">✅ 배·화주 ' + groups.length + "줄 표시됨 (진행 " + prog.length + " · 완료 " + doneCount + ")</div>";
   wrap.innerHTML = html;
+  wrap.querySelectorAll("textarea.tx-bl-text").forEach(triangleAutoSize);
+  gridRestoreFocus(wrap, focusToken);
 }
 
+function triangleAutoSize(t) { t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight + 2, 360) + "px"; }
+
 /* =========================================================================
-   표 위에서 일어나는 클릭/입력 처리 (한 번만 연결해두는 방식)
+   표 안에서 일어나는 클릭/입력 처리
    ========================================================================= */
-function triangleEntriesOfGroup(key) {
-  return TRIANGLE_LIST.filter((t) => triangleGroupKey(t.vessel, t.shipper) === key);
-}
 
 /* 대기 → O → X → (송금만: 신용) → 확인중 → 대기 */
 function triangleNextStepValue(stepIdx, st) {
@@ -418,29 +485,7 @@ async function triangleCycleStep(key, stepIdx) {
   const value = triangleNextStepValue(stepIdx, g.states[stepIdx]);
   const patch = {}; patch[TRIANGLE_STEPS[stepIdx].key] = value;
   const r = await triangleBatchUpdate(entries.map((e) => e.id), patch);
-  if (!r.ok) alert("저장에 실패했어요: " + r.error);
-}
-
-function triangleParseBls(text) {
-  const out = [];
-  String(text || "").toUpperCase().split(/[\s,;]+/).filter(Boolean).forEach((b) => { if (out.indexOf(b) < 0) out.push(b); });
-  return out;
-}
-
-async function triangleAddBlsToGroup(key, text, btn) {
-  const entries = triangleEntriesOfGroup(key);
-  if (!entries.length) return;
-  const all = triangleParseBls(text);
-  if (!all.length) return;
-  const bad = all.filter((b) => !/^[A-Z]+\d+$/.test(b));
-  if (bad.length) { alert("BL 형식이 이상해요: " + bad.join(", ")); return; }
-  const existing = new Set(TRIANGLE_LIST.map((t) => String(t.blNumber || "").trim().toUpperCase()));
-  const fresh = all.filter((b) => !existing.has(b));
-  const dups = all.filter((b) => existing.has(b));
-  if (!fresh.length) { alert("이미 등록된 BL이에요: " + dups.join(", ")); return; }
-  const res = await triangleCreateEntries(fresh, triangleTemplateFromEntries(entries));
-  if (!res.ok) { alert("등록에 실패했어요: " + res.error); return; }
-  if (dups.length) alert("이미 있는 BL은 제외하고 " + fresh.length + "건을 추가했어요.\n제외: " + dups.join(", "));
+  if (!r.ok) triangleSay("저장에 실패했어요: " + r.error, "bad");
 }
 
 /* 같은 줄에 BL을 새로 넣을 때, 그 줄의 현재 값(2ND·REMARK·진행 단계)을 그대로 물려줘요 */
@@ -451,6 +496,26 @@ function triangleTemplateFromEntries(entries) {
   return t;
 }
 
+function triangleNewDocData(bl, template, nowIso) {
+  return {
+    blNumber: bl,
+    vessel: template.vessel || "",
+    shipper: template.shipper || "",
+    onboardDate: template.onboardDate || "",
+    secondVessel: template.secondVessel || "",
+    groupRemark: template.groupRemark || "",
+    popCharge: template.popCharge || "",
+    mfstClose: template.mfstClose || "",
+    invoiceRequest: template.invoiceRequest || "",
+    remittance: template.remittance || "",
+    polPodInform: template.polPodInform || "",
+    remark: "",
+    doneStatus: "progress",
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    createdAtIso: nowIso,
+  };
+}
+
 async function triangleCreateEntries(blNumbers, template) {
   try {
     await window.fbReady;
@@ -458,24 +523,7 @@ async function triangleCreateEntries(blNumbers, template) {
     for (let i = 0; i < blNumbers.length; i += 400) {
       const batch = window.fbDb.batch();
       blNumbers.slice(i, i + 400).forEach((bl) => {
-        const ref = window.fbDb.collection(TRIANGLE_COLLECTION).doc();
-        batch.set(ref, {
-          blNumber: bl,
-          vessel: template.vessel || "",
-          shipper: template.shipper || "",
-          onboardDate: template.onboardDate || "",
-          secondVessel: template.secondVessel || "",
-          groupRemark: template.groupRemark || "",
-          popCharge: template.popCharge || "",
-          mfstClose: template.mfstClose || "",
-          invoiceRequest: template.invoiceRequest || "",
-          remittance: template.remittance || "",
-          polPodInform: template.polPodInform || "",
-          remark: "",
-          doneStatus: "progress",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-          createdAtIso: nowIso,
-        });
+        batch.set(window.fbDb.collection(TRIANGLE_COLLECTION).doc(), triangleNewDocData(bl, template, nowIso));
       });
       await batch.commit();
     }
@@ -484,6 +532,178 @@ async function triangleCreateEntries(blNumbers, template) {
     console.error("삼국간 등록 실패:", err);
     return { ok: false, error: String(err) };
   }
+}
+
+/* ---- 줄에 있는 칸(배·화주·온보드·2ND·REMARK) 고치기 ---- */
+function triangleFail(msg) { triangleSay(msg, "bad"); renderTriangleList(); }
+
+async function triangleCommitField(el) {
+  const key = el.dataset.gk, field = el.dataset.field;
+  el.dataset.dirty = "0";
+  const entries = triangleEntriesOfGroup(key);
+  if (!entries.length) return;
+  const ids = entries.map((e) => e.id);
+  const txt = el.value;
+  let patch = null, note = "", newKey = null;
+
+  if (field === "vessel") {
+    const r = triangleCheckVessel(txt, false); if (r.error) return triangleFail(r.error);
+    patch = { vessel: r.value };
+    if (r.isNew) note = "새 배로 저장됐어요: " + r.value;
+    newKey = triangleGroupKey(r.value, entries[0].shipper);
+  } else if (field === "shipper") {
+    const r = triangleCheckShipper(txt); if (r.error) return triangleFail(r.error);
+    patch = { shipper: r.value };
+    if (r.isNew) note = "처음 쓰는 화주예요: " + r.value + " (새 화주로 저장됐어요)";
+    newKey = triangleGroupKey(entries[0].vessel, r.value);
+  } else if (field === "onboard") {
+    const d = gridParseDate(txt);
+    if (d === null) return triangleFail('온보드: "' + txt.trim() + '" 날짜를 읽지 못했어요 (예: 10/17 또는 1017)');
+    patch = { onboardDate: d };
+  } else if (field === "second") {
+    const r = triangleCheckVessel(txt, true); if (r.error) return triangleFail("2ND 배: " + r.error);
+    patch = { secondVessel: r.value };
+    if (r.isNew) note = "새 2ND 배로 저장됐어요: " + r.value;
+  } else if (field === "remark") {
+    patch = { groupRemark: txt.trim() };
+  }
+  if (!patch) return;
+
+  if (newKey && newKey !== key && TRIANGLE_LIST.some((t) => triangleGroupKey(t.vessel, t.shipper) === newKey)) {
+    note = "같은 배·화주 줄이 이미 있어서 한 줄로 합쳐졌어요";
+  }
+  const r = await triangleBatchUpdate(ids, patch);
+  if (!r.ok) triangleSay("저장에 실패했어요: " + r.error, "bad");
+  else triangleSay(note || "저장됐어요", note ? "warn" : "ok");
+}
+
+/* ---- BL 목록(칸 하나에 한 줄씩) 고치기: 늘어난 건 새로 만들고, 사라진 건 삭제 ---- */
+async function triangleApplyBlEdit(key, text) {
+  const entries = triangleEntriesOfGroup(key);
+  if (!entries.length) return;
+  const tokens = triangleParseBls(text);
+  const bad = tokens.filter((b) => !/^[A-Z]+\d+$/.test(b));
+  if (bad.length) return triangleFail("BL 형식이 이상해요: " + bad.join(", "));
+  if (!tokens.length) return triangleFail("BL을 전부 지우려면 오른쪽 끝 🗑로 줄 전체를 삭제해 주세요");
+
+  const current = new Map();
+  entries.forEach((e) => { const k = triangleBlKey(e.blNumber); if (k) current.set(k, e); });
+  const others = new Map();
+  TRIANGLE_LIST.forEach((t) => { if (triangleGroupKey(t.vessel, t.shipper) !== key) others.set(triangleBlKey(t.blNumber), t); });
+
+  const added = tokens.filter((b) => !current.has(b));
+  const removed = Array.from(current.keys()).filter((b) => tokens.indexOf(b) < 0);
+  const dup = added.filter((b) => others.has(b));
+  if (dup.length) {
+    return triangleFail("이미 다른 줄에 있는 BL이에요: " + dup.map((b) => b + " → " + others.get(b).vessel + " / " + others.get(b).shipper).join(", "));
+  }
+  if (!added.length && !removed.length) { renderTriangleList(); return; }
+  if (removed.length && !confirm("BL " + removed.length + "건을 삭제할까요?\n" + removed.join(", "))) { renderTriangleList(); return; }
+
+  try {
+    await window.fbReady;
+    const tpl = triangleTemplateFromEntries(entries);
+    const nowIso = new Date().toISOString();
+    const batch = window.fbDb.batch();
+    added.forEach((bl) => batch.set(window.fbDb.collection(TRIANGLE_COLLECTION).doc(), triangleNewDocData(bl, tpl, nowIso)));
+    removed.forEach((bl) => batch.delete(window.fbDb.collection(TRIANGLE_COLLECTION).doc(current.get(bl).id)));
+    await batch.commit();
+    triangleSay("BL " + tokens.length + "건으로 저장됐어요" + (added.length ? " (추가 " + added.length + ")" : "") + (removed.length ? " (삭제 " + removed.length + ")" : ""), "ok");
+  } catch (err) {
+    console.error("BL 수정 실패:", err);
+    triangleSay("저장에 실패했어요: " + err, "bad");
+  }
+}
+
+/* ---- 🗑 줄 전체 삭제 (두 번 눌러야 삭제) ---- */
+function triangleOnTrash(key) {
+  if (triangleArmedDelete !== key) {
+    triangleArmedDelete = key;
+    const entries = triangleEntriesOfGroup(key);
+    triangleSay("한 번 더 누르면 이 줄(BL " + entries.length + "건)을 삭제해요", "warn");
+    renderTriangleList();
+    setTimeout(() => { if (triangleArmedDelete === key) { triangleArmedDelete = null; renderTriangleList(); } }, 3000);
+    return;
+  }
+  triangleArmedDelete = null;
+  const ids = triangleEntriesOfGroup(key).map((e) => e.id);
+  triangleBatchDelete(ids).then((r) => triangleSay(r.ok ? "삭제했어요" : "삭제에 실패했어요: " + r.error, r.ok ? "ok" : "bad"));
+}
+
+/* ---- 맨 아래 빈 줄 ---- */
+function triangleDraftCommit(el) {
+  const f = el.dataset.field, txt = el.value;
+  el.dataset.dirty = "0";
+  const d = triangleDraft;
+  let note = "";
+  if (f === "vessel") {
+    if (!txt.trim()) d.vessel = "";
+    else { const r = triangleCheckVessel(txt, false); if (r.error) { d.vessel = ""; return triangleFail(r.error); } d.vessel = r.value; if (r.isNew) note = "새 배로 저장돼요: " + r.value; }
+  } else if (f === "shipper") {
+    if (!txt.trim()) d.shipper = "";
+    else { const r = triangleCheckShipper(txt); if (r.error) { d.shipper = ""; return triangleFail(r.error); } d.shipper = r.value; if (r.isNew) note = "처음 쓰는 화주예요: " + r.value + " (새 화주로 저장돼요)"; }
+  } else if (f === "onboard") {
+    const v = gridParseDate(txt);
+    if (v === null) { d.onboard = ""; return triangleFail('온보드: "' + txt.trim() + '" 날짜를 읽지 못했어요 (예: 10/17 또는 1017)'); }
+    d.onboard = v;
+  } else if (f === "second") {
+    const r = triangleCheckVessel(txt, true); if (r.error) { d.second = ""; return triangleFail("2ND 배: " + r.error); }
+    d.second = r.value;
+  } else if (f === "bls") {
+    d.bls = triangleParseBls(txt).join(" ");
+  } else if (f === "remark") {
+    d.remark = txt.trim();
+  }
+  triangleDraftTryCreate(note);
+}
+
+async function triangleDraftTryCreate(note) {
+  const d = triangleDraft;
+  const bls = triangleParseBls(d.bls);
+  const missing = [];
+  if (!d.vessel) missing.push("배");
+  if (!d.shipper) missing.push("화주");
+  if (!bls.length) missing.push("BL");
+  if (missing.length) {
+    if (d.vessel || d.shipper || bls.length) triangleSay((note ? note + " · " : "") + missing.join(", ") + "까지 쓰면 새 줄로 저장돼요", "warn");
+    renderTriangleList();
+    return;
+  }
+  const bad = bls.filter((b) => !/^[A-Z]+\d+$/.test(b));
+  if (bad.length) { triangleSay("BL 형식이 이상해요: " + bad.join(", "), "bad"); renderTriangleList(); return; }
+
+  const existing = new Map(TRIANGLE_LIST.map((t) => [triangleBlKey(t.blNumber), t]));
+  const fresh = bls.filter((b) => !existing.has(b));
+  const dups = bls.filter((b) => existing.has(b));
+  if (!fresh.length) { triangleSay("이미 등록된 BL이에요: " + dups.map((b) => b + " → " + existing.get(b).vessel + " / " + existing.get(b).shipper).join(", "), "bad"); renderTriangleList(); return; }
+
+  const key = triangleGroupKey(d.vessel, d.shipper);
+  const entries = triangleEntriesOfGroup(key);
+  let tpl, merged = false;
+  if (entries.length) {
+    merged = true;
+    tpl = triangleTemplateFromEntries(entries);
+    if (!tpl.onboardDate && d.onboard) { // 온보드가 비어 있던 줄이면 이번에 쓴 날짜를 줄 전체에 채워줘요
+      tpl.onboardDate = d.onboard;
+      await triangleBatchUpdate(entries.map((e) => e.id), { onboardDate: d.onboard });
+    }
+  } else {
+    tpl = { vessel: d.vessel, shipper: d.shipper, onboardDate: d.onboard, secondVessel: d.second, groupRemark: d.remark };
+  }
+  const res = await triangleCreateEntries(fresh, tpl);
+  if (!res.ok) { triangleSay("저장에 실패했어요: " + res.error, "bad"); return; }
+  triangleDraft = { vessel: "", shipper: "", onboard: "", second: "", bls: "", remark: "" };
+  triangleSay("BL " + fresh.length + "건 저장됐어요 (" + (merged ? "기존 줄에 추가" : "새 줄") + ")" + (note ? " · " + note : "") + (dups.length ? " · 이미 있는 BL 제외: " + dups.join(", ") : ""), (dups.length || note) ? "warn" : "ok");
+  renderTriangleList();
+  const first = document.querySelector('#triangleListWrap input[data-act="draft"][data-field="vessel"]');
+  if (first) first.focus();
+}
+
+function triangleFindCell(desc) {
+  const wrap = document.getElementById("triangleListWrap");
+  if (!wrap || !desc) return null;
+  const sel = 'input[data-act="' + desc.act + '"][data-field="' + desc.field + '"]' + (desc.gk != null ? '[data-gk="' + String(desc.gk).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]' : "");
+  return wrap.querySelector(sel);
 }
 
 function triangleBindEvents() {
@@ -501,54 +721,74 @@ function triangleBindEvents() {
       if (triangleOpenGroups.has(gk)) triangleOpenGroups.delete(gk); else triangleOpenGroups.add(gk);
       renderTriangleList();
     }
-    else if (act === "edit") { openTriangleGroupEditor(gk); }
+    else if (act === "del-group") { triangleOnTrash(gk); }
     else if (act === "copy-bls") {
       const text = triangleEntriesOfGroup(gk).sort(triangleCompareByBl).map((t) => t.blNumber).filter(Boolean).join("\n");
       const done = () => { const old = el.textContent; el.textContent = "복사됨 ✓"; setTimeout(() => { el.textContent = old; }, 1500); };
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done).catch(() => legacyCopy(text));
       else legacyCopy(text);
     }
-    else if (act === "del-bl") {
-      const t = TRIANGLE_LIST.find((x) => x.id === el.dataset.id);
-      if (!t) return;
-      if (!confirm(t.blNumber + " 을(를) 삭제할까요?")) return;
-      deleteTriangleFromServer(t.id).then((r) => { if (!r.ok) alert("삭제에 실패했어요: " + r.error); });
-    }
-    else if (act === "add-bls") {
-      const ta = el.parentElement.querySelector("textarea");
-      if (ta) { triangleAddBlsToGroup(gk, ta.value, el); ta.value = ""; ta.dataset.dirty = "0"; }
-    }
+  });
+
+  wrap.addEventListener("focusin", (e) => {
+    const el = e.target;
+    if (el.dataset && el.dataset.act && el.tagName === "INPUT") { el.dataset.orig = el.value; el.select(); }
+    else if (el.dataset && el.dataset.act === "bl-edit") { el.dataset.orig = el.value; }
   });
 
   wrap.addEventListener("keydown", (e) => {
-    const el = e.target.closest("[data-act]");
-    if (!el) return;
-    if (el.dataset.act === "step" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); triangleCycleStep(el.dataset.gk, Number(el.dataset.step)); }
-    else if (el.dataset.act === "remark" && e.key === "Enter") { e.preventDefault(); el.blur(); }
+    const el = e.target;
+    if (!el.dataset || !el.dataset.act) return;
+    if (el.dataset.act === "step" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); triangleCycleStep(el.dataset.gk, Number(el.dataset.step)); return; }
+    if (el.tagName !== "INPUT") return;
+    if (e.key === "Escape") { el.value = el.dataset.orig != null ? el.dataset.orig : el.value; el.dataset.dirty = "0"; return; }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      // 같은 열의 아래(Shift는 위) 칸으로 이동 - 저장하느라 표가 다시 그려져도 같은 칸을 다시 찾아서 이동해요
+      const all = Array.from(wrap.querySelectorAll('input[data-field="' + el.dataset.field + '"]'));
+      const nx = all[all.indexOf(el) + (e.shiftKey ? -1 : 1)];
+      const desc = nx ? { act: nx.dataset.act, field: nx.dataset.field, gk: nx.dataset.gk } : null;
+      el.blur(); // 값이 바뀌었으면 여기서 저장(change)돼요
+      const target = triangleFindCell(desc);
+      if (target) target.focus();
+    }
   });
 
   wrap.addEventListener("input", (e) => {
     const el = e.target;
     if (el.classList && el.classList.contains("tx-input")) {
       el.dataset.dirty = "1";
-      if (el.tagName === "TEXTAREA") { el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight + 2, 200) + "px"; }
+      if (el.tagName === "TEXTAREA") triangleAutoSize(el);
     }
   });
 
-  wrap.addEventListener("change", async (e) => {
+  wrap.addEventListener("paste", (e) => {
     const el = e.target;
-    if (el.dataset && el.dataset.act === "remark") {
-      const ids = triangleEntriesOfGroup(el.dataset.gk).map((t) => t.id);
-      const r = await triangleBatchUpdate(ids, { groupRemark: el.value.trim() });
-      el.dataset.dirty = "0";
-      if (!r.ok) alert("저장에 실패했어요: " + r.error);
-    }
+    if (!el.dataset || el.dataset.act !== "draft" || el.dataset.field !== "bls") return;
+    const txt = (e.clipboardData || window.clipboardData).getData("text");
+    if (!/\s/.test(txt.trim())) return; // 한 건이면 그냥 붙여넣기
+    e.preventDefault();
+    el.value = triangleParseBls(txt).join(" ");
+    el.dataset.dirty = "1";
+    el.dispatchEvent(new Event("change", { bubbles: true }));
+  });
+
+  wrap.addEventListener("change", (e) => {
+    const el = e.target;
+    if (!el.dataset) return;
+    if (el.dataset.act === "field") triangleCommitField(el);
+    else if (el.dataset.act === "bl-edit") { el.dataset.dirty = "0"; triangleApplyBlEdit(el.dataset.gk, el.value); }
+    else if (el.dataset.act === "draft") triangleDraftCommit(el);
   });
 
   wrap.addEventListener("focusout", (e) => {
     const el = e.target;
-    if (el.dataset && el.dataset.act === "remark") { /* change 이후에 정리 */ setTimeout(() => { el.dataset.dirty = "0"; if (triangleRenderPending) renderTriangleList(); }, 0); }
-    else if (el.dataset && el.dataset.act === "bl-input") { el.dataset.dirty = "0"; if (triangleRenderPending) setTimeout(renderTriangleList, 0); }
+    if (!el.dataset || !el.dataset.act) return;
+    // change 이벤트가 먼저 처리된 다음, 입력 중이라 미뤄둔 다시 그리기가 있으면 그때 실행
+    setTimeout(() => {
+      if (el.dataset) el.dataset.dirty = "0";
+      if (triangleRenderPending) renderTriangleList();
+    }, 0);
   });
 }
 
@@ -575,91 +815,9 @@ async function loadTriangleTab(forceRefresh) {
 }
 
 /* =========================================================================
-   배 / 화주 고르기 칸 (새 건 추가와 줄 수정에서 같이 써요) - 목록에서 고르는 게 기본이라 제멋대로 쓰기 어려워요
-   ========================================================================= */
-function triangleVesselPicker(prefix, current, allowEmpty) {
-  const opts = (allowEmpty ? '<option value="">없음</option>' : '<option value="">배 선택</option>')
-    + triangleVesselOptions().map((v) => "<option" + (v === current ? " selected" : "") + ' value="' + escapeHtml(v) + '">' + escapeHtml(v) + "</option>").join("")
-    + '<option value="__new">＋ 새 배 추가</option>';
-  return '<select id="' + prefix + 'Vessel" data-act="vsel" data-prefix="' + prefix + '" class="tx-sel">' + opts + "</select>"
-    + '<div id="' + prefix + 'NewV" class="tx-newv" style="display:none;">'
-    + '<input id="' + prefix + 'VName" placeholder="선명 (예: RM1, ZIM ARIES)" style="text-transform:uppercase;">'
-    + '<input id="' + prefix + 'VVoy" placeholder="항차 숫자" inputmode="numeric" maxlength="4">'
-    + '<select id="' + prefix + 'VDir"><option>W</option><option>E</option><option>S</option><option>N</option></select>'
-    + '<div class="tx-newv-pv" id="' + prefix + 'VPv"></div></div>';
-}
-
-function triangleReadVessel(prefix, allowEmpty) {
-  const sel = document.getElementById(prefix + "Vessel");
-  if (!sel) return { error: "배 칸을 찾지 못했어요" };
-  if (sel.value === "__new") {
-    const name = document.getElementById(prefix + "VName").value.trim().toUpperCase();
-    const voy = document.getElementById(prefix + "VVoy").value.replace(/\D/g, "");
-    const dir = document.getElementById(prefix + "VDir").value;
-    if (!name || !voy) return { error: "새 배는 선명과 항차 숫자를 입력해 주세요" };
-    return { value: triangleCanonVessel(name + " " + voy + dir) };
-  }
-  if (!sel.value && !allowEmpty) return { error: "배를 선택해 주세요" };
-  return { value: sel.value };
-}
-
-function triangleShipperPicker(prefix, current) {
-  const opts = '<option value="">화주 선택</option>'
-    + triangleShipperOptions().map((s) => "<option" + (s === current ? " selected" : "") + ' value="' + escapeHtml(s) + '">' + escapeHtml(s) + "</option>").join("")
-    + '<option value="__new">＋ 새 화주 추가</option>';
-  return '<select id="' + prefix + 'Shipper" data-act="ssel" data-prefix="' + prefix + '" class="tx-sel">' + opts + "</select>"
-    + '<input id="' + prefix + 'SName" class="tx-snew" placeholder="새 화주 이름" style="display:none;">';
-}
-
-function triangleReadShipper(prefix) {
-  const sel = document.getElementById(prefix + "Shipper");
-  if (!sel) return { error: "화주 칸을 찾지 못했어요" };
-  let v = sel.value;
-  if (v === "__new") v = document.getElementById(prefix + "SName").value.trim().toUpperCase();
-  if (!v) return { error: "화주를 선택해 주세요" };
-  return { value: triangleCanonShipper(v) };
-}
-
-/* 선택 칸에서 "＋ 새 …"를 고르면 입력칸이 나타나게 */
-document.addEventListener("change", (e) => {
-  const el = e.target;
-  if (!el.dataset) return;
-  if (el.dataset.act === "vsel") {
-    const nv = document.getElementById(el.dataset.prefix + "NewV");
-    if (nv) nv.style.display = el.value === "__new" ? "flex" : "none";
-  } else if (el.dataset.act === "ssel") {
-    const sn = document.getElementById(el.dataset.prefix + "SName");
-    if (sn) sn.style.display = el.value === "__new" ? "block" : "none";
-  } else if (el.dataset.act === "imp-ship") {
-    const g = triangleImport.groups[Number(el.dataset.gi)];
-    g.sel = el.value;
-    g.auto = !!g.payer && el.value === trianglePayerMap[g.payer];
-    triangleRenderImportPreview();
-  } else if (el.dataset.act === "imp-file") {
-    triangleReadImportFile(el.files && el.files[0]);
-  } else if (el.id && /VDir$/.test(el.id)) {
-    const prefix = el.id.replace(/VDir$/, "");
-    const n = document.getElementById(prefix + "VName"), y = document.getElementById(prefix + "VVoy"), pv = document.getElementById(prefix + "VPv");
-    if (n && y && pv) { const name = n.value.trim().toUpperCase(), voy = y.value.replace(/\D/g, ""); pv.textContent = (name && voy) ? "→ " + name + " " + voy + el.value : ""; }
-  }
-});
-document.addEventListener("input", (e) => {
-  const el = e.target;
-  if (!el.dataset) return;
-  if (el.dataset.act === "imp-ship-new") triangleImport.groups[Number(el.dataset.gi)].nw = el.value;
-  else if (el.dataset.act === "imp-paste") triangleParseImportText(el.value);
-  else if (el.id && /VName$|VVoy$/.test(el.id)) {
-    const prefix = el.id.replace(/VName$|VVoy$/, "");
-    const n = document.getElementById(prefix + "VName"), y = document.getElementById(prefix + "VVoy"), d = document.getElementById(prefix + "VDir"), pv = document.getElementById(prefix + "VPv");
-    if (n && y && d && pv) { const name = n.value.trim().toUpperCase(), voy = y.value.replace(/\D/g, ""); pv.textContent = (name && voy) ? "→ " + name + " " + voy + d.value : ""; }
-  }
-});
-
-/* =========================================================================
-   ➕ 새 건 추가 패널 (엑셀 붙여넣기 / 수기 입력)
+   ➕ 엑셀로 새 건 추가 (붙여넣기 / 파일 올리기)
    ========================================================================= */
 let triangleAddOpen = false;
-let triangleAddMode = "excel";
 let triangleImport = { total: 0, excl: [], dups: [], groups: [], error: "" };
 
 function toggleTriangleAddPanel() {
@@ -675,37 +833,15 @@ function renderTriangleAddPanel() {
   triangleImport = { total: 0, excl: [], dups: [], groups: [], error: "" };
   panel.style.display = "block";
   panel.innerHTML = '<div class="tx-add">'
-    + '<div class="tx-add-tabs">'
-    + '<button type="button" id="txaTabExcel" class="btn secondary-btn" onclick="setTriangleAddMode(\'excel\')">📋 엑셀 붙여넣기 / 파일</button>'
-    + '<button type="button" id="txaTabManual" class="btn secondary-btn" onclick="setTriangleAddMode(\'manual\')">✍️ 수기 입력</button>'
+    + '<div class="tx-add-tabs"><b>📋 엑셀로 새 건 추가</b>'
     + '<button type="button" class="btn secondary-btn tx-close" onclick="toggleTriangleAddPanel()">✕ 닫기</button></div>'
-
-    + '<div id="txaExcel">'
-    + '<div class="hint">엑셀에서 복사해서 붙여넣거나 파일을 올리면 <b>B/L No</b>, <b>Vsl·Voy·Leg</b>(배), <b>Payer</b>(화주)를 읽어요. 숫자가 <b>9로 시작하는 BL은 자동 제외</b>돼요. 헤더를 같이 복사해도, 빼도 돼요.</div>'
+    + '<div class="hint">엑셀에서 복사해서 붙여넣거나 파일을 올리면 <b>B/L No</b>, <b>Vsl·Voy·Leg</b>(배), <b>Payer</b>(화주)를 읽어요. 숫자가 <b>9로 시작하는 BL은 자동 제외</b>돼요. 헤더를 같이 복사해도, 빼도 돼요. (한두 건은 표 맨 아래 빈 줄에 직접 쓰는 게 빨라요)</div>'
     + '<textarea id="txaPaste" class="tx-paste" rows="4" data-act="imp-paste" placeholder="여기에 붙여넣기 (Ctrl+V)"></textarea>'
     + '<div style="margin-top:6px;"><input type="file" id="txaFile" data-act="imp-file" accept=".xlsx,.xls,.csv"></div>'
-    + '<div id="txaPreview"></div></div>'
-
-    + '<div id="txaManual" style="display:none;">'
-    + '<div class="tx-field"><label>배</label>' + triangleVesselPicker("txa", "", false) + "</div>"
-    + '<div class="tx-field"><label>BL 번호 <span class="tx-sub">한 줄에 하나, 한 건이면 그냥 붙여넣기</span></label><textarea id="txaBls" class="tx-paste" rows="3" placeholder="ZIMUHAI80255002"></textarea></div>'
-    + '<div class="tx-field"><label>화주</label>' + triangleShipperPicker("txa", "") + "</div></div>"
-
+    + '<div id="txaPreview"></div>'
     + '<div class="tx-field tx-date"><label>온보드</label><input type="date" id="txaDate"></div>'
     + '<div class="tx-add-actions"><button type="button" class="btn generate-btn" onclick="submitTriangleAdd()">등록</button><span id="txaMsg" class="tx-msg"></span></div>'
     + "</div>";
-  setTriangleAddMode(triangleAddMode);
-}
-
-function setTriangleAddMode(mode) {
-  triangleAddMode = mode;
-  const a = document.getElementById("txaExcel"), b = document.getElementById("txaManual");
-  if (!a || !b) return;
-  a.style.display = mode === "excel" ? "block" : "none";
-  b.style.display = mode === "manual" ? "block" : "none";
-  document.getElementById("txaTabExcel").classList.toggle("tx-tab-on", mode === "excel");
-  document.getElementById("txaTabManual").classList.toggle("tx-tab-on", mode === "manual");
-  triangleSetMsg("", "");
 }
 
 function triangleSetMsg(text, kind) {
@@ -714,6 +850,26 @@ function triangleSetMsg(text, kind) {
   m.textContent = text;
   m.className = "tx-msg" + (kind ? " " + kind : "");
 }
+
+/* 엑셀 미리보기에서 화주를 고르거나, 파일/붙여넣기가 바뀔 때 */
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (!el.dataset) return;
+  if (el.dataset.act === "imp-ship") {
+    const g = triangleImport.groups[Number(el.dataset.gi)];
+    g.sel = el.value;
+    g.auto = !!g.payer && el.value === trianglePayerMap[g.payer];
+    triangleRenderImportPreview();
+  } else if (el.dataset.act === "imp-file") {
+    triangleReadImportFile(el.files && el.files[0]);
+  }
+});
+document.addEventListener("input", (e) => {
+  const el = e.target;
+  if (!el.dataset) return;
+  if (el.dataset.act === "imp-ship-new") triangleImport.groups[Number(el.dataset.gi)].nw = el.value;
+  else if (el.dataset.act === "imp-paste") triangleParseImportText(el.value);
+});
 
 /* ---------- 엑셀 읽기 ---------- */
 function triangleParseImportText(text) {
@@ -756,7 +912,7 @@ function triangleParseImportRows(rows) {
     if (vi < 0 || yi < 0) { out.error = "Vsl, Voy 열을 찾지 못했어요. 헤더 줄까지 같이 복사해 주세요."; triangleImport = out; triangleRenderImportPreview(); return; }
   }
   const cell = (r, i) => (i >= 0 && r[i] != null ? String(r[i]).trim() : "");
-  const existing = new Set(TRIANGLE_LIST.map((t) => String(t.blNumber || "").trim().toUpperCase()));
+  const existing = new Set(TRIANGLE_LIST.map((t) => triangleBlKey(t.blNumber)));
   const seen = new Set();
   const map = {};
   rows.slice(start).forEach((r) => {
@@ -812,31 +968,20 @@ function triangleRenderImportPreview() {
 /* ---------- 등록 ---------- */
 async function submitTriangleAdd() {
   const date = (document.getElementById("txaDate") || {}).value || "";
-  let items = [];       // [{ vessel, shipper, bls }]
+  const imp = triangleImport;
+  if (!imp.groups.length) { triangleSetMsg(imp.total ? "등록할 BL이 없어요" : "엑셀 내용을 먼저 붙여넣거나 파일을 올려 주세요", "err"); return; }
+  const items = [];     // [{ vessel, shipper, bls }]
   const links = [];     // 처음 연결할 Payer → 화주
-
-  if (triangleAddMode === "excel") {
-    const imp = triangleImport;
-    if (!imp.groups.length) { triangleSetMsg(imp.total ? "등록할 BL이 없어요" : "엑셀 내용을 먼저 붙여넣거나 파일을 올려 주세요", "err"); return; }
-    for (const g of imp.groups) {
-      const raw = g.sel === "__new" ? g.nw.trim().toUpperCase() : g.sel;
-      if (!raw) { triangleSetMsg("화주를 골라 주세요 (" + (g.vessel || "배 미입력") + ")", "err"); return; }
-      if (!g.vessel) { triangleSetMsg("배(Vsl·Voy·Leg)를 읽지 못한 BL이 있어요", "err"); return; }
-      const shipper = triangleCanonShipper(raw);
-      items.push({ vessel: g.vessel, shipper, bls: g.bls.slice() });
-      if (g.payer && !trianglePayerMap[g.payer]) links.push([g.payer, shipper]);
-    }
-  } else {
-    const v = triangleReadVessel("txa", false); if (v.error) { triangleSetMsg(v.error, "err"); return; }
-    const s = triangleReadShipper("txa"); if (s.error) { triangleSetMsg(s.error, "err"); return; }
-    const bls = triangleParseBls(document.getElementById("txaBls").value);
-    if (!bls.length) { triangleSetMsg("BL 번호를 입력해 주세요", "err"); return; }
-    const bad = bls.filter((b) => !/^[A-Z]+\d+$/.test(b));
-    if (bad.length) { triangleSetMsg("BL 형식이 이상해요: " + bad.join(", "), "err"); return; }
-    items.push({ vessel: v.value, shipper: s.value, bls });
+  for (const g of imp.groups) {
+    const raw = g.sel === "__new" ? g.nw.trim().toUpperCase() : g.sel;
+    if (!raw) { triangleSetMsg("화주를 골라 주세요 (" + (g.vessel || "배 미입력") + ")", "err"); return; }
+    if (!g.vessel) { triangleSetMsg("배(Vsl·Voy·Leg)를 읽지 못한 BL이 있어요", "err"); return; }
+    const shipper = triangleCanonShipper(raw);
+    items.push({ vessel: g.vessel, shipper, bls: g.bls.slice() });
+    if (g.payer && !trianglePayerMap[g.payer]) links.push([g.payer, shipper]);
   }
 
-  const existing = new Set(TRIANGLE_LIST.map((t) => String(t.blNumber || "").trim().toUpperCase()));
+  const existing = new Set(TRIANGLE_LIST.map((t) => triangleBlKey(t.blNumber)));
   const dups = [];
   let createdLines = 0, mergedLines = 0, total = 0;
   try {
@@ -861,14 +1006,7 @@ async function submitTriangleAdd() {
         createdLines++;
       }
       fresh.forEach((bl) => {
-        batch.set(window.fbDb.collection(TRIANGLE_COLLECTION).doc(), {
-          blNumber: bl, vessel: tpl.vessel || it.vessel, shipper: tpl.shipper || it.shipper,
-          onboardDate: tpl.onboardDate || "", secondVessel: tpl.secondVessel || "", groupRemark: tpl.groupRemark || "",
-          popCharge: tpl.popCharge || "", mfstClose: tpl.mfstClose || "", invoiceRequest: tpl.invoiceRequest || "",
-          remittance: tpl.remittance || "", polPodInform: tpl.polPodInform || "",
-          remark: "", doneStatus: "progress",
-          createdAt: firebase.firestore.FieldValue.serverTimestamp(), createdAtIso: nowIso,
-        });
+        batch.set(window.fbDb.collection(TRIANGLE_COLLECTION).doc(), triangleNewDocData(bl, tpl, nowIso));
         ops++; total++;
       });
     }
@@ -887,69 +1025,9 @@ async function submitTriangleAdd() {
   let note = "BL " + total + "건 등록 (" + (createdLines ? "새 줄 " + createdLines : "") + (createdLines && mergedLines ? " · " : "") + (mergedLines ? "기존 줄에 추가 " + mergedLines : "") + ")";
   if (dups.length) note += " · 이미 있는 BL 제외: " + dups.join(", ");
   if (links.length) note += " · Payer 연결 저장" + (saveWhere === "local" ? "(이 PC에만 저장됐어요)" : "");
-  // 입력창 비우기 (패널은 열어둬서 이어서 등록할 수 있게)
   const paste = document.getElementById("txaPaste"); if (paste) paste.value = "";
   const file = document.getElementById("txaFile"); if (file) file.value = "";
-  const bl = document.getElementById("txaBls"); if (bl) bl.value = "";
   triangleImport = { total: 0, excl: [], dups: [], groups: [], error: "" };
   triangleRenderImportPreview();
   triangleSetMsg(note, dups.length ? "warn" : "ok");
-}
-
-/* =========================================================================
-   ✏️ 줄 수정 (배 · 화주 · 온보드 · 2ND 배) - 이 줄에 속한 모든 BL에 한꺼번에 적용
-   ========================================================================= */
-let triangleGroupEditKey = null;
-
-function openTriangleGroupEditor(key) {
-  triangleGroupEditKey = key;
-  document.getElementById("triangleGroupEditOverlay").style.display = "flex";
-  renderTriangleGroupEditorBody();
-}
-function closeTriangleGroupEditor() {
-  document.getElementById("triangleGroupEditOverlay").style.display = "none";
-  triangleGroupEditKey = null;
-}
-
-function renderTriangleGroupEditorBody() {
-  const body = document.getElementById("triangleGroupEditBody");
-  const entries = triangleEntriesOfGroup(triangleGroupEditKey);
-  if (!entries.length) { closeTriangleGroupEditor(); return; }
-  const g = triangleDecorateGroup({ key: triangleGroupEditKey, entries: entries.slice() });
-  body.innerHTML = '<div class="hint" style="margin-bottom:10px;">🚢 이 줄에 속한 BL ' + entries.length + "건 전체에 적용돼요</div>"
-    + '<div class="tx-field"><label>배</label>' + triangleVesselPicker("txe", g.vessel, false) + "</div>"
-    + '<div class="tx-field"><label>화주</label>' + triangleShipperPicker("txe", g.shipper) + "</div>"
-    + '<div class="tx-field"><label>온보드</label><input type="date" id="txeDate" value="' + escapeHtml(g.onboard) + '"></div>'
-    + '<div class="tx-field"><label>2ND 배 <span class="tx-sub">없으면 "없음"</span></label>' + triangleVesselPicker("txe2", g.second, true) + "</div>"
-    + '<div id="txeMsg" class="tx-msg"></div>'
-    + '<div class="edit-actions"><button type="button" class="btn generate-btn" id="txeSave">💾 저장하기</button>'
-    + '<button type="button" class="btn secondary-btn" onclick="closeTriangleGroupEditor()">취소</button></div>'
-    + '<div style="margin-top:14px;"><button type="button" class="btn secondary-btn tx-danger" id="txeDelete">🗑️ 이 줄 전체 삭제 (BL ' + entries.length + "건)</button></div>";
-
-  document.getElementById("txeSave").onclick = async () => {
-    const msg = document.getElementById("txeMsg");
-    const v = triangleReadVessel("txe", false); if (v.error) { msg.className = "tx-msg err"; msg.textContent = v.error; return; }
-    const s = triangleReadShipper("txe"); if (s.error) { msg.className = "tx-msg err"; msg.textContent = s.error; return; }
-    const v2 = triangleReadVessel("txe2", true); if (v2.error) { msg.className = "tx-msg err"; msg.textContent = v2.error; return; }
-    const btn = document.getElementById("txeSave");
-    btn.disabled = true; btn.textContent = "💾 저장 중...";
-    const r = await triangleBatchUpdate(entries.map((e) => e.id), {
-      vessel: v.value, shipper: s.value, onboardDate: document.getElementById("txeDate").value || "", secondVessel: v2.value || "",
-    });
-    btn.disabled = false; btn.textContent = "💾 저장하기";
-    if (!r.ok) { msg.className = "tx-msg err"; msg.textContent = "저장에 실패했어요: " + r.error; return; }
-    closeTriangleGroupEditor();
-  };
-  document.getElementById("txeDelete").onclick = async () => {
-    if (!confirm("이 배·화주 줄의 BL " + entries.length + "건을 전부 삭제할까요? 되돌릴 수 없어요.")) return;
-    try {
-      await window.fbReady;
-      for (let i = 0; i < entries.length; i += 400) {
-        const batch = window.fbDb.batch();
-        entries.slice(i, i + 400).forEach((e) => batch.delete(window.fbDb.collection(TRIANGLE_COLLECTION).doc(e.id)));
-        await batch.commit();
-      }
-      closeTriangleGroupEditor();
-    } catch (err) { alert("삭제에 실패했어요: " + err); }
-  };
 }

@@ -2325,21 +2325,22 @@ input, select, textarea {
 .tx-input:focus { outline: none; border-color: #6366f1; background: #fff; }
 .tx-remark { min-width: 130px; }
 .tx-edit-btn { padding: 3px 9px; font-size: 12px; }
-.tx-mini { padding: 4px 10px; font-size: 12px; }
+.tx-mini { padding: 5px 12px; font-size: 13px; white-space: nowrap; flex: none; }
 .tx-danger { color: #b91c1c; border-color: #fecaca; }
 
 .tx-ex-row > td { background: #f8fafc; }
 .tx-ex { padding: 8px 4px 10px; }
-.tx-ex-head { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 13px; }
-.tx-bl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 2px 14px; max-height: 220px; overflow-y: auto; padding: 2px 0; }
-.tx-bl-line { display: flex; align-items: center; gap: 8px; padding: 2px 4px; border-radius: 4px; font-size: 12.5px; }
+.tx-ex-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 15px; }
+.tx-bl-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 4px 20px; max-height: 320px; overflow-y: auto; padding: 2px 0; }
+.tx-bl-line { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-radius: 6px; font-size: 15px; }
 .tx-bl-line:hover { background: #eef2ff; }
-.tx-bl-no { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-weight: 600; }
-.tx-bl-remark { color: #6b7280; font-size: 11.5px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tx-del { margin-left: auto; border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 12px; padding: 0 4px; }
+.tx-bl-no { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15.5px; font-weight: 700; letter-spacing: 0.2px; }
+.tx-bl-remark { color: #6b7280; font-size: 13px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tx-del { margin-left: auto; border: none; background: transparent; color: #9ca3af; cursor: pointer; font-size: 15px; padding: 2px 8px; }
 .tx-del:hover { color: #dc2626; }
-.tx-add-bl { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; max-width: 560px; }
-.tx-bl-input { border-color: #d1d5db; background: #fff; resize: none; overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+.tx-add-bl { display: flex; gap: 8px; align-items: flex-start; margin-top: 10px; max-width: 680px; }
+.tx-bl-input { border-color: #d1d5db; background: #fff; resize: none; overflow: hidden; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15px; padding: 8px 10px; }
+.tx-add-bl .tx-mini { padding: 9px 18px; font-size: 14px; }
 
 .tx-add { margin-top: 12px; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; }
 .tx-add-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -2369,3 +2370,56 @@ input, select, textarea {
 .tx-note { font-size: 12px; margin-top: 4px; }
 .tx-note.ok { color: #166534; }
 .tx-note.warn { color: #92400e; }
+
+/* ---- 삼국간: 표에서 바로 고치는 칸 ---- */
+.tx-table { table-layout: fixed; min-width: 1290px; width: 100%; }
+.tx-table td { padding: 2px 4px; }
+.tx-input { font-size: 14px; padding: 7px 8px; }
+.tx-input.tx-vin { font-weight: 600; }
+.tx-input.tx-rep { color: #9ca3af; font-weight: 400; }
+.tx-input.tx-warnph::placeholder { color: #dc2626; opacity: 1; }
+.tx-input.tx-mixed { text-decoration: underline dotted #9ca3af; }
+.tx-table .row-done .tx-input { color: #9ca3af; }
+.tx-status { min-height: 20px; font-size: 13px; margin: 4px 0 2px; }
+.tx-status.ok { color: #166534; }
+.tx-status.warn { color: #92400e; }
+.tx-status.bad { color: #b91c1c; font-weight: 600; }
+.tx-trash { text-align: center; cursor: pointer; color: #9ca3af; font-size: 15px; user-select: none; }
+.tx-trash:hover { color: #dc2626; }
+.tx-trash.armed { background: #fee2e2; color: #b91c1c; }
+.tx-draft td { background: #f9fafb; border-top: 2px solid #d1d5db; }
+.tx-draft .tx-input { background: #fff; border-color: #e5e7eb; }
+.tx-draft-hint { color: #6b7280; font-size: 12.5px; padding-left: 10px; }
+.tx-bl-text { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 15.5px; font-weight: 700; line-height: 1.7; border-color: #d1d5db; background: #fff; resize: none; overflow: hidden; max-width: 560px; }
+.tx-ex-head .tx-sub { color: #6b7280; font-size: 12.5px; }
+.tx-ex-head .tx-mini { margin-left: auto; }
+
+/* ---- 노션 입항 스케줄 raw 표: 칸에서 바로 고치기 ---- */
+.ps-scroll { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 10px; background: #fff; }
+.ps-table { border-collapse: collapse; table-layout: fixed; min-width: 1500px; width: 100%; }
+.ps-table th { background: #1f2937; color: #fff; font-size: 13px; text-align: left; padding: 10px 10px; white-space: nowrap; position: sticky; top: 0; }
+.ps-table td { padding: 0; border-bottom: 1px solid #eef0f3; border-right: 1px solid #f1f3f5; height: 42px; vertical-align: middle; background: #fff; }
+.ps-table .ps-sk { position: sticky; left: 0; z-index: 2; background: #fff; }
+.ps-table th.ps-sk { background: #1f2937; z-index: 3; }
+.ps-cw { position: relative; height: 100%; }
+.ps-in { width: 100%; height: 42px; box-sizing: border-box; border: none; border-radius: 0; background: transparent; padding: 0 10px; font-size: 14px; font-family: inherit; }
+.ps-in:hover { background: #f8fafc; }
+.ps-in:focus { outline: 2px solid #6366f1; outline-offset: -2px; background: #eef2ff; }
+.ps-cw.ps-lkd .ps-in, .ps-cw.ps-mm .ps-in { padding-right: 30px; }
+.ps-cw.ps-mm { background: #fef3c7; }
+.ps-lk, .ps-fx { position: absolute; right: 7px; top: 50%; transform: translateY(-50%); cursor: pointer; font-size: 14px; user-select: none; }
+.ps-fx { color: #b45309; font-size: 17px; font-weight: 700; }
+.ps-trash { text-align: center; cursor: pointer; color: #9ca3af; font-size: 15px; user-select: none; }
+.ps-trash:hover { color: #dc2626; }
+.ps-trash.armed { background: #fee2e2; color: #b91c1c; }
+.ps-draft td { background: #f9fafb; border-top: 2px solid #d1d5db; }
+.ps-draft .ps-in { background: #fff; }
+.ps-draft .ps-in::placeholder { color: #9ca3af; }
+.ps-addcell { text-align: center; }
+.ps-addbtn { border: 1px solid #c7d2fe; background: #eef2ff; color: #3730a3; border-radius: 8px; font-size: 16px; font-weight: 700; padding: 3px 11px; cursor: pointer; }
+.ps-status { min-height: 20px; font-size: 13px; margin: 4px 0; }
+.ps-status.ok { color: #166534; }
+.ps-status.warn { color: #92400e; }
+.ps-status.bad { color: #b91c1c; font-weight: 600; }
+.ps-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 12.5px; color: #6b7280; margin: 4px 0 8px; }
+.ps-badge { display: inline-block; margin-left: 4px; padding: 1px 7px; border-radius: 999px; background: #e0e7ff; color: #3730a3; font-size: 11px; font-weight: 700; }

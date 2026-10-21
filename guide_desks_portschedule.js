@@ -140,6 +140,7 @@ function renderPortScheduleAutoUpdateBanner(data) {
   if (!wrap) return;
 
   const changes = data.changes || [];
+  const kept = data.keptManual || []; // 직접 고친 날짜라 터미널 값으로 안 바꾼 것 (터미널이 지난번과 같은 값을 계속 줌)
   const ranAtIso = data.ranAtIso || "";
   let ranAtLabel = "";
   if (ranAtIso) {
@@ -150,7 +151,7 @@ function renderPortScheduleAutoUpdateBanner(data) {
   }
 
   // 오늘 실행된 게 아니면(예: 어제 마지막으로 돈 채로 며칠 지남) "오늘"이라고 하면 헷갈리니 날짜를 같이 보여줌
-  if (changes.length === 0) {
+  if (changes.length === 0 && kept.length === 0) {
     wrap.innerHTML = `
       <div class="port-schedule-update-banner none">
         ℹ️ 마지막 자동 갱신(${escapeHtml(ranAtLabel)}) 때는 raw에 등록된 배 중 날짜가 바뀐 게 없었어요.
@@ -169,22 +170,36 @@ function renderPortScheduleAutoUpdateBanner(data) {
       <tr>
         <td>${escapeHtml(c.vesselName || "-")}</td>
         <td>${escapeHtml(c.terminal || "-")}</td>
-        <td>${arrivalChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldArrivalDate || "-")}</span> → <b>${escapeHtml(c.newArrivalDate || "-")}</b>` : escapeHtml(c.newArrivalDate || "-")}</td>
-        <td>${departureChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldDepartureDate || "-")}</span> → <b>${escapeHtml(c.newDepartureDate || "-")}</b>` : escapeHtml(c.newDepartureDate || "-")}</td>
+        <td>${arrivalChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldArrivalDate || "-")}</span> → <b>${escapeHtml(c.newArrivalDate || "-")}</b>` : escapeHtml(c.newArrivalDate || "-")}${c.arrivalNote === "followed" ? ' <span class="ps-badge" title="직접 고쳐둔 값이었는데 터미널이 일정을 바꿔서 새 값으로 바꿨어요">🔄 터미널 새 값</span>' : ""}</td>
+        <td>${departureChanged ? `<span class="port-schedule-update-old">${escapeHtml(c.oldDepartureDate || "-")}</span> → <b>${escapeHtml(c.newDepartureDate || "-")}</b>` : escapeHtml(c.newDepartureDate || "-")}${c.departureNote === "followed" ? ' <span class="ps-badge" title="직접 고쳐둔 값이었는데 터미널이 일정을 바꿔서 새 값으로 바꿨어요">🔄 터미널 새 값</span>' : ""}</td>
         <td>${anCell}</td>
       </tr>`;
   }).join("");
 
+  const keptRows = kept.map((c) => {
+    const parts = [];
+    if (c.arrivalNote === "kept") parts.push(`입항일: 내 값 <b>${escapeHtml(c.newArrivalDate || "-")}</b> (터미널 ${escapeHtml(c.terminalArrivalDate || "-")})`);
+    if (c.departureNote === "kept") parts.push(`출항일: 내 값 <b>${escapeHtml(c.newDepartureDate || "-")}</b> (터미널 ${escapeHtml(c.terminalDepartureDate || "-")})`);
+    return `<tr><td>${escapeHtml(c.vesselName || "-")}</td><td>${escapeHtml(c.terminal || "-")}</td><td>${parts.join("<br>")}</td></tr>`;
+  }).join("");
+  const keptHtml = kept.length ? `
+        <div style="margin-top:10px; font-weight:600;">🔒 직접 고친 날짜라서 그대로 둔 것 ${kept.length}건 <span class="hint" style="font-weight:400;">(터미널이 지난번과 같은 값을 계속 줘서예요. 터미널이 일정을 바꾸면 자동으로 따라가요)</span></div>
+        <table class="contacts-table" style="margin-top:6px;">
+          <tr><th>선명</th><th>터미널</th><th>내 값 / 터미널 값</th></tr>
+          ${keptRows}
+        </table>` : "";
+
   wrap.innerHTML = `
     <div class="port-schedule-update-banner">
       <div class="port-schedule-update-header" onclick="togglePortScheduleUpdateDetail()">
-        🔄 자동 갱신(${escapeHtml(ranAtLabel)}) — <b>${changes.length}건</b> 일정 변경됨 <span id="portScheduleUpdateCaret">▾ 펼쳐보기</span>
+        🔄 자동 갱신(${escapeHtml(ranAtLabel)}) — <b>${changes.length}건</b> 일정 변경됨${kept.length ? ` · 🔒 직접 고친 값 유지 <b>${kept.length}건</b>` : ""} <span id="portScheduleUpdateCaret">▾ 펼쳐보기</span>
       </div>
       <div id="portScheduleUpdateDetail" style="display:none;">
-        <table class="contacts-table" style="margin-top:8px;">
+        ${changes.length ? `<table class="contacts-table" style="margin-top:8px;">
           <tr><th>선명</th><th>터미널</th><th>입항일</th><th>출항일</th><th>AN 발송 예정</th></tr>
           ${rows}
-        </table>
+        </table>` : ""}
+        ${keptHtml}
       </div>
     </div>`;
 }
@@ -245,8 +260,7 @@ function loadPortScheduleTab() {
         </div>
       </div>
       <div id="portScheduleUploadResult"></div>
-      <button class="btn generate-btn" style="margin:12px 0;" onclick="openPortScheduleEditForm(null)">＋ 직접 한 건 등록</button>
-      <div id="portScheduleEditFormWrap"></div>
+      <div class="hint" style="margin:12px 0;">표의 칸을 눌러서 바로 고쳐요 (Enter 아래 칸 · Esc 되돌리기). 새 항목은 표 맨 아래 빈 줄에 쓰거나, 엑셀에서 여러 줄을 복사해 그 빈 줄에 붙여넣어요.</div>
       <div id="portScheduleTableWrap"></div>
     </div>
 
@@ -297,6 +311,11 @@ function loadPortScheduleTab() {
             dischargeDeadlineDate: d.dischargeDeadlineDate || "",
             dischargeDeadlineTime: d.dischargeDeadlineTime || "",
             anSendDate: d.anSendDate || "",
+            // 직접 고친 날짜 표시 / 터미널이 마지막으로 준 값 (터미널이 일정을 "바꿨는지" 알아보려고 자동 갱신이 기록해 둠)
+            arrivalManual: !!d.arrivalManual,
+            departureManual: !!d.departureManual,
+            arrivalAuto: d.arrivalAuto || "",
+            departureAuto: d.departureAuto || "",
           };
         });
         renderPortScheduleTable();
@@ -512,14 +531,157 @@ function renderPortScheduleControls() {
   `;
 }
 
+/* =========================================================================
+   📄 raw 표 - 칸을 눌러서 바로 고치고, 맨 아래 빈 줄에서 새로 추가해요 (엑셀처럼)
+   - 날짜는 10/22, 1022 처럼 간단히, 적하목록·하선제출은 "10/22 오후 4:00" 한 칸에
+   - 입항일/출항일도 직접 고칠 수 있어요. 직접 고친 칸에는 🔒가 붙고,
+     터미널이 "지난번과 같은 값"을 계속 줄 때만 내가 고친 값을 지켜줘요.
+     터미널이 일정을 바꾸면(당겨지든 늦춰지든) 새 값을 자동으로 따라가요.
+   ========================================================================= */
+const PS_COLS = [
+  { f: "vesselName", label: "선명", w: 170, type: "text", ph: "선명 입력" },
+  { f: "vesselCode", label: "코드", w: 66, type: "text" },
+  { f: "voyage", label: "항차", w: 76, type: "text" },
+  { f: "arrivalDate", label: "입항일", w: 118, type: "date", kind: "arrival", ph: "10/22" },
+  { f: "departureDate", label: "출항일", w: 118, type: "date", kind: "departure", ph: "10/23" },
+  { f: "terminal", label: "터미널", w: 96, type: "text", list: "psDlTerminal" },
+  { f: "line", label: "LINE", w: 130, type: "text", list: "psDlLine" },
+  { f: "manager", label: "마감자", w: 80, type: "text", list: "psDlManager" },
+  { f: "cargo", label: "적하목록 제출", w: 168, type: "dt", dk: "cargoDeadlineDate", tk: "cargoDeadlineTime", ph: "10/22 오후 4:00" },
+  { f: "discharge", label: "하선제출", w: 168, type: "dt", dk: "dischargeDeadlineDate", tk: "dischargeDeadlineTime", ph: "10/22 오후 4:00" },
+  { f: "anSendDate", label: "AN발송예정", w: 118, type: "date", an: true, ph: "10/20" },
+];
+
+let psDraft = {};
+let psArmedDelete = null;
+let psBound = false;
+let psRenderPending = false;
+let psStatus = { text: "", kind: "" };
+let psStatusTimer = null;
+
+function psSay(text, kind) {
+  psStatus = { text: text || "", kind: kind || "" };
+  const el = document.getElementById("psStatus");
+  if (el) { el.textContent = psStatus.text; el.className = "ps-status " + psStatus.kind; }
+  if (psStatusTimer) clearTimeout(psStatusTimer);
+  if (text) psStatusTimer = setTimeout(() => psSay("", ""), 8000);
+}
+function psFail(msg) { psSay(msg, "bad"); renderPortScheduleRows(); }
+
+/* "BPT감만", "BPT신선대" 처럼 부두 이름을 붙여 적은 것도 모두 같은 "BPT"로 봐요 (터미널 사이트에서는 한 표로 나와요) */
+function psTerminalKey(t) {
+  const s = String(t || "").replace(/\s+/g, "").toUpperCase();
+  return s.startsWith("BPT") ? "BPT" : s;
+}
+
+/* ---- 터미널 값이 들어왔을 때 날짜를 어떻게 할지 (scripts/push_to_firestore.py 의 decide_date 와 같은 규칙) ----
+   기준은 "내가 고친 값과 같은지"가 아니라 "터미널이 지난번과 다른 값을 줬는지"예요.
+   터미널이 같은 값(틀린 값)을 계속 주면 내가 고친 값을 지키고, 터미널이 값을 바꾸면 방향과 상관없이 새 값을 따라가요. */
+function psDecideDate(fetched, current, manual, lastAuto) {
+  const res = {};
+  if (!fetched) return res;
+  if (fetched !== lastAuto) res.auto = fetched;
+  if (!manual) {
+    if (fetched !== current) res.value = fetched;
+    return res;
+  }
+  const moved = !!lastAuto && fetched !== lastAuto;
+  if (moved) {
+    if (fetched !== current) res.value = fetched;
+    res.manual = false;
+    res.note = "followed";
+  } else if (fetched === current) {
+    res.manual = false;
+  } else {
+    res.note = "kept";
+  }
+  return res;
+}
+
+/* 사람이 입항일/출항일을 고쳤을 때 저장할 내용 - 이미 있던 값을 바꾼 경우에만 "직접 고침" 표시를 붙여요 */
+function psDateEditPatch(item, kind, newVal) {
+  const key = kind + "Date";
+  const prev = item[key] || "";
+  const patch = {};
+  patch[key] = newVal;
+  if (!newVal) { patch[kind + "Manual"] = false; return patch; }
+  if (prev && newVal !== prev) {
+    const auto = item[kind + "Auto"] || prev; // 터미널이 마지막으로 준 값 (기록이 없으면 바꾸기 전 값으로 봐요)
+    patch[kind + "Auto"] = auto;
+    patch[kind + "Manual"] = newVal !== auto;   // 터미널 값으로 되돌린 거면 표시 필요 없음
+  }
+  return patch;
+}
+
+function psCellValue(r, c) {
+  if (c.type === "date") return gridFmtDate(r[c.f]);
+  if (c.type === "dt") {
+    const d = r[c.dk], t = r[c.tk];
+    return d ? gridFmtDate(d) + (t ? " " + t : " (시간 미정)") : "";
+  }
+  return r[c.f] || "";
+}
+
+function psDatalistsHtml() {
+  const uniq = (arr) => Array.from(new Set(arr.map((x) => String(x || "").trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, "ko"));
+  const terminals = uniq(["BCT", "PNIT", "HPNT", "BPT", "HJIT"].concat(PORT_SCHEDULE_LIST.map((r) => r.terminal)));
+  const lines = uniq(PORT_SCHEDULE_LIST.map((r) => r.line));
+  const mgrs = uniq(PORT_SCHEDULE_LIST.map((r) => r.manager));
+  const opt = (arr) => arr.map((v) => '<option value="' + escapeHtml(v) + '">').join("");
+  return '<datalist id="psDlTerminal">' + opt(terminals) + '</datalist><datalist id="psDlLine">' + opt(lines) + '</datalist><datalist id="psDlManager">' + opt(mgrs) + "</datalist>";
+}
+
+function psRowHtml(r) {
+  const id = escapeHtml(r.id);
+  let h = '<tr data-id="' + id + '">';
+  PS_COLS.forEach((c) => {
+    let wrapCls = "ps-cw", extra = "";
+    if (c.kind) {
+      if (r[c.kind + "Manual"]) {
+        wrapCls += " ps-lkd";
+        const auto = r[c.kind + "Auto"];
+        const tip = "직접 고친 날짜예요." + (auto ? " (터미널 값: " + gridFmtDate(auto) + ")" : "") + " 터미널이 지난번과 같은 값을 주는 동안은 내가 고친 값을 지키고, 터미널이 일정을 바꾸면 새 값으로 자동으로 따라가요. 누르면 직접 고침 표시를 풀어요.";
+        extra = '<span class="ps-lk" data-act="ps-unlock" data-id="' + id + '" data-kind="' + c.kind + '" title="' + escapeHtml(tip) + '">🔒</span>';
+      }
+    }
+    if (c.an && r.anSendDate && r.arrivalDate && r.anSendDate !== gridMinusDays(r.arrivalDate, 2)) {
+      wrapCls += " ps-mm";
+      extra = '<span class="ps-fx" data-act="ps-fixan" data-id="' + id + '" title="입항일 -2일(' + escapeHtml(gridFmtDate(gridMinusDays(r.arrivalDate, 2))) + ')과 달라요. 누르면 맞춰요">↺</span>';
+    }
+    h += '<td' + (c.f === "vesselName" ? ' class="ps-sk"' : "") + '><div class="' + wrapCls + '"><input class="ps-in" type="text" autocomplete="off" data-act="ps-field" data-id="' + id + '" data-f="' + c.f + '" value="' + escapeHtml(psCellValue(r, c)) + '"'
+      + (c.list ? ' list="' + c.list + '"' : "") + (c.f === "vesselName" ? ' style="font-weight:600"' : "") + ">" + extra + "</div></td>";
+  });
+  h += '<td class="ps-trash' + (psArmedDelete === r.id ? " armed" : "") + '" data-act="ps-del" data-id="' + id + '" title="삭제 (두 번 누르면 삭제돼요)">🗑</td></tr>';
+  return h;
+}
+
+function psDraftRowHtml() {
+  let h = '<tr class="ps-draft">';
+  PS_COLS.forEach((c) => {
+    let v = psDraft[c.f] || "";
+    if (c.type === "date") v = v ? gridFmtDate(v) : "";
+    else if (c.type === "dt") v = v && v.d ? gridFmtDate(v.d) + (v.t ? " " + gridTimeToKorean(v.t) : " (시간 미정)") : "";
+    h += '<td' + (c.f === "vesselName" ? ' class="ps-sk"' : "") + '><div class="ps-cw"><input class="ps-in" type="text" autocomplete="off" data-act="ps-draft" data-f="' + c.f + '" value="' + escapeHtml(v) + '" placeholder="' + escapeHtml(c.ph || (c.f === "vesselName" ? "" : "")) + '"'
+      + (c.list ? ' list="' + c.list + '"' : "") + "></div></td>";
+  });
+  return h + '<td class="ps-addcell"><button type="button" class="ps-addbtn" data-act="ps-add" title="선명만 써도 추가돼요 (입항일 없이도)">＋</button></td></tr>';
+}
+
 /* 표(행)만 다시 그림 - 검색어 입력, 필터 조합 계산 등 자주 일어나는 일은 여기서만 처리해서
    검색창·드롭다운 DOM은 안 건드림 (포커스 유지 + 매번 컨트롤 다시 계산 안 해도 되니 더 빠름) */
 function renderPortScheduleRows() {
   const rowsWrap = document.getElementById("portScheduleRowsWrap");
   if (!rowsWrap) return;
+  psBindEvents();
+
+  // 입력 중인 칸이 있으면 실시간 갱신으로 날아가지 않게 잠깐 미뤄요
+  const ae = document.activeElement;
+  if (ae && rowsWrap.contains(ae) && ae.dataset && ae.dataset.dirty === "1") { psRenderPending = true; return; }
+  psRenderPending = false;
+  const focusToken = gridCaptureFocus(rowsWrap);
 
   const q = portScheduleQuery.trim().toUpperCase();
-  let filtered = PORT_SCHEDULE_LIST.filter((r) => {
+  const filtered = PORT_SCHEDULE_LIST.filter((r) => {
     if (portScheduleHideEmpty && !r.arrivalDate) return false;
     if (portScheduleMonthFilter && (r.arrivalDate || "").slice(0, 7) !== portScheduleMonthFilter) return false;
     if (portScheduleLineFilter && (r.line || "").trim() !== portScheduleLineFilter) return false;
@@ -528,43 +690,278 @@ function renderPortScheduleRows() {
     return [r.vesselName, r.vesselCode, r.voyage, r.terminal, r.line, r.manager]
       .some((v) => String(v || "").toUpperCase().includes(q));
   });
-
   const sorted = filtered.slice().sort((a, b) => (a.arrivalDate || "").localeCompare(b.arrivalDate || ""));
 
-  const rows = sorted.map((r) => `
-    <tr data-id="${escapeHtml(r.id)}">
-      <td>${escapeHtml(r.vesselName)}</td>
-      <td>${escapeHtml(r.vesselCode)}</td>
-      <td>${escapeHtml(r.voyage)}</td>
-      <td>${escapeHtml(r.arrivalDate)}</td>
-      <td>${escapeHtml(r.departureDate)}</td>
-      <td>${escapeHtml(r.terminal)}</td>
-      <td>${escapeHtml(r.line)}</td>
-      <td>${escapeHtml(r.manager)}</td>
-      <td>${escapeHtml(r.cargoDeadlineDate)} ${escapeHtml(r.cargoDeadlineTime)}</td>
-      <td>${escapeHtml(r.dischargeDeadlineDate)} ${escapeHtml(r.dischargeDeadlineTime)}</td>
-      <td>${escapeHtml(r.anSendDate)}</td>
-      <td class="poa-row-actions">
-        <button type="button" class="poa-edit-btn" title="수정" onclick="openPortScheduleEditForm('${escapeHtml(r.id)}')">✏️</button>
-        <button type="button" class="poa-delete-btn" title="삭제" onclick="deletePortScheduleRow('${escapeHtml(r.id)}')">🗑️</button>
-      </td>
-    </tr>
-  `).join("");
-
-  rowsWrap.innerHTML = `
-    <div style="overflow-x:auto;">
-      <table class="port-schedule-table">
-        <tr>
-          <th>선명</th><th>코드</th><th>항차</th><th>입항일</th><th>출항일</th>
-          <th>터미널</th><th>LINE</th><th>마감자</th><th>적하목록 제출</th><th>하선제출</th><th>AN발송예정</th><th>관리</th>
-        </tr>
-        ${rows || '<tr><td colspan="12" style="text-align:center; padding:20px;">검색 결과가 없어요.</td></tr>'}
-      </table>
-    </div>
-  `;
+  let html = '<div id="psStatus" class="ps-status ' + escapeHtml(psStatus.kind) + '">' + escapeHtml(psStatus.text) + "</div>"
+    + psDatalistsHtml()
+    + '<div class="ps-legend"><span>🔒 직접 고친 날짜 (터미널이 같은 값을 계속 주는 동안만 지켜요 · 터미널이 일정을 바꾸면 자동으로 따라가요 · 누르면 표시 해제)</span>'
+    + "<span>↺ AN발송예정이 입항일 -2일과 달라요 (누르면 맞춰요)</span></div>"
+    + '<div class="ps-scroll"><table class="ps-table"><colgroup>'
+    + PS_COLS.map((c) => '<col style="width:' + c.w + 'px">').join("") + '<col style="width:48px"></colgroup><thead><tr>'
+    + PS_COLS.map((c) => '<th' + (c.f === "vesselName" ? ' class="ps-sk"' : "") + ">" + c.label + "</th>").join("") + "<th></th></tr></thead><tbody>"
+    + sorted.map(psRowHtml).join("")
+    + psDraftRowHtml()
+    + "</tbody></table></div>";
+  rowsWrap.innerHTML = html;
 
   const countLabel = document.getElementById("portScheduleCountLabel");
   if (countLabel) countLabel.textContent = `${sorted.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건`;
+  gridRestoreFocus(rowsWrap, focusToken);
+}
+
+/* ---- 칸 고치기 ---- */
+function psWriteUpdate(id, patch) {
+  return window.fbReady.then(() => window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(id).update(
+    Object.assign({}, patch, { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: "manual" })
+  ));
+}
+
+async function psCommitField(el) {
+  el.dataset.dirty = "0";
+  const id = el.dataset.id, f = el.dataset.f;
+  const item = PORT_SCHEDULE_LIST.find((x) => x.id === id);
+  const col = PS_COLS.find((c) => c.f === f);
+  if (!item || !col) return;
+  const txt = el.value;
+  const patch = {};
+
+  if (col.type === "text") {
+    let v = txt.trim().replace(/\s+/g, " ");
+    if (f === "vesselName") { if (!v) return psFail("선명은 비울 수 없어요 (줄을 지우려면 오른쪽 🗑를 두 번 눌러 주세요)"); }
+    else v = v.toUpperCase();
+    patch[f] = v;
+  } else if (col.type === "date") {
+    const d = gridParseDate(txt);
+    if (d === null) return psFail(col.label + ': "' + txt.trim() + '" 날짜를 읽지 못했어요 (예: 10/22 또는 1022)');
+    if (col.kind) {
+      Object.assign(patch, psDateEditPatch(item, col.kind, d));
+      if (col.kind === "arrival" && d && d !== item.arrivalDate) {
+        // 입항일이 바뀌면 AN발송예정(입항일 -2일)도 같이 - 직접 따로 정해둔 값이면 그대로 둬요
+        const autoOld = item.arrivalDate ? gridMinusDays(item.arrivalDate, 2) : "";
+        if (!item.anSendDate || item.anSendDate === autoOld) patch.anSendDate = gridMinusDays(d, 2);
+      }
+    } else {
+      patch[f] = d;
+    }
+  } else if (col.type === "dt") {
+    const q = gridParseDateTime(txt);
+    if (q === null) return psFail(col.label + ': "' + txt.trim() + '" 날짜·시간을 읽지 못했어요 (예: 10/22 오후 4:00)');
+    patch[col.dk] = q.d;
+    patch[col.tk] = q.t ? gridTimeToKorean(q.t) : "";
+  }
+
+  try {
+    await psWriteUpdate(id, patch);
+    let note = "";
+    if (patch.arrivalManual === true || patch.departureManual === true) note = "직접 고친 날짜로 표시했어요 🔒 (터미널이 일정을 바꾸기 전까지 지켜져요)";
+    if (patch.anSendDate && col.kind === "arrival") note += (note ? " · " : "") + "AN발송예정도 같이 바꿨어요";
+    psSay(note || "저장됐어요", note ? "warn" : "ok");
+  } catch (err) {
+    console.error("입항 스케줄 수정 실패:", err);
+    psSay("저장에 실패했어요: " + err, "bad");
+  }
+}
+
+/* ---- 맨 아래 빈 줄 ---- */
+function psDraftCommit(el) {
+  el.dataset.dirty = "0";
+  const f = el.dataset.f, col = PS_COLS.find((c) => c.f === f), txt = el.value;
+  if (!col) return;
+  if (col.type === "text") {
+    const v = txt.trim().replace(/\s+/g, " ");
+    psDraft[f] = f === "vesselName" ? v : v.toUpperCase();
+  } else if (col.type === "date") {
+    const d = gridParseDate(txt);
+    if (d === null) { psDraft[f] = ""; return psFail(col.label + ': "' + txt.trim() + '" 날짜를 읽지 못했어요 (예: 10/22 또는 1022)'); }
+    psDraft[f] = d;
+  } else if (col.type === "dt") {
+    const q = gridParseDateTime(txt);
+    if (q === null) { psDraft[f] = null; return psFail(col.label + ': "' + txt.trim() + '" 날짜·시간을 읽지 못했어요 (예: 10/22 오후 4:00)'); }
+    psDraft[f] = q.d ? q : null;
+  }
+  if (psDraft.vesselName && psDraft.arrivalDate) { psDraftCreate(false); return; }
+  if (psDraft.vesselName) psSay("입항일까지 쓰면 저장돼요 (입항일 없이 저장하려면 맨 오른쪽 ＋ 를 눌러 주세요)", "warn");
+  renderPortScheduleRows();
+}
+
+/* 새 항목 하나를 저장할 내용으로 만들기. 검사에 걸리면 { error } */
+function psBuildNewDoc(v) {
+  const name = String(v.vesselName || "").trim();
+  if (!name) return { error: "선명이 비어 있어요" };
+  const code = String(v.vesselCode || "").toUpperCase(), voy = String(v.voyage || "").toUpperCase(), term = String(v.terminal || "").toUpperCase();
+  const dupe = PORT_SCHEDULE_LIST.find((r) => r.vesselName.trim().toUpperCase() === name.toUpperCase() && String(r.voyage || "").toUpperCase() === voy && psTerminalKey(r.terminal) === psTerminalKey(term));
+  if (dupe) return { error: "이미 있는 항목이에요: " + name + (voy ? " " + voy : "") + (term ? " (" + term + ")" : "") + " — 표에서 고쳐 주세요" };
+  const arrival = v.arrivalDate || "";
+  const data = {
+    vesselName: name, vesselCode: code, voyage: voy,
+    arrivalDate: arrival, departureDate: v.departureDate || "",
+    terminal: term, line: String(v.line || "").toUpperCase(), manager: String(v.manager || "").toUpperCase(),
+    cargoDeadlineDate: v.cargo ? v.cargo.d : "", cargoDeadlineTime: v.cargo && v.cargo.t ? gridTimeToKorean(v.cargo.t) : "",
+    dischargeDeadlineDate: v.discharge ? v.discharge.d : "", dischargeDeadlineTime: v.discharge && v.discharge.t ? gridTimeToKorean(v.discharge.t) : "",
+    anSendDate: v.anSendDate || (arrival ? gridMinusDays(arrival, 2) : ""),
+  };
+  // 코드+항차가 있으면 raw 엑셀 업로드와 같은 고정 ID를 써서(같은 배를 다시 올려도 중복 안 생김), 없으면 자동 ID
+  let docId = "";
+  if (code && voy) {
+    docId = portScheduleDocId(code, voy, term);
+    if (PORT_SCHEDULE_LIST.some((r) => r.id === docId)) return { error: "같은 코드·항차·터미널의 항목이 이미 있어요 — 표에서 고쳐 주세요" };
+  }
+  return { data, docId };
+}
+
+async function psDraftCreate(force) {
+  const built = psBuildNewDoc(psDraft);
+  if (built.error) return psFail(built.error);
+  if (!force && !psDraft.arrivalDate) return;
+  try {
+    await window.fbReady;
+    const col = window.fbDb.collection(PORT_SCHEDULE_COLLECTION);
+    const ref = built.docId ? col.doc(built.docId) : col.doc();
+    await ref.set(Object.assign({}, built.data, { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: "manual" }));
+    psDraft = {};
+    psSay("추가됐어요: " + built.data.vesselName + (built.data.voyage ? " " + built.data.voyage : ""), "ok");
+    renderPortScheduleRows();
+    const first = document.querySelector('#portScheduleRowsWrap input[data-act="ps-draft"][data-f="vesselName"]');
+    if (first) first.focus();
+  } catch (err) {
+    console.error("입항 스케줄 추가 실패:", err);
+    psSay("추가에 실패했어요: " + err, "bad");
+  }
+}
+
+/* 엑셀에서 여러 줄을 복사해서 맨 아래 빈 줄에 붙여넣기 - 열 순서는 표와 같아요 (선명, 코드, 항차, 입항일, 출항일, 터미널, LINE, 마감자, 적하목록, 하선제출, AN) */
+async function psPasteRows(text) {
+  const rows = String(text).replace(/\r/g, "").replace(/\n+$/, "").split("\n").map((l) => l.split("\t"));
+  if (rows.length && /^선명|vessel/i.test((rows[0][0] || "").trim())) rows.shift(); // 헤더 줄이 같이 왔으면 건너뜀
+  const docs = [], problems = [];
+  const seen = new Set();
+  rows.forEach((cells, i) => {
+    if (cells.every((c) => !String(c || "").trim())) return;
+    const v = {};
+    let bad = "";
+    PS_COLS.forEach((c, j) => {
+      const raw = String(cells[j] == null ? "" : cells[j]).trim();
+      if (!raw || bad) return;
+      if (c.type === "text") v[c.f] = raw;
+      else if (c.type === "date") { const d = gridParseDate(raw); if (d === null) bad = c.label + ' "' + raw + '"'; else v[c.f] = d; }
+      else { const q = gridParseDateTime(raw); if (q === null) bad = c.label + ' "' + raw + '"'; else v[c.f] = q.d ? q : null; }
+    });
+    if (bad) { problems.push((i + 1) + "번째 줄: " + bad + " 날짜를 읽지 못했어요"); return; }
+    const built = psBuildNewDoc(v);
+    if (built.error) { problems.push((i + 1) + "번째 줄: " + built.error); return; }
+    const key = built.docId || (built.data.vesselName.toUpperCase() + "|" + built.data.voyage + "|" + psTerminalKey(built.data.terminal));
+    if (seen.has(key)) { problems.push((i + 1) + "번째 줄: 붙여넣은 내용 안에 같은 항목이 있어요"); return; }
+    seen.add(key);
+    docs.push(built);
+  });
+  if (!docs.length) return psFail(problems.length ? problems.slice(0, 3).join(" / ") : "붙여넣은 내용에서 읽을 수 있는 줄이 없어요");
+  try {
+    await window.fbReady;
+    const col = window.fbDb.collection(PORT_SCHEDULE_COLLECTION);
+    for (let i = 0; i < docs.length; i += 400) {
+      const batch = window.fbDb.batch();
+      docs.slice(i, i + 400).forEach((b) => {
+        const ref = b.docId ? col.doc(b.docId) : col.doc();
+        batch.set(ref, Object.assign({}, b.data, { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: "manual" }));
+      });
+      await batch.commit();
+    }
+    psDraft = {};
+    psSay(docs.length + "건 추가됐어요" + (problems.length ? " · 건너뜀 " + problems.length + "건 (" + problems.slice(0, 2).join(" / ") + ")" : ""), problems.length ? "warn" : "ok");
+    renderPortScheduleRows();
+  } catch (err) {
+    console.error("입항 스케줄 붙여넣기 실패:", err);
+    psSay("추가에 실패했어요: " + err, "bad");
+  }
+}
+
+function psFindCell(desc) {
+  const wrap = document.getElementById("portScheduleRowsWrap");
+  if (!wrap || !desc) return null;
+  const sel = 'input[data-act="' + desc.act + '"][data-f="' + desc.f + '"]' + (desc.id != null ? '[data-id="' + String(desc.id).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]' : "");
+  return wrap.querySelector(sel);
+}
+
+function psBindEvents() {
+  if (psBound) return;
+  const wrap = document.getElementById("portScheduleTableWrap");
+  if (!wrap) return;
+  psBound = true;
+
+  wrap.addEventListener("click", (e) => {
+    const el = e.target.closest("[data-act]");
+    if (!el || !wrap.contains(el)) return;
+    const act = el.dataset.act, id = el.dataset.id;
+    if (act === "ps-unlock") {
+      const patch = {}; patch[el.dataset.kind + "Manual"] = false;
+      psWriteUpdate(id, patch).then(() => psSay("직접 고침 표시를 풀었어요. 이제 터미널 값이 바뀌면 그대로 반영돼요", "ok")).catch((err) => psSay("저장에 실패했어요: " + err, "bad"));
+    } else if (act === "ps-fixan") {
+      const item = PORT_SCHEDULE_LIST.find((x) => x.id === id);
+      if (item && item.arrivalDate) psWriteUpdate(id, { anSendDate: gridMinusDays(item.arrivalDate, 2) }).then(() => psSay("AN발송예정을 입항일 -2일로 맞췄어요", "ok")).catch((err) => psSay("저장에 실패했어요: " + err, "bad"));
+    } else if (act === "ps-del") {
+      if (psArmedDelete !== id) {
+        psArmedDelete = id;
+        const item = PORT_SCHEDULE_LIST.find((x) => x.id === id);
+        psSay('한 번 더 누르면 "' + (item ? item.vesselName : "이 항목") + '"을(를) 삭제해요', "warn");
+        renderPortScheduleRows();
+        setTimeout(() => { if (psArmedDelete === id) { psArmedDelete = null; renderPortScheduleRows(); } }, 3000);
+      } else {
+        psArmedDelete = null;
+        window.fbReady.then(() => window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(id).delete())
+          .then(() => psSay("삭제했어요", "ok")).catch((err) => psSay("삭제 실패: " + err, "bad"));
+      }
+    } else if (act === "ps-add") {
+      psDraftCreate(true);
+    }
+  });
+
+  wrap.addEventListener("focusin", (e) => {
+    const el = e.target;
+    if (el.dataset && el.dataset.act && el.tagName === "INPUT") { el.dataset.orig = el.value; el.select(); }
+  });
+
+  wrap.addEventListener("keydown", (e) => {
+    const el = e.target;
+    if (!el.dataset || !el.dataset.act || el.tagName !== "INPUT") return;
+    if (e.key === "Escape") { if (el.dataset.orig != null) el.value = el.dataset.orig; el.dataset.dirty = "0"; return; }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const all = Array.from(wrap.querySelectorAll('input[data-f="' + el.dataset.f + '"]'));
+      const nx = all[all.indexOf(el) + (e.shiftKey ? -1 : 1)];
+      const desc = nx ? { act: nx.dataset.act, f: nx.dataset.f, id: nx.dataset.id } : null;
+      el.blur(); // 값이 바뀌었으면 여기서 저장(change)돼요
+      const target = psFindCell(desc);
+      if (target) target.focus();
+    }
+  });
+
+  wrap.addEventListener("input", (e) => {
+    const el = e.target;
+    if (el.classList && el.classList.contains("ps-in")) el.dataset.dirty = "1";
+  });
+
+  wrap.addEventListener("paste", (e) => {
+    const el = e.target;
+    if (!el.dataset || !el.dataset.act || el.tagName !== "INPUT") return;
+    const txt = (e.clipboardData || window.clipboardData).getData("text");
+    if (!/[\t\n]/.test(txt.replace(/\n+$/, ""))) return; // 한 칸 붙여넣기는 그냥 붙여넣기
+    e.preventDefault();
+    if (el.dataset.act === "ps-draft") psPasteRows(txt);
+    else psSay("여러 칸 붙여넣기는 맨 아래 빈 줄에서만 돼요 (새 항목으로 추가돼요)", "warn");
+  });
+
+  wrap.addEventListener("change", (e) => {
+    const el = e.target;
+    if (!el.dataset) return;
+    if (el.dataset.act === "ps-field") psCommitField(el);
+    else if (el.dataset.act === "ps-draft") psDraftCommit(el);
+  });
+
+  wrap.addEventListener("focusout", (e) => {
+    const el = e.target;
+    if (!el.dataset || !el.dataset.act) return;
+    setTimeout(() => { if (el.dataset) el.dataset.dirty = "0"; if (psRenderPending) renderPortScheduleRows(); }, 0);
+  });
 }
 
 async function deletePortScheduleRow(id) {
@@ -859,16 +1256,30 @@ function processPortScheduleTerminalFile(file, terminalName) {
           const existing = matches[0];
           // ⚠️ 이미 다른 터미널로 등록되어 있으면(예: 광양서부인데 BPT 파일에 이름이 겹침) 자동으로
           //    덮어쓰지 않아요. 터미널이 다르면 배정 자체가 바뀐 게 아니라 다른 배일 가능성이 높거든요.
-          if (existing.terminal && existing.terminal !== terminalName) {
+          if (existing.terminal && psTerminalKey(existing.terminal) !== psTerminalKey(terminalName)) {
             terminalMismatch.push({ vesselName, existingTerminal: existing.terminal });
           } else {
+            // 입항일·출항일은 "터미널이 지난번과 다른 값을 줬는지"로 판단해요 (직접 고친 값은 터미널이 같은 값을 계속 줄 때만 지켜요)
+            const arr = psDecideDate(arrivalDate, existing.arrivalDate || "", !!existing.arrivalManual, existing.arrivalAuto || "");
+            const dep = psDecideDate(departureDate, existing.departureDate || "", !!existing.departureManual, existing.departureAuto || "");
+            const fields = {};
+            if (arr.auto !== undefined) fields.arrivalAuto = arr.auto;
+            if (dep.auto !== undefined) fields.departureAuto = dep.auto;
+            if ("manual" in arr) fields.arrivalManual = arr.manual;
+            if ("manual" in dep) fields.departureManual = dep.manual;
+            if (arr.value) fields.arrivalDate = arr.value;
+            if (dep.value) fields.departureDate = dep.value;
             // AN 발송 예정일(입항일 - 2일)도 같이 맞춤 - 비어 있거나 예전 입항일 기준 자동값일 때만 (직접 정한 값은 유지)
-            let anSendDate = "";
-            if (arrivalDate && arrivalDate !== existing.arrivalDate) {
+            if (arr.value && arr.value !== existing.arrivalDate) {
               const autoOld = existing.arrivalDate ? subtractDaysFromDateStr(existing.arrivalDate, 2) : "";
-              if (!existing.anSendDate || existing.anSendDate === autoOld) anSendDate = subtractDaysFromDateStr(arrivalDate, 2);
+              if (!existing.anSendDate || existing.anSendDate === autoOld) fields.anSendDate = subtractDaysFromDateStr(arr.value, 2);
             }
-            updated.push({ id: existing.id, vesselName, arrivalDate, departureDate, anSendDate });
+            updated.push({
+              id: existing.id, vesselName, fields,
+              changed: !!(arr.value || dep.value),
+              followed: arr.note === "followed" || dep.note === "followed",
+              kept: arr.note === "kept" || dep.note === "kept",
+            });
           }
         }
       }
@@ -877,18 +1288,29 @@ function processPortScheduleTerminalFile(file, terminalName) {
         await window.fbReady;
         let batch = window.fbDb.batch();
         updated.forEach((u) => {
+          if (!Object.keys(u.fields).length) return;
           const docRef = window.fbDb.collection(PORT_SCHEDULE_COLLECTION).doc(u.id);
-          const fields = { terminal: terminalName, updatedAt: firebase.firestore.FieldValue.serverTimestamp() };
-          if (u.arrivalDate) fields.arrivalDate = u.arrivalDate;
-          if (u.departureDate) fields.departureDate = u.departureDate;
-          if (u.anSendDate) fields.anSendDate = u.anSendDate;
+          const fields = Object.assign({}, u.fields);
+          if (u.changed) fields.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
           batch.update(docRef, fields);
         });
         await batch.commit();
       }
 
       let html = `<div style="display:flex; justify-content:flex-end;"><button type="button" class="port-result-close-btn" onclick="document.getElementById('portScheduleUploadResult').innerHTML=''">✕ 닫기</button></div>`;
-      html += `<div class="excel-question-box">✅ [${escapeHtml(terminalName)}] ${updated.length}건 갱신 완료</div>`;
+      const changedCount = updated.filter((u) => u.changed).length;
+      const followedCount = updated.filter((u) => u.followed).length;
+      const keptList = updated.filter((u) => u.kept);
+      html += `<div class="excel-question-box">✅ [${escapeHtml(terminalName)}] 날짜가 바뀐 ${changedCount}건 갱신 완료 (확인한 배 ${updated.length}건)</div>`;
+      if (followedCount) {
+        html += `<div class="excel-warning-box" style="margin-top:8px;"><div class="excel-warning-title">🔄 터미널이 일정을 바꿔서 직접 고친 날짜를 터미널의 새 값으로 바꾼 것 ${followedCount}건</div></div>`;
+      }
+      if (keptList.length) {
+        html += `<div class="excel-warning-box" style="margin-top:8px;">
+          <div class="excel-warning-title">🔒 직접 고친 날짜라서 그대로 둔 것 ${keptList.length}건 (터미널이 지난번과 같은 값을 계속 줘서예요)</div>
+          <ul style="margin:8px 0 0 18px;">${keptList.map((u) => `<li>${escapeHtml(u.vesselName)}</li>`).join("")}</ul>
+        </div>`;
+      }
       if (ambiguous.length) {
         html += `<div class="excel-warning-box" style="margin-top:8px;">
           <div class="excel-warning-title">⚠️ 이름이 같은 배가 여러 건이라 자동 갱신 안 한 것 ${ambiguous.length}건 (직접 확인해서 수정 버튼으로 고쳐주세요)</div>
