@@ -61,6 +61,35 @@ def init_firestore():
     return firestore.client()
 
 
+def minus_days(date_str, days):
+    """'YYYY-MM-DD'에서 days일 전 날짜를 'YYYY-MM-DD'로. 형식이 이상하면 빈 문자열.
+    (가이드 페이지의 subtractDaysFromDateStr 와 같은 규칙: AN 발송 예정일 = 입항일 - 2일)"""
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", str(date_str or ""))
+    if not m:
+        return ""
+    d = datetime.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+    return (d - datetime.timedelta(days=days)).isoformat()
+
+
+def decide_an_send_date(old_an, old_arrival, new_arrival):
+    """입항일이 바뀌었을 때 AN 발송 예정일을 어떻게 할지 정해요.
+    돌려주는 값: (새 AN 발송 예정일 또는 None, 사람이 직접 정한 값이라 그대로 뒀는지)
+
+    - 입항일이 안 바뀌었으면 건드리지 않아요 (None)
+    - 지금 AN 발송 예정일이 비어 있거나, '예전 입항일 - 2일'이라서 자동으로 채워진 값이면
+      → 새 입항일 - 2일로 같이 바꿔요
+    - 그 외(사람이 일부러 다른 날짜로 적어둔 값)는 덮어쓰지 않고 그대로 둬요
+    """
+    if not new_arrival or new_arrival == old_arrival:
+        return None, False
+    auto_value = minus_days(new_arrival, 2)
+    if not auto_value:
+        return None, False
+    if not old_an or old_an == minus_days(old_arrival, 2):
+        return auto_value, False
+    return None, True
+
+
 def normalize_name(name):
     """선명 비교용 - 앞뒤 공백 지우고 대문자로 통일 (터미널마다 대소문자/공백이 다를 수 있어서)."""
     return re.sub(r"\s+", " ", str(name or "").strip()).upper()
@@ -219,6 +248,13 @@ def main():
             if new_departure:
                 fields["departureDate"] = new_departure
 
+            # AN 발송 예정일(입항일 - 2일)도 입항일이 바뀌면 같이 맞춰요.
+            # (예전엔 입항일/출항일만 갱신해서, 입항일이 바뀌어도 AN 발송 예정일은 그대로 남았어요)
+            old_an = existing_data.get("anSendDate") or ""
+            new_an, an_kept_manual = decide_an_send_date(old_an, old_arrival, new_arrival)
+            if new_an:
+                fields["anSendDate"] = new_an
+
             change_record = {
                 "vesselName": existing_data.get("vesselName", ""),
                 "terminal": existing_data.get("terminal", ""),
@@ -226,6 +262,9 @@ def main():
                 "newArrivalDate": new_arrival or old_arrival,
                 "oldDepartureDate": old_departure,
                 "newDepartureDate": new_departure or old_departure,
+                "oldAnSendDate": old_an,
+                "newAnSendDate": new_an or old_an,
+                "anKeptManual": an_kept_manual,  # 사람이 직접 정한 AN 발송 예정일이라 안 바꿨다는 표시
             }
             changes_for_today.append(change_record)
 
@@ -233,7 +272,8 @@ def main():
                 log(
                     f"  [미리보기] {existing_data.get('vesselName')} ({existing_data.get('terminal')}): "
                     f"입항 {old_arrival} → {new_arrival or '(변경없음)'}, "
-                    f"출항 {old_departure} → {new_departure or '(변경없음)'}"
+                    f"출항 {old_departure} → {new_departure or '(변경없음)'}, "
+                    f"AN발송 {old_an or '-'} → {new_an or ('(직접 정한 값이라 유지)' if an_kept_manual else '(변경없음)')}"
                 )
             else:
                 batch.update(doc_ref, fields)

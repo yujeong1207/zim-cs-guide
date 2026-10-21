@@ -183,8 +183,15 @@ def fetch_bpt():
     idx_vessel = find_col("선박명", "선명", "모선명", "Vessel")
     idx_voyage = find_col("모선항차", "항차", "Voyage")
     idx_line = find_col("선사", "Line")
-    idx_arrival = find_col("입항일시", "접안", "ETB", "ATB")
+    # ⚠️ 입항일이 안 바뀌던 원인: 표에는 "입항 예정일시"와 "입항일시" 두 칸이 있는데,
+    #    "입항일시"는 배가 실제로 들어온 뒤에야 채워지는 칸이라 아직 안 들어온 배는 비어 있어요.
+    #    그래서 비어 있는 칸만 읽고 입항일을 못 가져왔어요 (출항일시는 값이 있어서 갱신됐고요).
+    #    → 실제 입항일시가 있으면 그걸 쓰고, 비어 있으면 "입항 예정일시"를 써요.
+    idx_arrival_actual = find_col("입항일시")
+    idx_arrival_est = find_col("입항 예정일시", "입항예정일시")
+    idx_arrival_fallback = find_col("접안", "ETB", "ATB")  # 위 두 칸 다 없을 때만 쓰는 마지막 수단
     idx_departure = find_col("출항일시", "ETD", "ATD")
+    log(f"BPT 컬럼 위치: 선박명={idx_vessel}, 입항일시(실제)={idx_arrival_actual}, 입항 예정일시={idx_arrival_est}, 출항일시={idx_departure}")
 
     if idx_vessel < 0:
         raise RuntimeError(
@@ -204,11 +211,16 @@ def fetch_bpt():
         vessel_name = clean_vessel_name(cells[idx_vessel])
         if not vessel_name:
             continue
+
+        def cell_date(idx):
+            return parse_date_loose(cells[idx]) if idx >= 0 and len(cells) > idx else ""
+
+        arrival = cell_date(idx_arrival_actual) or cell_date(idx_arrival_est) or cell_date(idx_arrival_fallback)
         entries.append({
             "vesselName": vessel_name,
             "vesselCode": "",  # BPT 표에 선박코드가 별도로 안 보여서 일단 비워둠 (선명으로만 식별)
             "voyage": cells[idx_voyage].strip() if idx_voyage >= 0 and len(cells) > idx_voyage else "",
-            "arrivalDate": parse_date_loose(cells[idx_arrival]) if idx_arrival >= 0 and len(cells) > idx_arrival else "",
+            "arrivalDate": arrival,
             "departureDate": parse_date_loose(cells[idx_departure]) if idx_departure >= 0 and len(cells) > idx_departure else "",
             "terminal": "BPT",
             "line": cells[idx_line].strip() if idx_line >= 0 and len(cells) > idx_line else "",
