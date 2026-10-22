@@ -688,6 +688,10 @@ function renderAdminList() {
     renderNtfLetterheadBox(body);
   }
 
+  if (adminSection === "procedures") {
+    renderProceduresDbBox(body); // 팀 DB 저장 상태 안내 + 처음 한 번 "팀 DB로 올리기" 버튼
+  }
+
   if (adminSection === "templates" || adminSection === "ntf" || adminSection === "resources") {
     renderGroupRenameBox(body);
   }
@@ -978,6 +982,7 @@ function renderAdminList() {
   ioRow.className = "io-row";
   ioRow.innerHTML = `
     <button class="btn secondary-btn" onclick="exportAll()">⬇️ 전체 내보내기 (백업/공유)</button>
+    <button class="btn secondary-btn" onclick="openPartialExport()">🧩 선택 내보내기 (원하는 항목만)</button>
     <button class="btn secondary-btn" onclick="document.getElementById('importInput').click()">⬆️ 전체 가져오기</button>
     <button class="btn secondary-btn" onclick="document.getElementById('partialImportInput').click()">🧩 선택 가져오기 (원하는 항목만)</button>
   `;
@@ -1022,6 +1027,20 @@ async function deleteItem(id) {
     NTF_TEMPLATES = NTF_TEMPLATES.filter((t) => t.id !== id);
   } else if (adminSection === "procedures") {
     const item = PROCEDURES.find((t) => t.id === id);
+    if (typeof PROCEDURES_DB_ACTIVE !== "undefined" && PROCEDURES_DB_ACTIVE) {
+      if (!confirm(`"${item.title}" 절차를 삭제할까요?\n팀 모두에게서 삭제돼요.`)) return;
+      try {
+        await deleteProcedureFromFirestore(id);
+      } catch (err) {
+        alert("삭제에 실패했어요: " + (err && err.message ? err.message : err));
+        return;
+      }
+      FAVORITE_PROC_IDS = FAVORITE_PROC_IDS.filter((fid) => fid !== id);
+      saveData(); // 즐겨찾기는 여전히 localStorage 기반
+      renderAdminList();
+      refreshCurrentTab();
+      return;
+    }
     if (!confirm(`"${item.title}" 절차를 삭제할까요?`)) return;
     PROCEDURES = PROCEDURES.filter((t) => t.id !== id);
     FAVORITE_PROC_IDS = FAVORITE_PROC_IDS.filter((fid) => fid !== id);
@@ -1520,7 +1539,21 @@ function saveProcedure() {
   if (draft.subItems.length === 0) { alert("하위 항목을 최소 1개 이상 입력해주세요."); return; }
   const err = validateSubItemTree(draft.subItems);
   if (err) { alert(err); return; }
+  if (typeof PROCEDURES_DB_ACTIVE !== "undefined" && PROCEDURES_DB_ACTIVE) { commitProcedureToDb(); return; }
   commitDraft(PROCEDURES, (list) => { PROCEDURES = list; });
+}
+
+/* 업무 절차가 팀 DB로 옮겨진 뒤에는 저장도 팀 DB에 해요 (모두에게 바로 반영) */
+async function commitProcedureToDb() {
+  try {
+    await saveProcedureToFirestore(draft);
+  } catch (err) {
+    alert("저장에 실패했어요: " + (err && err.message ? err.message : err));
+    return;
+  }
+  draft = null;
+  renderAdminList();
+  refreshCurrentTab();
 }
 
 /* ---- FAQ 편집 ---- */

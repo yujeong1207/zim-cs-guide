@@ -34,7 +34,13 @@ const PARTIAL_IMPORT_LABELS = {
 const PARTIAL_IMPORT_SETTERS = {
   templates: (v) => { replaceAllMailTemplatesInFirestore(v).then(() => alert("메일 템플릿이 Firestore에 반영됐어요 ✅")).catch((err) => alert("메일 템플릿 복원 실패: " + err.message)); },
   ntfTemplates: (v) => { NTF_TEMPLATES = v; },
-  procedures: (v) => { PROCEDURES = normalizeProcedures(v); },
+  procedures: (v) => {
+    PROCEDURES = normalizeProcedures(v);
+    // 업무 절차가 팀 DB로 옮겨진 뒤에는 가져온 내용도 팀 DB에 반영해야 모두에게 보여요
+    if (typeof PROCEDURES_DB_ACTIVE !== "undefined" && PROCEDURES_DB_ACTIVE) {
+      replaceAllProceduresInFirestore(PROCEDURES).then(() => alert("업무 절차가 팀 DB에 반영됐어요 ✅")).catch((err) => alert("업무 절차 팀 DB 반영 실패: " + (err && err.message ? err.message : err)));
+    }
+  },
   faqs: (v) => { FAQS = v; },
   faqTopics: (v) => { FAQ_TOPICS = v; },
   resources: (v) => { RESOURCES = v; },
@@ -172,8 +178,9 @@ function openPartialImportModal(keys) {
   document.body.appendChild(overlay);
 }
 
-function exportAll() {
-  const payload = {
+/* 내보낼 전체 내용 (전체 내보내기·선택 내보내기가 같이 써요) */
+function buildExportPayload() {
+  return {
     templates: TEMPLATES, ntfTemplates: NTF_TEMPLATES, procedures: PROCEDURES, faqs: FAQS, resources: RESOURCES,
     vacations: VACATIONS, faqTopics: FAQ_TOPICS, faqProcedureMigrated: true, templateGroupsMigrated: true, ntfSeedsMigratedV2: true, workManualImportedV1: true, workManualImportedV3: true, workManualImportedV4: true, faqPhoneTopicV1: true,
     vacationMembers: VACATION_MEMBERS, vacationNotice: VACATION_NOTICE, teamEvents: TEAM_EVENTS,
@@ -183,13 +190,123 @@ function exportAll() {
     vesselMonths: VESSEL_MONTHS, vessels: VESSELS, quotes: QUOTES, poaList: POA_LIST, holidays: HOLIDAYS,
     exchangeRates: EXCHANGE_RATES, ttLines: TT_LINES
   };
+}
+
+function downloadJsonFile(payload, filename) {
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "cs_guide_backup.json";
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportAll() {
+  downloadJsonFile(buildExportPayload(), "cs_guide_backup.json");
+}
+
+/* =========================================================================
+   🧩 선택 내보내기 - 원하는 항목만 골라서 파일로 받기
+   (내보내기는 지금 내용을 복사해서 파일로 받는 것뿐이라 아무것도 바뀌지 않아요.
+    받은 파일은 '🧩 선택 가져오기'로 같은 항목만 다시 가져올 수 있어요)
+   ========================================================================= */
+function openPartialExport() {
+  let overlay = document.getElementById("partialExportOverlay");
+  if (overlay) overlay.remove();
+  const payload = buildExportPayload();
+
+  overlay = document.createElement("div");
+  overlay.id = "partialExportOverlay";
+  overlay.className = "admin-overlay";
+  overlay.style.display = "flex";
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+  const box = document.createElement("div");
+  box.className = "admin-panel small-panel";
+
+  const header = document.createElement("div");
+  header.className = "admin-header";
+  const title = document.createElement("div");
+  title.className = "admin-title";
+  title.textContent = "🧩 어떤 항목을 내보낼까요?";
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "close-btn";
+  closeBtn.textContent = "✕ 닫기";
+  closeBtn.onclick = () => overlay.remove();
+  header.appendChild(title);
+  header.appendChild(closeBtn);
+  box.appendChild(header);
+
+  const hint = document.createElement("div");
+  hint.className = "hint";
+  hint.style.marginBottom = "12px";
+  hint.textContent = "체크한 항목만 파일로 받아져요. 내보내기는 지금 내용을 복사해서 받는 것뿐이라 사이트의 내용은 하나도 바뀌지 않아요.";
+  box.appendChild(hint);
+
+  // 보통 필요한 항목이 위로, "이미 실시간 연동됨" 항목은 아래로
+  const keys = Object.keys(PARTIAL_IMPORT_LABELS).filter((k) => payload[k] !== undefined);
+  const live = (k) => /이미 실시간 연동됨/.test(PARTIAL_IMPORT_LABELS[k] || "");
+  keys.sort((x, y) => (live(x) ? 1 : 0) - (live(y) ? 1 : 0));
+
+  const list = document.createElement("div");
+  list.style.cssText = "display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;";
+  const checkboxes = [];
+  keys.forEach((k) => {
+    const row = document.createElement("label");
+    row.style.cssText = "display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;";
+    const chk = document.createElement("input");
+    chk.type = "checkbox";
+    chk.checked = false;
+    chk.dataset.key = k;
+    checkboxes.push(chk);
+    const span = document.createElement("span");
+    const count = Array.isArray(payload[k]) ? " (" + payload[k].length + "개)" : "";
+    span.textContent = (PARTIAL_IMPORT_LABELS[k] || k) + count;
+    row.appendChild(chk);
+    row.appendChild(span);
+    list.appendChild(row);
+  });
+  box.appendChild(list);
+
+  const quick = document.createElement("div");
+  quick.style.cssText = "margin-top:10px;display:flex;gap:8px;";
+  const allBtn = document.createElement("button");
+  allBtn.type = "button"; allBtn.className = "btn secondary-btn"; allBtn.textContent = "전체 선택";
+  allBtn.onclick = () => checkboxes.forEach((c) => { c.checked = true; });
+  const noneBtn = document.createElement("button");
+  noneBtn.type = "button"; noneBtn.className = "btn secondary-btn"; noneBtn.textContent = "전체 해제";
+  noneBtn.onclick = () => checkboxes.forEach((c) => { c.checked = false; });
+  quick.appendChild(allBtn);
+  quick.appendChild(noneBtn);
+  box.appendChild(quick);
+
+  const actions = document.createElement("div");
+  actions.className = "edit-actions";
+  actions.style.marginTop = "16px";
+  const goBtn = document.createElement("button");
+  goBtn.className = "btn generate-btn";
+  goBtn.type = "button";
+  goBtn.textContent = "⬇️ 선택한 항목 내보내기";
+  goBtn.onclick = () => {
+    const selected = checkboxes.filter((c) => c.checked).map((c) => c.dataset.key);
+    if (selected.length === 0) { alert("최소 하나는 선택해주세요."); return; }
+    const out = {};
+    selected.forEach((k) => { out[k] = payload[k]; });
+    downloadJsonFile(out, "cs_guide_backup_partial.json");
+    overlay.remove();
+  };
+  const cancelBtn = document.createElement("button");
+  cancelBtn.className = "btn secondary-btn";
+  cancelBtn.type = "button";
+  cancelBtn.textContent = "취소";
+  cancelBtn.onclick = () => overlay.remove();
+  actions.appendChild(goBtn);
+  actions.appendChild(cancelBtn);
+  box.appendChild(actions);
+
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
 }
 
 function handleImportFile(event) {
@@ -204,6 +321,9 @@ function handleImportFile(event) {
       TEMPLATES = imported.templates || TEMPLATES; // 아래에서 Firestore로도 별도 반영
       NTF_TEMPLATES = imported.ntfTemplates || NTF_TEMPLATES;
       PROCEDURES = normalizeProcedures(imported.procedures || PROCEDURES);
+      if (imported.procedures && typeof PROCEDURES_DB_ACTIVE !== "undefined" && PROCEDURES_DB_ACTIVE) {
+        replaceAllProceduresInFirestore(PROCEDURES).catch((err) => alert("업무 절차 팀 DB 반영 실패: " + (err && err.message ? err.message : err)));
+      }
       FAQS = imported.faqs || FAQS;
       RESOURCES = imported.resources || RESOURCES;
       VACATIONS = imported.vacations || VACATIONS;

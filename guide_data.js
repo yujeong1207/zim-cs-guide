@@ -234,7 +234,7 @@ const DEFAULT_PROCEDURES = [
           "📧 CM에게 OBL 재발행 컨펌 요청 → 도착지 office 및 다큐팀 담당자에게 노티스",
           "📧 POD office에 '1st OBL 분실, 2nd set 발행 예정'임을 CM 컨펌 메일 첨부하여 노티스",
           "⚠️ 최종 다큐팀에 재발행 안내 시, 2번째 OBL 세트에 반드시 \"Second set of originals, the first set stated to be lost\" 문구 기재 요청",
-          "💬 FAQ: Shipper LOI는 필수(부득이하면 FW LOI라도 전달), 은행이 분실 주체가 아니라면 bank guarantee letter는 불필요",
+          "💬 FAQ: Shipper LOI는 필수(부득이하면 FW LOI라도 전달), 은행이 분실 주체인 경우에는 은행이 직접 새 B/L 발행 요청 서류를 주므로 bank guarantee letter는 불필요",
           "🚫 [OBL 없이 반출] 원칙적으로 불가하나 특이 케이스(예: 오피스 폐쇄 등)는 'TU2612' 규정으로 처리 — ZIMformation에서 'TU2612' 검색해 Cargo Value별 처리법 확인",
           "📧 가이드에 따라 LOI 및 서류 작성 후 본사 담당자(Barron.Missy@zim.com, storfer.efrat@zim.com) 및 POD office에 문의"
         ],
