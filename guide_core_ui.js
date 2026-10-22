@@ -241,6 +241,7 @@ function switchMainTab(tab) {
   if (tab === "faqs") { renderFaqTopics(); renderFaqList(); }
   if (tab === "resources") renderResList();
   if (tab === "teamFiles") loadTeamFilesTab();
+  if (tab === "destBl") loadDestBlTab();
   if (tab === "vessels") loadVesselTab();
   if (tab === "panamaTransit") loadPanamaTransitTab();
   if (tab === "news") loadNewsTab();

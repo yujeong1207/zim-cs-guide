@@ -1680,7 +1680,7 @@ function renderBlDeskCreditResult() {
 
 const TAB_GROUPS = {
   work: ["procedures", "faqs", "templates", "ntf", "toneCheck"],
-  csboard: ["followup", "caseShare", "cod", "triangle"],
+  csboard: ["followup", "caseShare", "cod", "triangle", "destBl"],
   "csboard-import": ["followupImport", "caseShareImport", "srManualImport"],
   reference: ["resources", "teamFiles", "vessels", "contacts", "news"],
   schedule: ["vacations", "teamEvents"],
