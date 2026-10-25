@@ -493,10 +493,61 @@ function renderFields() {
   renderMailTableEditor();
 }
 
+/* ===== 표 "필수" 템플릿 지원 (COD REQUEST - 인랜드 구간 변경 등) =====
+   인랜드 구간 변경은 현지에서 POL / POD / FD가 어떻게 바뀌는지 표로 봐야 헷갈리지 않아서,
+   이 유형만 표를 "필수"로 처리한다. (다른 COD 유형은 기존처럼 선택사항)
+   - 템플릿 이름에 "COD"와 "인랜드"가 둘 다 들어 있으면 필수로 인식
+   - 또는 관리에서 tpl.table.required = true 로 지정해도 필수로 인식 (다른 템플릿에도 쓸 수 있게 열어둠) */
+const REQUIRED_TABLE_DEFAULT_COLUMNS = ["B/L No.", "구분", "POL", "POD", "FD"];
+const REQUIRED_TABLE_DEFAULT_PLACEHOLDERS = ["B/L 번호", "", "예: KRPUS", "예: USNYC", "예: USDET"];
+
+function isTableRequired(tpl) {
+  if (!tpl || !tpl.table) return false;
+  if (tpl.table.required === true) return true;
+  const label = tpl.label || "";
+  return /COD/i.test(label) && /인랜드/.test(label);
+}
+
+/* 표를 처음 켤 때 열/행 기본값을 채우는 로직 (예전엔 체크박스 onchange 안에 있었는데, 필수 템플릿이 자동으로 켤 때도 써야 해서 함수로 뺌) */
+function initTableState(tpl, isFixed) {
+  if (isFixed) {
+    const valueCols = (tpl.table.columns && tpl.table.columns.length) ? tpl.table.columns : ["값"];
+    const labels = (tpl.table.rowLabels && tpl.table.rowLabels.length) ? tpl.table.rowLabels : ["항목1"];
+    currentTableColumns = [""].concat(valueCols);
+    currentTablePlaceholders = [""].concat(valueCols.map(() => ""));
+    currentTableRows = labels.map((label) => [label].concat(valueCols.map(() => "")));
+    return;
+  }
+
+  const hasDefaults = tpl.table && tpl.table.columns && tpl.table.columns.length;
+  const useRequiredDefaults = !hasDefaults && isTableRequired(tpl);
+
+  if (useRequiredDefaults) {
+    // 관리에서 열을 따로 안 정해뒀으면: B/L No. | 구분 | POL | POD | FD, 그리고 변경 전/후 두 줄을 미리 깔아둠
+    currentTableColumns = REQUIRED_TABLE_DEFAULT_COLUMNS.slice();
+    currentTablePlaceholders = REQUIRED_TABLE_DEFAULT_PLACEHOLDERS.slice();
+    currentTableRows = [
+      ["", "변경 전", "", "", ""],
+      ["", "변경 후", "", "", ""]
+    ];
+  } else if (hasDefaults) {
+    currentTableColumns = tpl.table.columns.slice();
+    currentTablePlaceholders = (tpl.table.placeholders || []).slice();
+    while (currentTablePlaceholders.length < currentTableColumns.length) currentTablePlaceholders.push("");
+    currentTableRows = [tpl.table.columns.map(() => "")];
+  } else {
+    currentTableColumns = ["항목1", "항목2"];
+    currentTablePlaceholders = ["", ""];
+    currentTableRows = [["", ""]];
+  }
+}
+
 /* 메일 작성 카드의 "표 (선택사항)" 영역.
    관리에서는 이 유형이 표를 "쓸 수 있는지"만 켜두고(tpl.table), 실제 열/행 내용은
    여기 메일 작성 화면에서 팀원이 그때그때 자유롭게 채워 넣는다 (단, "고정 항목 비교표"는 행 이름이 고정돼서
-   팀원은 값 칸만 채운다). */
+   팀원은 값 칸만 채운다).
+   단, 인랜드 구간 변경 COD처럼 isTableRequired()가 true인 유형은 "필수"로 표시되고,
+   표가 자동으로 켜지며(체크 해제 불가), 표가 비어 있으면 generate()에서 생성이 막힌다. */
 function renderMailTableEditor() {
   const wrap = document.getElementById("tableEditorWrap");
   wrap.innerHTML = "";
@@ -504,44 +555,42 @@ function renderMailTableEditor() {
   if (!tpl || !tpl.table) { currentTableColumns = []; currentTableRows = []; currentTablePlaceholders = []; currentTableEnabled = false; return; }
 
   const isFixed = tpl.table.mode === "fixed";
+  const required = isTableRequired(tpl);
+
+  /* 필수 유형이면 체크 안 해도 자동으로 켜고 기본 표를 깔아준다 */
+  if (required && !currentTableEnabled) {
+    currentTableEnabled = true;
+    if (currentTableColumns.length === 0) initTableState(tpl, isFixed);
+  }
 
   const sectionTitle = document.createElement("div");
   sectionTitle.className = "label";
-  sectionTitle.innerHTML = '<span class="icon">📊</span>표 (선택사항 - 여러 건을 표로 넣고 싶을 때)';
+  sectionTitle.innerHTML = required
+    ? '<span class="icon">📊</span><span style="color:#dc2626;font-weight:700;">표 (필수 - POL / POD / FD 변경 전후를 반드시 표로 작성해 주세요)</span>'
+    : '<span class="icon">📊</span>표 (선택사항 - 여러 건을 표로 넣고 싶을 때)';
   wrap.appendChild(sectionTitle);
+
+  if (required) {
+    const reqHint = document.createElement("div");
+    reqHint.className = "hint";
+    reqHint.style.cssText = "margin:4px 0 8px;color:#b91c1c;";
+    reqHint.textContent = "⚠️ 현지에서 구간 변경 내용을 헷갈리지 않도록, 건마다 변경 전/후 POL·POD·FD를 꼭 채워주세요. 표가 비어 있으면 메일이 생성되지 않아요.";
+    wrap.appendChild(reqHint);
+  }
 
   const toggleRow = document.createElement("label");
   toggleRow.className = "toggle-row";
   const toggleInput = document.createElement("input");
   toggleInput.type = "checkbox";
   toggleInput.checked = currentTableEnabled;
+  toggleInput.disabled = required; // 필수면 해제 불가
   toggleInput.onchange = (e) => {
     currentTableEnabled = e.target.checked;
-    if (currentTableEnabled && currentTableColumns.length === 0) {
-      if (isFixed) {
-        const valueCols = (tpl.table.columns && tpl.table.columns.length) ? tpl.table.columns : ["값"];
-        const labels = (tpl.table.rowLabels && tpl.table.rowLabels.length) ? tpl.table.rowLabels : ["항목1"];
-        currentTableColumns = [""].concat(valueCols);
-        currentTablePlaceholders = [""].concat(valueCols.map(() => ""));
-        currentTableRows = labels.map((label) => [label].concat(valueCols.map(() => "")));
-      } else {
-        const defaults = (tpl.table && tpl.table.columns && tpl.table.columns.length) ? tpl.table.columns : null;
-        if (defaults) {
-          currentTableColumns = defaults.slice();
-          currentTablePlaceholders = (tpl.table.placeholders || []).slice();
-          while (currentTablePlaceholders.length < currentTableColumns.length) currentTablePlaceholders.push("");
-          currentTableRows = [defaults.map(() => "")];
-        } else {
-          currentTableColumns = ["항목1", "항목2"];
-          currentTablePlaceholders = ["", ""];
-          currentTableRows = [["", ""]];
-        }
-      }
-    }
+    if (currentTableEnabled && currentTableColumns.length === 0) initTableState(tpl, isFixed);
     renderMailTableEditor();
   };
   toggleRow.appendChild(toggleInput);
-  toggleRow.appendChild(document.createTextNode("표 추가하기"));
+  toggleRow.appendChild(document.createTextNode(required ? "표 추가하기 (필수라 자동 적용됨)" : "표 추가하기"));
   wrap.appendChild(toggleRow);
 
   if (!currentTableEnabled) return;
@@ -775,6 +824,22 @@ function generate() {
   const tpl = getCurrentTemplate();
   if (!tpl) return;
   const values = collectValues();
+
+  /* 표가 필수인 유형(인랜드 구간 변경 COD 등)은 POL / POD / FD 칸이 전부 비어 있으면 생성 자체를 막는다.
+     (열 이름에 POL/POD/FD가 없으면 모든 열을 기준으로 검사) */
+  if (isTableRequired(tpl)) {
+    const keyIdx = currentTableColumns
+      .map((c, i) => (/^(POL|POD|FD)$/i.test((c || "").trim()) ? i : -1))
+      .filter((i) => i >= 0);
+    const checkIdx = keyIdx.length ? keyIdx : currentTableColumns.map((c, i) => i);
+    const hasData = currentTableEnabled && currentTableRows.some((r) =>
+      checkIdx.some((i) => r[i] && r[i].trim() !== "")
+    );
+    if (!hasData) {
+      alert("이 메일은 표 작성이 필수예요 🙏\nPOL / POD / FD 변경 전·후 내용을 표에 입력한 뒤 다시 생성해주세요.");
+      return;
+    }
+  }
 
   const tabsWrap = document.getElementById("tabs");
   const outputsWrap = document.getElementById("outputs");
@@ -1849,4 +1914,3 @@ function formatFileSize(bytes) {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
-
