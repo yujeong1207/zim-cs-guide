@@ -28,6 +28,30 @@ let PROCEDURES_DB_ERROR = "";         // 팀 DB에 연결하지 못했을 때 �
 let PROCEDURES_DB_SEEDED_AT = "";
 let proceduresUnsubscribe = null;
 
+/* ⚠️ Firestore는 "배열 안의 배열"을 저장하지 못해요. 업무 절차의 표(rows: [[칸, 칸], [칸, 칸]])가 바로 그 모양이라서,
+   저장할 때는 안쪽 배열을 { _nestedArray: [...] } 로 한 겹 감싸고, 읽을 때 다시 원래 모양으로 되돌려요.
+   (화면과 다른 코드에서는 예전과 똑같은 모양의 데이터만 보여서, 표 기능은 전혀 달라지지 않아요) */
+function proceduresEncode(v) {
+  if (Array.isArray(v)) return v.map((x) => (Array.isArray(x) ? { _nestedArray: proceduresEncode(x) } : proceduresEncode(x)));
+  if (v && typeof v === "object") {
+    const o = {};
+    Object.keys(v).forEach((k) => { o[k] = proceduresEncode(v[k]); });
+    return o;
+  }
+  return v;
+}
+function proceduresDecode(v) {
+  if (Array.isArray(v)) return v.map(proceduresDecode);
+  if (v && typeof v === "object") {
+    const keys = Object.keys(v);
+    if (keys.length === 1 && keys[0] === "_nestedArray") return proceduresDecode(v._nestedArray);
+    const o = {};
+    keys.forEach((k) => { o[k] = proceduresDecode(v[k]); });
+    return o;
+  }
+  return v;
+}
+
 function proceduresSizeOf(obj) {
   const json = JSON.stringify(obj);
   return typeof Blob !== "undefined" ? new Blob([json]).size : json.length * 3;
@@ -66,7 +90,7 @@ function initProceduresFirestoreSync() {
 
       const list = snapshot.docs
         .filter((d) => d.id !== PROCEDURES_META_ID)
-        .map((d) => Object.assign({ id: d.id }, d.data()))
+        .map((d) => Object.assign({ id: d.id }, proceduresDecode(d.data())))
         .sort((a, b) => (typeof a.order === "number" ? a.order : 9999) - (typeof b.order === "number" ? b.order : 9999) || String(a.title || "").localeCompare(String(b.title || ""), "ko"));
       PROCEDURES = normalizeProcedures(list);
       PROCEDURES_DB_ACTIVE = true;
@@ -91,10 +115,11 @@ function proceduresAfterChange() {
 
 /* 절차 1개 저장 (관리 화면 "저장"). 새 절차면 id를 만들어 줘요. 저장한 id를 돌려줘요 */
 async function saveProcedureToFirestore(item) {
-  const data = JSON.parse(JSON.stringify(item));
-  const id = data.id || genId("proc");
-  delete data.id;
-  data.updatedAt = todayStr();
+  const plain = JSON.parse(JSON.stringify(item));
+  const id = plain.id || genId("proc");
+  delete plain.id;
+  plain.updatedAt = todayStr();
+  const data = proceduresEncode(plain); // 표(배열 안의 배열)를 Firestore가 받아주는 모양으로
   const size = proceduresSizeOf(data);
   if (size > PROCEDURES_MAX_BYTES) {
     throw new Error("이 절차는 용량이 " + (size / 1024 / 1024).toFixed(1) + "MB라서 팀 DB(한 절차 최대 약 0.9MB)에 저장할 수 없어요. 첨부파일(이미지 등)을 줄이거나, 큰 파일은 SharePoint에 두고 링크로 바꿔 주세요.");
@@ -116,12 +141,13 @@ async function deleteProcedureFromFirestore(id) {
 async function replaceAllProceduresInFirestore(list) {
   const col = window.fbDb.collection(PROCEDURES_COLLECTION);
   const prepared = (list || []).map((p, i) => {
-    const data = JSON.parse(JSON.stringify(p));
-    const id = data.id || genId("proc");
-    delete data.id;
-    data.order = i;
-    if (!data.updatedAt) data.updatedAt = todayStr();
-    return { id, data, size: proceduresSizeOf(data), title: data.title || id };
+    const plain = JSON.parse(JSON.stringify(p));
+    const id = plain.id || genId("proc");
+    delete plain.id;
+    plain.order = i;
+    if (!plain.updatedAt) plain.updatedAt = todayStr();
+    const data = proceduresEncode(plain); // 표(배열 안의 배열)를 Firestore가 받아주는 모양으로
+    return { id, data, size: proceduresSizeOf(data), title: plain.title || id };
   });
   const tooBig = prepared.filter((x) => x.size > PROCEDURES_MAX_BYTES);
   if (tooBig.length) {
