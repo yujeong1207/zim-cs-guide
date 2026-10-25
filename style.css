@@ -2485,3 +2485,11 @@ a.tf-name:hover { color: #4338ca; text-decoration: underline; }
 .db-note.bad { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
 .db-fr { display: grid; grid-template-columns: 70px 1fr auto; gap: 8px; align-items: center; margin-bottom: 6px; font-size: 13px; color: #4b5563; }
 .db-fr input { padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px; box-sizing: border-box; width: 100%; }
+
+/* ---- 📤 B/L 데스크: 계산기 사용하기 ---- */
+.bl-calc-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.bl-calc-btn.active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+.bl-calc-panel { border: 1px solid #e5e7eb; border-radius: 14px; background: #f9fafb; padding: 16px 18px; margin-bottom: 18px; }
+.bl-calc-tab-btn { padding: 9px 16px; border: none; border-radius: 10px; background: #f3f4f6; cursor: pointer; font-size: 14px; font-weight: 600; color: #374151; }
+.bl-calc-tab-btn.active { background: #4f46e5; color: #fff; }
+.bl-calc-tab-btn:hover:not(.active) { background: #e5e7eb; }

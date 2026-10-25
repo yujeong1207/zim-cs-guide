@@ -234,6 +234,8 @@ function switchMainTab(tab) {
     const fab = document.querySelector(".feedback-fab");
     if (fab) fab.style.display = "";
   }
+  // B/L 데스크에서 펼쳐둔 계산기는 다른 탭으로 나갈 때 접어요 (다른 탭 계산기와 칸 id가 겹치지 않게)
+  if (mainTab === "blDesk" && tab !== "blDesk" && typeof closeBlDeskCalc === "function") closeBlDeskCalc();
   mainTab = tab;
   showPage(tab);
   stopLiveTabRefresh();

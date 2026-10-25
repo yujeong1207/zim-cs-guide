@@ -1359,9 +1359,23 @@ function renderCalcTool() {
   else renderDoCalculator();
 }
 
+/* 계산기(LAP · D/O)는 칸마다 고유한 id(doDate, doRate, lapDeparture ...)로 동작해서, 계산기가 두 군데에 동시에 떠 있으면
+   엉뚱한 쪽 칸을 읽어요. 그래서 계산기를 그릴 때마다 "다른 자리에 남아 있던 계산기"는 비워줘요
+   (🧮 계산기 탭 · 📦 D/O 데스크 · 📤 B/L 데스크 - 각 화면은 열 때마다 다시 그리니까 비워도 괜찮아요) */
+const CALC_CONTAINER_IDS = ["calcToolBody", "doDeskCalcBody", "blDeskCalcBody"];
+function clearOtherCalcContainers(keepId) {
+  CALC_CONTAINER_IDS.forEach((id) => {
+    if (id === keepId) return;
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = "";
+  });
+}
+
 /* ---- 💸 LAP(연체료) 계산기 ---- */
-function renderLapCalculator() {
-  const body = document.getElementById("calcToolBody");
+function renderLapCalculator(containerId) {
+  const targetId = containerId || "calcToolBody";
+  clearOtherCalcContainers(targetId);
+  const body = document.getElementById(targetId);
   body.innerHTML = "";
 
   const card = document.createElement("div");
@@ -1462,7 +1476,9 @@ async function fetchCitiFxRate() {
 }
 
 function renderDoCalculator(containerId) {
-  const body = document.getElementById(containerId || "calcToolBody");
+  const targetId = containerId || "calcToolBody";
+  clearOtherCalcContainers(targetId);
+  const body = document.getElementById(targetId);
   body.innerHTML = "";
 
   if (!window.__doSelectedDate) window.__doSelectedDate = todayStr();

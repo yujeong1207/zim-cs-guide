@@ -1549,10 +1549,63 @@ const CREDIT_COMPANIES = [
 
 ];
 
+/* 🧮 B/L 데스크 계산기 - 평소엔 숨겨두고, 위쪽 "계산기 사용하기" 버튼을 눌렀을 때만 펼쳐요.
+   LAP 연체료 계산기와 D/O 비용(환율) 계산기는 🧮 계산기 탭 / 📦 D/O 데스크와 같은 계산기를 그대로 써요
+   (D/O 계산기는 열면 씨티은행 오늘 환율을 자동으로 불러와서 "오늘 환율이 얼마인지"도 바로 볼 수 있어요). */
+let blDeskCalcOpen = false;
+let blDeskCalcTool = "lap";
+
+function toggleBlDeskCalc() {
+  if (blDeskCalcOpen) { closeBlDeskCalc(); return; }
+  const panel = document.getElementById("blDeskCalcPanel");
+  const btn = document.getElementById("blDeskCalcBtn");
+  if (!panel || !btn) return;
+  blDeskCalcOpen = true;
+  panel.style.display = "block";
+  btn.textContent = "🧮 계산기 닫기";
+  btn.classList.add("active");
+  renderBlDeskCalc();
+}
+
+function switchBlDeskCalcTool(tool) {
+  blDeskCalcTool = tool;
+  renderBlDeskCalc();
+}
+
+function renderBlDeskCalc() {
+  document.querySelectorAll(".bl-calc-tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.blCalc === blDeskCalcTool));
+  if (blDeskCalcTool === "lap") renderLapCalculator("blDeskCalcBody");
+  else renderDoCalculator("blDeskCalcBody");
+}
+
+/* 닫을 때 계산기 칸을 비워둬요 (다른 탭의 계산기와 칸 id가 겹치지 않게). 다른 탭으로 나갈 때도 자동으로 불려요 */
+function closeBlDeskCalc() {
+  blDeskCalcOpen = false;
+  const panel = document.getElementById("blDeskCalcPanel");
+  const body = document.getElementById("blDeskCalcBody");
+  const btn = document.getElementById("blDeskCalcBtn");
+  if (body) body.innerHTML = "";
+  if (panel) panel.style.display = "none";
+  if (btn) { btn.textContent = "🧮 계산기 사용하기"; btn.classList.remove("active"); }
+}
+
 function loadBlDeskTab() {
   const wrap = document.getElementById("blDeskWrap");
   if (!wrap) return;
+  blDeskCalcOpen = false;
   wrap.innerHTML = `
+    <div class="bl-calc-bar">
+      <button type="button" id="blDeskCalcBtn" class="btn secondary-btn bl-calc-btn" onclick="toggleBlDeskCalc()">🧮 계산기 사용하기</button>
+      <span class="hint" style="margin:0;">LAP 연체료 · D/O 비용(오늘 환율 포함) 계산기를 필요할 때만 펼쳐서 쓸 수 있어요</span>
+    </div>
+    <div id="blDeskCalcPanel" class="bl-calc-panel" style="display:none;">
+      <div class="calc-sub-tabs" style="margin-bottom:14px;">
+        <button type="button" class="bl-calc-tab-btn" data-bl-calc="lap" onclick="switchBlDeskCalcTool('lap')">💸 LAP 계산기 (연체료)</button>
+        <button type="button" class="bl-calc-tab-btn" data-bl-calc="do" onclick="switchBlDeskCalcTool('do')">💱 D/O 비용 계산기 (환율)</button>
+      </div>
+      <div id="blDeskCalcBody"></div>
+    </div>
+
     <div class="desk-search-row">
       <div class="desk-search-col">
         <label class="label">🚩 선박명 검색 (출항일 확인)</label>
