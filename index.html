@@ -328,7 +328,22 @@
     <button id="poaInlineSubmitBtn" class="btn generate-btn" style="margin-top:10px;" onclick="submitPoaInlineForm()">✅ 등록하기</button>
   </div>
 
-  <input id="poaFilter" class="contacts-filter-input" placeholder="🔍 신청업체, 실화주 또는 BL No.로 검색" oninput="renderPoaTable()" style="margin-top:18px;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:18px;">
+    <select id="poaStatusFilter" class="poa-date-input" style="max-width:210px;" onchange="renderPoaTable()">
+      <option value="__all">상태 전체</option>
+      <option value="need">⚠️ 갱신 필요 (날짜 없음 + 1년 경과)</option>
+      <option value="empty">제출일자 없음</option>
+      <option value="expired">1년 경과</option>
+      <option value="soon">⏳ 만료 임박 (30일 이내)</option>
+      <option value="ok">✅ 유효</option>
+    </select>
+    <select id="poaSortSelect" class="poa-date-input" style="max-width:240px;" onchange="renderPoaTable()">
+      <option value="shipper">정렬: 실화주 순</option>
+      <option value="dateAsc">정렬: 제출일자 오래된 순 (날짜 없음 먼저)</option>
+      <option value="dateDesc">정렬: 제출일자 최신 순</option>
+    </select>
+  </div>
+  <input id="poaFilter" class="contacts-filter-input" placeholder="🔍 신청업체, 실화주 또는 BL No.로 검색" oninput="renderPoaTable()" style="margin-top:10px;">
   <div id="poaTableWrap" class="table-scroll-wrap"></div>
 </div>
 

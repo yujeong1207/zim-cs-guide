@@ -142,11 +142,50 @@ function getPoaExpiryWarning(submittedDate) {
   return null;
 }
 
+/* 위임장 상태 분류
+   empty = 제출일자 없음 / expired = 제출일로부터 1년 경과 / soon = 30일 이내 만료 / ok = 유효 */
+function getPoaExpiryDate(submittedDate) {
+  const dateStr = formatPoaDate(submittedDate);
+  if (!dateStr) return null;
+  const submitted = new Date(dateStr);
+  if (isNaN(submitted.getTime())) return null;
+  const expiry = new Date(submitted);
+  expiry.setFullYear(expiry.getFullYear() + 1);
+  return expiry;
+}
+
+function getPoaStatus(submittedDate) {
+  if (!formatPoaDate(submittedDate)) return "empty";
+  const expiry = getPoaExpiryDate(submittedDate);
+  if (!expiry) return "ok"; // 날짜 형식을 못 읽으면 기존 경고 로직과 똑같이 문제없는 걸로 취급
+  const now = new Date();
+  if (now >= expiry) return "expired";
+  const soonFrom = new Date(expiry);
+  soonFrom.setDate(soonFrom.getDate() - 30);
+  if (now >= soonFrom) return "soon";
+  return "ok";
+}
+
+function formatLocalDate_(d) {
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+/* 상단 건수 버튼을 눌렀을 때 상태 드롭다운을 그 값으로 맞추고 다시 그림 */
+function setPoaStatusFilter(value) {
+  const el = document.getElementById("poaStatusFilter");
+  if (el) el.value = value;
+  renderPoaTable();
+}
+
 function renderPoaTable() {
   const wrap = document.getElementById("poaTableWrap");
   if (!wrap) return;
   const qEl = document.getElementById("poaFilter");
   const q = (qEl ? qEl.value : "").trim().toLowerCase();
+  const statusEl = document.getElementById("poaStatusFilter");
+  const statusFilter = statusEl ? statusEl.value : "__all";
+  const sortEl = document.getElementById("poaSortSelect");
+  const sortMode = sortEl ? sortEl.value : "shipper";
 
   if (POA_LIST.length === 0) {
     wrap.innerHTML = POA_SHEET_API_URL
@@ -155,12 +194,78 @@ function renderPoaTable() {
     return;
   }
 
-  const sorted = POA_LIST.slice().sort((a, b) => (a.shipper || "").localeCompare(b.shipper || "", "ko"));
-  /* 신청업체 / 실화주 / BL No. 어디에 입력해도 검색되게 함 */
-  const matched = q ? sorted.filter((p) => [p.applicant, p.shipper, p.blNo].filter(Boolean).join(" ").toLowerCase().includes(q)) : sorted;
+  /* ---- 전체 목록 기준 상태별 건수 (검색·필터와 상관없이 항상 전체 기준) ---- */
+  const counts = { empty: 0, expired: 0, soon: 0, ok: 0 };
+  POA_LIST.forEach((p) => { counts[getPoaStatus(p.submittedDate)]++; });
+  const needCount = counts.empty + counts.expired;
 
-  if (q && matched.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요. 아직 위임장 제출이 안 됐거나, 업체명/BL No. 표기가 다를 수 있어요.</div>';
+  const summary = document.createElement("div");
+  summary.style.cssText = "display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;";
+  [
+    ["need", "⚠️ 갱신 필요", needCount],
+    ["empty", "제출일자 없음", counts.empty],
+    ["expired", "1년 경과", counts.expired],
+    ["soon", "⏳ 만료 임박(30일)", counts.soon],
+    ["ok", "✅ 유효", counts.ok],
+    ["__all", "전체", POA_LIST.length],
+  ].forEach(([key, label, n]) => {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn secondary-btn";
+    const active = statusFilter === key;
+    btn.style.cssText = "padding:5px 11px;font-size:12.5px;" + (active ? "background:#4f46e5;color:#fff;border-color:#4f46e5;" : "");
+    btn.textContent = label + " " + n;
+    btn.onclick = () => setPoaStatusFilter(key);
+    summary.appendChild(btn);
+  });
+
+  /* ---- 정렬 ---- */
+  const byShipper = (a, b) => (a.shipper || "").localeCompare(b.shipper || "", "ko");
+  const dateOf = (p) => formatPoaDate(p.submittedDate);
+  const sorted = POA_LIST.slice();
+  if (sortMode === "dateAsc") {
+    // 오래된 순 - 제출일자가 아예 없는 건을 맨 위로 (먼저 새로 받아야 하는 것부터)
+    sorted.sort((a, b) => {
+      const da = dateOf(a), db = dateOf(b);
+      if (!da && !db) return byShipper(a, b);
+      if (!da) return -1;
+      if (!db) return 1;
+      return da.localeCompare(db) || byShipper(a, b);
+    });
+  } else if (sortMode === "dateDesc") {
+    // 최신 순 - 제출일자가 없는 건은 맨 아래로
+    sorted.sort((a, b) => {
+      const da = dateOf(a), db = dateOf(b);
+      if (!da && !db) return byShipper(a, b);
+      if (!da) return 1;
+      if (!db) return -1;
+      return db.localeCompare(da) || byShipper(a, b);
+    });
+  } else {
+    sorted.sort(byShipper);
+  }
+
+  /* ---- 상태 필터 + 검색(신청업체 / 실화주 / BL No.) ---- */
+  let matched = sorted;
+  if (statusFilter === "need") {
+    matched = matched.filter((p) => { const st = getPoaStatus(p.submittedDate); return st === "empty" || st === "expired"; });
+  } else if (statusFilter !== "__all") {
+    matched = matched.filter((p) => getPoaStatus(p.submittedDate) === statusFilter);
+  }
+  if (q) {
+    matched = matched.filter((p) => [p.applicant, p.shipper, p.blNo].filter(Boolean).join(" ").toLowerCase().includes(q));
+  }
+
+  wrap.innerHTML = "";
+  wrap.appendChild(summary);
+
+  if (matched.length === 0) {
+    const empty = document.createElement("div");
+    empty.className = "empty-state";
+    empty.innerHTML = q
+      ? '❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요. 아직 위임장 제출이 안 됐거나, 업체명/BL No. 표기가 다를 수 있어요.'
+      : "해당하는 건이 없어요 👍";
+    wrap.appendChild(empty);
     return;
   }
 
@@ -173,33 +278,34 @@ function renderPoaTable() {
     tr.dataset.poaId = p.id;
     const warning = getPoaExpiryWarning(p.submittedDate);
     if (warning) warningCount++;
+    let soonNote = "";
+    if (getPoaStatus(p.submittedDate) === "soon") {
+      const exp = getPoaExpiryDate(p.submittedDate);
+      soonNote = '<div style="color:#b45309;font-size:12px;margin-top:3px;">⏳ 곧 만료돼요 (' + formatLocalDate_(exp) + ')</div>';
+    }
     tr.innerHTML = `<td>${q ? snippetHtml(p.applicant || "", q) : escapeHtml(p.applicant || "")}</td>`
       + `<td>${q ? snippetHtml(p.shipper || "", q) : escapeHtml(p.shipper || "")}</td>`
       + `<td>${p.blNo ? (q ? snippetHtml(p.blNo, q) : escapeHtml(p.blNo)) : "-"}</td>`
-      + `<td>${formatPoaDate(p.submittedDate) || "-"}${warning ? `<div class="poa-expiry-warning">${escapeHtml(warning)}</div>` : ""}</td>`
+      + `<td>${formatPoaDate(p.submittedDate) || "-"}${warning ? `<div class="poa-expiry-warning">${escapeHtml(warning)}</div>` : ""}${soonNote}</td>`
       + `<td class="poa-row-actions">`
       + `<button type="button" class="poa-edit-btn" title="수정" onclick="startPoaEdit('${p.id}')">✏️</button>`
       + `<button type="button" class="poa-delete-btn" title="삭제" onclick="deletePoaFromTable('${p.id}')">🗑️</button>`
       + `</td>`;
     table.appendChild(tr);
   });
-  wrap.innerHTML = "";
   wrap.appendChild(table);
-  if (q) {
-    const countInfo = document.createElement("div");
-    countInfo.className = "hint";
-    countInfo.style.marginTop = "8px";
+
+  const countInfo = document.createElement("div");
+  countInfo.className = "hint";
+  countInfo.style.marginTop = "8px";
+  if (q || statusFilter !== "__all") {
     countInfo.textContent = warningCount > 0
-      ? "✅ " + matched.length + "건 검색됨 (이 중 " + warningCount + "건은 위임장 기한 확인이 필요해요)"
-      : "✅ 제출 완료 (" + matched.length + "건 검색됨)";
-    wrap.appendChild(countInfo);
+      ? "✅ " + matched.length + "건 표시 중 (이 중 " + warningCount + "건은 위임장 기한 확인이 필요해요)"
+      : "✅ " + matched.length + "건 표시 중";
   } else if (warningCount > 0) {
-    const countInfo = document.createElement("div");
-    countInfo.className = "hint";
-    countInfo.style.marginTop = "8px";
     countInfo.textContent = "⚠️ 전체 " + matched.length + "건 중 " + warningCount + "건은 위임장 기한 확인이 필요해요";
-    wrap.appendChild(countInfo);
   }
+  if (countInfo.textContent) wrap.appendChild(countInfo);
 }
 
 function renderContactsTable() {
