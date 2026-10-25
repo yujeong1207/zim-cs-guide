@@ -462,12 +462,12 @@
     <div class="tone-intro-pills">
       <span>🔒 붙여넣은 답장은 어디에도 저장되지 않아요</span>
       <span>🌱 표시된 곳이 있어도 틀렸다는 뜻은 아니에요</span>
-      <span>💜 "이 말도 바꾸면 좋겠다" 싶은 표현은 언제든 알려주세요</span>
+      <span>💜 "이 말도 바꾸면 좋겠다" 싶은 표현은 누구나 직접 추가·수정할 수 있어요</span>
     </div>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">
     <button class="btn secondary-btn tone-soft-btn" onclick="document.getElementById('toneCheckInput').value=''; renderToneCheck();">🧹 비우기</button>
-    <button class="btn secondary-btn tone-soft-btn" onclick="openToneRulesManager()">⚙️ 표현 목록 관리 (관리 PIN)</button>
+    <button class="btn secondary-btn tone-soft-btn" onclick="openToneRulesManager()">✏️ 표현 추가·수정</button>
   </div>
   <textarea id="toneCheckInput" class="tone-input" rows="9" placeholder="여기에 보내려는 답장을 붙여넣어 주세요" oninput="renderToneCheck()"></textarea>
   <div id="toneCheckResult" style="margin-top:14px;"></div>
@@ -697,7 +697,7 @@
     <div class="howto-icon">✍️</div>
     <div class="howto-body">
       <div class="howto-title">답장 다듬기 <span class="howto-badge">업무가이드 안 · 저장 안 됨</span></div>
-      <div class="howto-desc">보내기 전에 답장을 붙여넣으면 딱딱하게 들릴 수 있는 표현("~하시기 바랍니다", "불가합니다" 등)을 찾아서 부드러운 표현을 추천해주고, 공감 한마디나 다음 안내처럼 더하면 좋은 부분도 알려줘요. 답장은 브라우저 안에서만 확인하고 <b>어디에도 저장되지 않아요.</b> SR 응대 매뉴얼의 답장 칸에서 "✍️ 답장 다듬기" 버튼을 누르면 바로 넘어와요.</div>
+      <div class="howto-desc">보내기 전에 답장을 붙여넣으면 딱딱하게 들릴 수 있는 표현("~하시기 바랍니다", "불가합니다" 등)을 찾아서 부드러운 표현을 추천해주고, 공감 한마디나 다음 안내처럼 더하면 좋은 부분도 알려줘요. 답장은 브라우저 안에서만 확인하고 <b>어디에도 저장되지 않아요.</b> SR 응대 매뉴얼의 답장 칸에서 "✍️ 답장 다듬기" 버튼을 누르면 바로 넘어와요. 딱딱하게 느껴지는 표현을 발견하면 <b>"✏️ 표현 추가·수정"</b>에서 팀원 누구나 직접 추가하거나 고칠 수 있고, 저장하면 <b>팀 전체에 바로 반영</b>돼요.</div>
     </div>
   </div>
 
@@ -975,7 +975,7 @@
 <div class="admin-overlay" id="toneRulesOverlay" style="display:none;" onclick="if(event.target===this) closeToneRulesManager()">
   <div class="admin-panel">
     <div class="admin-header">
-      <div class="admin-title">⚙️ 답장 다듬기 표현 목록</div>
+      <div class="admin-title">✏️ 답장 다듬기 표현 목록</div>
       <button class="close-btn" onclick="closeToneRulesManager()">✕ 닫기</button>
     </div>
     <div id="toneRulesBody"></div>
