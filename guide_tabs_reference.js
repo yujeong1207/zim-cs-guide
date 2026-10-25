@@ -53,11 +53,13 @@ function startPoaEdit(id) {
   const wrap = document.getElementById("poaInlineFormWrap");
   const applicantEl = document.getElementById("poaInlineApplicant");
   const shipperEl = document.getElementById("poaInlineShipper");
+  const blEl = document.getElementById("poaInlineBl");
   const dateEl = document.getElementById("poaInlineDate");
   const btn = document.getElementById("poaInlineSubmitBtn");
   if (wrap) wrap.style.display = "block";
   if (applicantEl) applicantEl.value = item.applicant || "";
   if (shipperEl) shipperEl.value = item.shipper || "";
+  if (blEl) blEl.value = item.blNo || "";
   if (dateEl) dateEl.value = formatPoaDate(item.submittedDate) || "";
   if (btn) btn.textContent = "✅ 수정 저장하기";
   if (applicantEl) applicantEl.focus();
@@ -80,11 +82,15 @@ async function deletePoaFromTable(id) {
 async function submitPoaInlineForm() {
   const applicantEl = document.getElementById("poaInlineApplicant");
   const shipperEl = document.getElementById("poaInlineShipper");
+  const blEl = document.getElementById("poaInlineBl");
   const dateEl = document.getElementById("poaInlineDate");
   const btn = document.getElementById("poaInlineSubmitBtn");
 
   const applicant = (applicantEl.value || "").trim();
   const shipper = (shipperEl.value || "").trim();
+  /* BL No.는 선택 입력 - 위임장을 최초 제출했던 건의 BL을 참고용으로 남겨두는 칸.
+     대소문자 때문에 검색이 헷갈리지 않게 대문자로 통일해서 저장 */
+  const blNo = blEl ? (blEl.value || "").trim().toUpperCase() : "";
   const submittedDate = dateEl.value || "";
 
   if (!applicant) {
@@ -94,7 +100,7 @@ async function submitPoaInlineForm() {
   }
 
   const isEdit = !!poaEditingId;
-  const entry = { applicant, shipper, submittedDate };
+  const entry = { applicant, shipper, blNo, submittedDate };
   if (isEdit) entry.id = poaEditingId;
 
   btn.disabled = true;
@@ -110,6 +116,7 @@ async function submitPoaInlineForm() {
 
   applicantEl.value = "";
   shipperEl.value = "";
+  if (blEl) blEl.value = "";
   dateEl.value = "";
   poaEditingId = null;
   btn.textContent = "✅ 등록하기";
@@ -149,16 +156,17 @@ function renderPoaTable() {
   }
 
   const sorted = POA_LIST.slice().sort((a, b) => (a.shipper || "").localeCompare(b.shipper || "", "ko"));
-  const matched = q ? sorted.filter((p) => [p.applicant, p.shipper].filter(Boolean).join(" ").toLowerCase().includes(q)) : sorted;
+  /* 신청업체 / 실화주 / BL No. 어디에 입력해도 검색되게 함 */
+  const matched = q ? sorted.filter((p) => [p.applicant, p.shipper, p.blNo].filter(Boolean).join(" ").toLowerCase().includes(q)) : sorted;
 
   if (q && matched.length === 0) {
-    wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요. 아직 위임장 제출이 안 됐거나, 업체명 표기가 다를 수 있어요.</div>';
+    wrap.innerHTML = '<div class="empty-state">❌ "' + escapeHtml(qEl.value) + '"는 목록에 없어요. 아직 위임장 제출이 안 됐거나, 업체명/BL No. 표기가 다를 수 있어요.</div>';
     return;
   }
 
   const table = document.createElement("table");
   table.className = "contacts-table";
-  table.innerHTML = "<tr><th>신청업체 (포워더/관세사무소)</th><th>실화주</th><th>제출일자</th><th>관리</th></tr>";
+  table.innerHTML = "<tr><th>신청업체 (포워더/관세사무소)</th><th>실화주</th><th>BL No. (최초 제출 건)</th><th>제출일자</th><th>관리</th></tr>";
   let warningCount = 0;
   matched.forEach((p) => {
     const tr = document.createElement("tr");
@@ -167,6 +175,7 @@ function renderPoaTable() {
     if (warning) warningCount++;
     tr.innerHTML = `<td>${q ? snippetHtml(p.applicant || "", q) : escapeHtml(p.applicant || "")}</td>`
       + `<td>${q ? snippetHtml(p.shipper || "", q) : escapeHtml(p.shipper || "")}</td>`
+      + `<td>${p.blNo ? (q ? snippetHtml(p.blNo, q) : escapeHtml(p.blNo)) : "-"}</td>`
       + `<td>${formatPoaDate(p.submittedDate) || "-"}${warning ? `<div class="poa-expiry-warning">${escapeHtml(warning)}</div>` : ""}</td>`
       + `<td class="poa-row-actions">`
       + `<button type="button" class="poa-edit-btn" title="수정" onclick="startPoaEdit('${p.id}')">✏️</button>`
@@ -2148,4 +2157,3 @@ function renderVacationEditorBody(existingId, prefillName) {
   };
   body.appendChild(saveBtn);
 }
-

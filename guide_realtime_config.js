@@ -29,6 +29,7 @@ async function fetchPoaListFromServer() {
         id: doc.id,
         applicant: d.applicant || "",
         shipper: d.shipper || "",
+        blNo: d.blNo || "", // BL No. (최초 위임장 제출 건 참고용, 없는 옛날 데이터는 빈 값)
         submittedDate: d.submittedDate || "",
       };
     });
@@ -46,6 +47,7 @@ async function submitPoaToServer(entry) {
     const payload = {
       applicant: entry.applicant || "",
       shipper: entry.shipper || "",
+      blNo: entry.blNo || "",
       submittedDate: entry.submittedDate || "",
     };
     if (entry.id) {
@@ -172,7 +174,7 @@ async function loadPoaTab(forceRefresh) {
       poaLoadFailed = false;
       const list = snapshot.docs.map((doc) => {
         const d = doc.data();
-        return { id: doc.id, applicant: d.applicant || "", shipper: d.shipper || "", submittedDate: d.submittedDate || "" };
+        return { id: doc.id, applicant: d.applicant || "", shipper: d.shipper || "", blNo: d.blNo || "", submittedDate: d.submittedDate || "" };
       });
       poaServerList = list;
       POA_LIST = list;
@@ -1100,4 +1102,3 @@ async function deleteOblItemFlow(id) {
   }
   await loadOblTab();
 }
-

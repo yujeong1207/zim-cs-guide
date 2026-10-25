@@ -309,7 +309,7 @@
 
 <!-- ===== 🖋️ 위임장 현황 탭 ===== -->
 <div class="tab-page" id="page-poa">
-  <div class="hint" style="margin-bottom:10px;">신청업체(포워더/관세사무소)나 실화주 이름으로 검색해서 위임장 제출 여부를 바로 확인해요. 목록에 없으면 아직 제출 안 된 거예요. (진짜 실시간이라 새로고침 안 누르셔도 자동으로 반영돼요. 화면이 이상할 때만 새로고침을 눌러주세요.)<br><span style="color:#b91c1c;font-weight:bold;font-size:13px;">⚠️ 위임 권한은 최대 1년이에요. 1년이 지난 건은 검색 결과에 자동으로 경고가 뜨니, 그 업체는 새로 위임장을 받아주세요.</span></div>
+  <div class="hint" style="margin-bottom:10px;">신청업체(포워더/관세사무소)나 실화주 이름, 또는 <b>BL No.</b>로 검색해서 위임장 제출 여부를 바로 확인해요. 목록에 없으면 아직 제출 안 된 거예요. (진짜 실시간이라 새로고침 안 누르셔도 자동으로 반영돼요. 화면이 이상할 때만 새로고침을 눌러주세요.)<br><span style="color:#b91c1c;font-weight:bold;font-size:13px;">⚠️ 위임 권한은 최대 1년이에요. 1년이 지난 건은 검색 결과에 자동으로 경고가 뜨니, 그 업체는 새로 위임장을 받아주세요.</span></div>
 
   <div style="display:flex;gap:8px;flex-wrap:wrap;">
     <button class="btn generate-btn" onclick="openPoaForm()">➕ 새 업체 등록하기 (팀원 누구나)</button>
@@ -320,6 +320,7 @@
     <div class="hint" style="margin:12px 0 8px;">여기서 입력하고 등록하기를 누르면 바로 목록에 반영돼요.</div>
     <input id="poaInlineApplicant" class="contacts-filter-input" placeholder="신청업체 (포워더/관세사무소)">
     <input id="poaInlineShipper" class="contacts-filter-input" placeholder="실화주" style="margin-top:8px;">
+    <input id="poaInlineBl" class="contacts-filter-input" placeholder="BL No. (위임장을 최초 제출한 건의 BL, 선택)" style="margin-top:8px;">
     <div class="poa-date-field">
       <label for="poaInlineDate">제출일자</label>
       <input id="poaInlineDate" type="date" class="poa-date-input">
@@ -327,7 +328,7 @@
     <button id="poaInlineSubmitBtn" class="btn generate-btn" style="margin-top:10px;" onclick="submitPoaInlineForm()">✅ 등록하기</button>
   </div>
 
-  <input id="poaFilter" class="contacts-filter-input" placeholder="🔍 신청업체 또는 실화주로 검색" oninput="renderPoaTable()" style="margin-top:18px;">
+  <input id="poaFilter" class="contacts-filter-input" placeholder="🔍 신청업체, 실화주 또는 BL No.로 검색" oninput="renderPoaTable()" style="margin-top:18px;">
   <div id="poaTableWrap" class="table-scroll-wrap"></div>
 </div>
 
@@ -737,7 +738,7 @@
     <div class="howto-icon">🖋️</div>
     <div class="howto-body">
       <div class="howto-title">위임장 현황 <span class="howto-badge howto-badge-live">🔴 실시간 공유</span></div>
-      <div class="howto-desc">신청업체나 실화주 이름으로 검색하면 위임장 제출 여부를 바로 확인할 수 있어요. <b>위임 권한은 최대 1년</b>이라, 제출일자가 1년 넘었거나 아예 없는 업체는 자동으로 경고 문구가 떠요 (검색 안 해도 목록 전체에서 바로 보여요). 새 업체가 위임장을 냈으면 "➕ 새 업체 등록하기"로 직접 등록해주세요 — <b>등록하는 순간 팀원 전체 화면에 반영</b>돼요.</div>
+      <div class="howto-desc">신청업체나 실화주 이름으로 검색하면 위임장 제출 여부를 바로 확인할 수 있어요. <b>위임 권한은 최대 1년</b>이라, 제출일자가 1년 넘었거나 아예 없는 업체는 자동으로 경고 문구가 떠요 (검색 안 해도 목록 전체에서 바로 보여요). 새 업체가 위임장을 냈으면 "➕ 새 업체 등록하기"로 직접 등록해주세요 — <b>등록하는 순간 팀원 전체 화면에 반영</b>돼요. DO를 다른 사이트에서 처리할 때 참고할 수 있도록, 위임장을 <b>최초로 제출한 건의 BL No.</b>를 같이 적어두면 나중에 BL 번호로도 검색해서 찾아볼 수 있어요 (선택 입력이에요).</div>
     </div>
   </div>
 
