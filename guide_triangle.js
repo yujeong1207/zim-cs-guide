@@ -20,7 +20,9 @@ let triangleOpenGroups = new Set(); // BL 목록을 펼친 줄의 key 모음
 let triangleRenderPending = false;  // 입력 중이라 미뤄둔 다시 그리기가 있는지
 let triangleBound = false;
 let triangleArmedDelete = null;     // 🗑 한 번 눌러서 "한 번 더 누르면 삭제" 대기 중인 줄
-let triangleDraft = { vessel: "", shipper: "", onboard: "", second: "", bls: "", remark: "" }; // 맨 아래 빈 줄(저장 전)
+let triangleBlAddText = {};         // 펼친 BL 목록 아래 "BL 추가" 칸에 쓰던 글 (표가 다시 그려져도, 오류가 나도 안 날아가게)
+let triangleBlAddBusy = false;
+let triangleDraft = { vessel: "", shipper: "", onboard: "", second: "", secondNote: "", bls: "", remark: "" }; // 맨 아래 빈 줄(저장 전)
 let triangleStatus = { text: "", kind: "" };
 let triangleStatusTimer = null;
 
@@ -146,6 +148,82 @@ function triangleCanonShipper(s) {
   return f || t;
 }
 
+/* 2ND 배 칸에는 배 이름 뒤에 괄호로 메모를 같이 쓸 수 있어요. 예) ZE5 15E (VNHAI ETD 11/4)
+   → 배 이름 "ZE5 15E" 와 메모 "VNHAI ETD 11/4" 를 따로 저장해요 (배 이름은 다른 칸처럼 형식·표기를 맞추고, 메모는 쓴 그대로 둬요) */
+function triangleSplitSecond(raw) {
+  const s = String(raw || "").trim();
+  const m = /^(.*?)\s*[\(（](.*)[\)）]\s*$/.exec(s);
+  return m ? { vessel: m[1].trim(), note: m[2].trim() } : { vessel: s, note: "" };
+}
+/* 반환: { vessel, note, isNew } 또는 { error } */
+function triangleCheckSecond(raw) {
+  const sp = triangleSplitSecond(raw);
+  if (!sp.vessel) return sp.note ? { error: "2ND 배 이름이 없어요. 배 이름을 먼저 쓰고 괄호 안에 메모를 써 주세요 (예: ZE5 15E (VNHAI ETD 11/4))" } : { vessel: "", note: "" };
+  const r = triangleCheckVessel(sp.vessel, false);
+  if (r.error) return r;
+  return { vessel: r.value, note: sp.note, isNew: r.isNew };
+}
+/* 화면에 보여줄 글: 배 이름 + (메모) */
+function triangleSecondText(e) {
+  const v = String((e && e.secondVessel) || "").trim();
+  if (!v) return "";
+  const n = String((e && e.secondNote) || "").trim();
+  return n ? v + " (" + n + ")" : v;
+}
+
+/* =========================================================================
+   🚢 2ND 배 출항 표시
+   2ND 배 메모에 적은 ETD 날짜(예: "VNHAI ETD 11/4")를 읽어서, 2ND 배가 오늘 출항하거나 이미 출항했는데
+   아직 "POL/POD 인폼"(= 운임지불 메시지) 단계가 안 끝났으면 표시를 띄워요 (빨강: 출항 지남 / 주황: 오늘 출항).
+   POL/POD 인폼 단계를 완료(O)하거나 해당 없음(X)으로 바꾸면 표시가 사라져요.
+   ========================================================================= */
+const TRIANGLE_POLPOD_IDX = 4; // TRIANGLE_STEPS 의 맨 끝 = POL/POD 인폼
+
+/* "ETD 11/4", "etd:11.4", "ETD 11월 4일" 을 읽어요. ETD 글자가 없으면 메모 안의 첫 날짜를 써요. 못 읽으면 "" */
+function triangleEtdFromNote(note) {
+  const s = String(note || "");
+  const m = /etd\s*[:\-]?\s*(\d{1,2})\s*(?:[\/.\-]|월)\s*(\d{1,2})/i.exec(s) || /(\d{1,2})\s*[\/.\-]\s*(\d{1,2})/.exec(s);
+  if (!m) return "";
+  return gridParseDate(m[1] + "/" + m[2]) || "";
+}
+/* 오늘부터 며칠 뒤인지 (오늘=0, 어제=-1) */
+function triangleDaysUntil(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || "");
+  if (!m) return 0;
+  const n = new Date();
+  return Math.round((Date.UTC(+m[1], +m[2] - 1, +m[3]) - Date.UTC(n.getFullYear(), n.getMonth(), n.getDate())) / 86400000);
+}
+/* BL 한 건의 표시: 없으면 null, 있으면 { cls: "red"|"amb", n, text, tip } */
+function triangleEntryEtdStatus(e) {
+  if (!String(e.secondVessel || "").trim()) return null;
+  if (e.doneStatus === "done") return null;
+  const step = TRIANGLE_STEPS[TRIANGLE_POLPOD_IDX];
+  const kind = triangleStepState(step, e[step.key]).kind;
+  if (kind === "done" || kind === "na") return null;      // POL/POD 인폼까지 끝났으면 표시 없음
+  const iso = triangleEtdFromNote(e.secondNote);
+  if (!iso) return null;
+  const n = triangleDaysUntil(iso);
+  if (n > 0) return null;                                  // 아직 출항 전이면 표시 없음
+  const when = gridFmtDate(iso).replace(/\(.\)/, "");
+  return n < 0
+    ? { cls: "red", n, text: "🚢 출항 " + (-n) + "일 지남", tip: "2ND 배가 " + when + "에 출항했어요. POL/POD 인폼(운임지불 메시지)을 보낼 차례예요" }
+    : { cls: "amb", n: 0, text: "🚢 오늘 출항", tip: "2ND 배가 오늘(" + when + ") 출항해요. 출항하면 POL/POD 인폼(운임지불 메시지)을 보내세요" };
+}
+/* 줄(그룹)의 표시: BL들 중 ETD가 가장 빠른(가장 많이 지난) 것 기준 */
+function triangleSecondEtdStatus(g) {
+  let best = null;
+  g.entries.forEach((e) => { const st = triangleEntryEtdStatus(e); if (st && (best === null || st.n < best.n)) best = st; });
+  return best;
+}
+function triangleEtdBadgeHtml(st) {
+  return st ? '<span class="tx-etd ' + st.cls + '" title="' + escapeHtml(st.tip) + '">' + st.text + "</span>" : "";
+}
+/* 2ND 배 칸(<td>…</td>) 맨 뒤에 표시를 붙여요 */
+function triangleAddEtdBadge(tdHtml, g) {
+  const badge = triangleEtdBadgeHtml(triangleSecondEtdStatus(g));
+  return badge ? tdHtml.replace(/<\/td>$/, badge + "</td>") : tdHtml;
+}
+
 /* 칸에 쓴 값 검사 - 반환: { value, isNew } 또는 { error } */
 function triangleCheckVessel(raw, allowEmpty) {
   const v = triangleNormText(raw);
@@ -211,6 +289,7 @@ function triangleDocToEntry(doc) {
     shipper: d.shipper || "",
     onboardDate: d.onboardDate || "",
     secondVessel: d.secondVessel || "",
+    secondNote: d.secondNote || "",    // 2ND 배 옆에 괄호로 적는 메모 (예: VNHAI ETD 11/4)
     groupRemark: d.groupRemark || "",
     popCharge: d.popCharge || "",
     mfstClose: d.mfstClose || "",
@@ -278,7 +357,13 @@ function triangleDecorateGroup(g) {
   const dates = Array.from(new Set(g.entries.map((e) => e.onboardDate).filter(Boolean))).sort();
   g.onboard = dates[0] || "";
   g.dateMixed = dates.length > 1;
-  g.second = pick("secondVessel");
+  // 2ND 배는 BL마다 다를 수 있어요 (같은 배·화주 줄 안에서 어떤 BL은 있고 어떤 BL은 없을 수도)
+  const seconds = g.entries.map((e) => triangleSecondText(e));
+  g.secondCount = g.entries.filter((e) => String(e.secondVessel || "").trim()).length;  // 2ND 배가 있는 BL 수
+  g.secondMixed = new Set(seconds).size > 1;                      // 모두 같지 않음 (있는 BL·없는 BL이 섞였거나 값이 다름)
+  g.second = g.secondMixed ? "" : (seconds[0] || "");             // 줄 전체가 같을 때만 값을 보여줘요 ("배 이름 (메모)")
+  g.secondVesselOnly = g.secondMixed ? "" : String(first.secondVessel || "").trim();
+  g.secondNoteOnly = g.secondMixed ? "" : String(first.secondNote || "").trim();
   g.remark = pick("groupRemark");
   g.states = TRIANGLE_STEPS.map((step) => {
     const vals = g.entries.map((e) => String(e[step.key] || "").trim());
@@ -297,7 +382,8 @@ function triangleEntriesOfGroup(key) {
 function triangleMatchesChip(g, chip) {
   if (chip === "check") return g.entries.some((e) => triangleEntryInfo(e).states.some((s) => s.kind === "check"));
   if (chip === "remit") return g.entries.some((e) => triangleEntryInfo(e).states[TRIANGLE_REMIT_IDX].kind === "wait"); // 신용·X는 대기가 아니라서 안 세요
-  if (chip === "second") return !!g.second;
+  if (chip === "second") return g.secondCount > 0; // 한 건이라도 2ND 배가 있으면
+  if (chip === "etd") return !!triangleSecondEtdStatus(g); // 2ND 배가 오늘 출항했거나 이미 출항했는데 POL/POD 인폼이 아직
   return true;
 }
 
@@ -338,13 +424,13 @@ function renderTriangleList() {
   let groups = triangleBuildGroups(TRIANGLE_LIST);
 
   // 요약 칩 숫자 - 검색/필터와 상관없이 "진행중인 전체 줄" 기준
-  const counts = { check: 0, remit: 0, second: 0 };
+  const counts = { check: 0, remit: 0, second: 0, etd: 0 };
   const prog = groups.filter((g) => !g.done);
   prog.forEach((g) => { Object.keys(counts).forEach((c) => { if (triangleMatchesChip(g, c)) counts[c]++; }); });
   const doneCount = groups.length - prog.length;
 
   if (q) {
-    groups = groups.filter((g) => [g.vessel, g.shipper, g.second, g.remark].concat(g.entries.map((e) => e.blNumber + " " + e.remark)).join(" ").toLowerCase().includes(q));
+    groups = groups.filter((g) => [g.vessel, g.shipper, g.second, g.remark].concat(g.entries.map((e) => e.blNumber + " " + e.remark + " " + triangleSecondText(e))).join(" ").toLowerCase().includes(q));
   }
   if (triangleChipFilter) groups = groups.filter((g) => !g.done && triangleMatchesChip(g, triangleChipFilter));
   if (triangleHideDone) groups = groups.filter((g) => !g.done);
@@ -370,6 +456,7 @@ function renderTriangleList() {
     + chip("check", "check", "확인중", counts.check)
     + chip("remit", "remit", "송금 대기", counts.remit)
     + chip("second", "second", "2ND 배 있음", counts.second)
+    + chip("etd", "etd", "🚢 2ND 출항함 (오늘 포함)", counts.etd)
     + '<button type="button" class="tri-chip' + (triangleHideDone ? " active" : "") + '" onclick="toggleTriangleHideDone()">' + (triangleHideDone ? "완료 건 보이기" : "완료 건 숨기기") + "</button>"
     + "</div>";
 
@@ -390,9 +477,9 @@ function renderTriangleList() {
     + '<datalist id="txDlShipper">' + triangleShipperOptions().map((v) => '<option value="' + esc(v) + '">').join("") + "</datalist>";
 
   html += '<table class="contacts-table triangle-table tx-table sticky-table"><colgroup>'
-    + '<col style="width:30px"><col style="width:176px"><col style="width:132px"><col style="width:104px"><col style="width:132px">'
+    + '<col style="width:30px"><col style="width:176px"><col style="width:132px"><col style="width:104px"><col style="width:220px">'
     + '<col style="width:84px"><col style="width:84px"><col style="width:90px"><col style="width:84px"><col style="width:90px">'
-    + '<col style="width:84px"><col style="width:210px"><col style="width:44px"></colgroup>'
+    + '<col style="width:84px"><col style="width:270px"><col style="width:44px"></colgroup>'
     + "<thead><tr><th></th><th>배(VSL)</th><th>화주</th><th>온보드</th><th>2ND 배</th>"
     + "<th>POP CHARGE</th><th>MFST CLOSE</th><th title=\"인보이스 발송요청\">인보이스요청</th><th>송금 완료</th><th>POL/POD 인폼</th>"
     + "<th>BL</th><th>REMARK</th><th></th></tr></thead><tbody>";
@@ -406,17 +493,21 @@ function renderTriangleList() {
     const autoOpen = !!q && g.entries.some((e) => String(e.blNumber).toLowerCase().includes(q));
     const open = triangleOpenGroups.has(g.key) || autoOpen;
     const armed = triangleArmedDelete === g.key;
+    const etdSt = triangleSecondEtdStatus(g);
     const cell = (field, val, ph, list, extraCls, title) =>
       '<td class="no-strike"><input type="text" class="tx-input ' + (extraCls || "") + '" data-act="field" data-field="' + field + '" data-gk="' + gk + '" value="' + esc(val) + '" placeholder="' + ph + '" autocomplete="off"'
       + (list ? ' list="' + list + '"' : "") + (title ? ' title="' + esc(title) + '"' : "") + "></td>";
 
-    html += '<tr class="tx-row' + (g.done ? " row-done" : "") + (firstOfVessel ? " tx-vfirst" : "") + '" data-gk="' + gk + '">'
+    html += '<tr class="tx-row' + (g.done ? " row-done" : "") + (firstOfVessel ? " tx-vfirst" : "") + (etdSt ? (etdSt.n < 0 ? " tx-etd-late" : " tx-etd-today") : "") + '" data-gk="' + gk + '">'
       + '<td class="no-strike tx-caret" data-act="toggle-bl" data-gk="' + gk + '">' + (open ? "▾" : "▸") + "</td>"
       + cell("vessel", g.vessel, "배 미입력", "txDlVessel", "tx-vin" + (firstOfVessel ? "" : " tx-rep") + (g.vessel ? "" : " tx-warnph"))
       + cell("shipper", g.shipper, "화주 미입력", "txDlShipper", g.shipper ? "" : "tx-warnph")
       + cell("onboard", g.onboard ? gridFmtDate(g.onboard) : "", "미입력", "", g.onboard ? (g.dateMixed ? "tx-mixed" : "") : "tx-warnph",
         g.dateMixed ? "BL마다 온보드가 달라요. 여기서 고치면 이 줄 전체가 같은 날짜로 바뀌어요" : "")
-      + cell("second", g.second, "없음", "txDlVessel", "");
+      + triangleAddEtdBadge((g.secondMixed
+        ? '<td class="no-strike"><input type="text" class="tx-input tx-mixed tx-second-mixed" readonly data-act="toggle-bl" data-gk="' + gk + '" value="혼합 (' + g.secondCount + "/" + g.entries.length + '건)" title="'
+          + esc("BL마다 2ND 배가 달라요 (" + Array.from(new Set(g.entries.map(triangleSecondText).filter(Boolean))).join(", ") + "). 눌러서 BL 목록을 펼치면 BL별로 보고 고칠 수 있어요") + '"></td>'
+        : cell("second", g.second, "없음", "txDlVessel", "", "2ND 배 이름 뒤에 괄호로 메모를 같이 쓸 수 있어요 (예: ZE5 15E (VNHAI ETD 11/4))" + (g.second ? "\n지금: " + g.second : ""))), g);
 
     g.states.forEach((st0, i) => {
       const st = (g.done && st0.kind === "wait") ? { kind: "na", label: "—", raw: "" } : st0;
@@ -426,18 +517,25 @@ function renderTriangleList() {
     });
 
     html += '<td class="no-strike"><button type="button" class="tx-bl-btn" data-act="toggle-bl" data-gk="' + gk + '">' + g.entries.length + "건 " + (open ? "▴" : "▾") + "</button></td>"
-      + cell("remark", g.remark, "-", "", "tx-remark")
+      + '<td class="no-strike"><textarea class="tx-input tx-remark" rows="1" data-act="field" data-field="remark" data-gk="' + gk + '" placeholder="-" spellcheck="false">' + esc(g.remark) + "</textarea></td>"
       + '<td class="no-strike tx-trash' + (armed ? " armed" : "") + '" data-act="del-group" data-gk="' + gk + '" title="이 줄 전체 삭제 (두 번 누르면 삭제돼요)">🗑</td>'
       + "</tr>";
 
     if (open) {
-      const blText = g.entries.map((e) => e.blNumber).filter(Boolean).join("\n");
       const perBl = g.entries.filter((e) => e.remark).map((e) => e.blNumber + ": " + e.remark);
+      const addText = triangleBlAddText[g.key] || "";
       html += '<tr class="tx-ex-row"><td></td><td colspan="12" class="no-strike"><div class="tx-ex">'
         + '<div class="tx-ex-head"><b>BL <span class="tx-cnt">' + g.entries.length + "</span>건</b>"
-        + '<span class="tx-sub">한 줄에 하나씩 · 고치거나 붙여넣고 칸 밖을 누르면 저장돼요</span>'
+        + '<span class="tx-sub">BL마다 2ND 배를 따로 쓸 수 있어요 (없는 BL은 비워두세요) · 배 이름 뒤에 괄호로 메모도 가능: ZE5 15E (VNHAI ETD 11/4)</span>'
         + '<button type="button" class="btn secondary-btn tx-mini" data-act="copy-bls" data-gk="' + gk + '">📋 BL 전체 복사</button></div>'
-        + '<textarea class="tx-input tx-bl-text" rows="1" data-act="bl-edit" data-gk="' + gk + '" spellcheck="false">' + esc(blText) + "</textarea>"
+        + '<div class="tx-bl-grid"><div class="tx-bl-row tx-bl-grid-head"><span>BL 번호</span><span>2ND 배</span><span></span></div>'
+        + g.entries.map((e) => '<div class="tx-bl-row' + (e.secondVessel ? " has-second" : "") + '" data-triangle-id="' + e.id + '">'
+          + '<input type="text" class="tx-input tx-bl-no-in" data-act="bl-field" data-field="bl" data-id="' + e.id + '" data-gk="' + gk + '" value="' + esc(e.blNumber) + '" spellcheck="false" autocomplete="off">'
+          + '<div class="tx-sec-wrap"><input type="text" class="tx-input" list="txDlVessel" data-act="bl-field" data-field="second" data-id="' + e.id + '" data-gk="' + gk + '" value="' + esc(triangleSecondText(e)) + '" placeholder="없음" title="' + esc("2ND 배 이름 뒤에 괄호로 메모를 같이 쓸 수 있어요 (예: ZE5 15E (VNHAI ETD 11/4))" + (triangleSecondText(e) ? "\n지금: " + triangleSecondText(e) : "")) + '" autocomplete="off">' + triangleEtdBadgeHtml(triangleEntryEtdStatus(e)) + "</div>"
+          + '<button type="button" class="tx-del" data-act="del-bl" data-id="' + e.id + '" title="이 BL 삭제">✕</button></div>').join("")
+        + "</div>"
+        + '<div class="tx-add-bl"><textarea class="tx-input tx-bl-input" rows="1" data-act="bl-add" data-gk="' + gk + '" spellcheck="false" placeholder="BL 추가 · 한 줄에 BL 하나 (2ND 배가 있으면 BL 번호 뒤에 같이 써요: ZIMUHAI80255002 RM1 11W). 엑셀에서 BL·2ND 두 열을 복사해 붙여넣어도 돼요">' + esc(addText) + "</textarea>"
+        + '<button type="button" class="btn generate-btn tx-mini" data-act="bl-add-btn" data-gk="' + gk + '">추가</button></div>'
         + (perBl.length ? '<div class="tx-sub" style="margin-top:6px;">BL별로 적혀 있던 메모: ' + esc(perBl.join(" · ")) + "</div>" : "")
         + "</div></td></tr>";
     }
@@ -451,7 +549,7 @@ function renderTriangleList() {
     + dcell("vessel", d.vessel, "새 줄: 배 (예: RM1 11W)", "txDlVessel")
     + dcell("shipper", d.shipper, "화주", "txDlShipper")
     + dcell("onboard", d.onboard ? gridFmtDate(d.onboard) : "", "온보드 10/17", "")
-    + dcell("second", d.second, "2ND 배", "txDlVessel")
+    + dcell("second", d.second ? d.second + (d.secondNote ? " (" + d.secondNote + ")" : "") : "", "2ND 배 (메모는 괄호로)", "txDlVessel")
     + '<td colspan="5" class="no-strike tx-draft-hint">← 배·화주를 쓰고 오른쪽에 BL을 붙여넣으면 새 줄로 저장돼요</td>'
     + dcell("bls", d.bls, "BL 붙여넣기", "")
     + dcell("remark", d.remark, "REMARK", "")
@@ -460,7 +558,7 @@ function renderTriangleList() {
   html += "</tbody></table>"
     + '<div class="hint" style="margin-top:8px;">✅ 배·화주 ' + groups.length + "줄 표시됨 (진행 " + prog.length + " · 완료 " + doneCount + ")</div>";
   wrap.innerHTML = html;
-  wrap.querySelectorAll("textarea.tx-bl-text").forEach(triangleAutoSize);
+  wrap.querySelectorAll("textarea.tx-remark, textarea.tx-bl-input").forEach(triangleAutoSize);
   gridRestoreFocus(wrap, focusToken);
 }
 
@@ -491,7 +589,7 @@ async function triangleCycleStep(key, stepIdx) {
 /* 같은 줄에 BL을 새로 넣을 때, 그 줄의 현재 값(2ND·REMARK·진행 단계)을 그대로 물려줘요 */
 function triangleTemplateFromEntries(entries) {
   const g = triangleDecorateGroup({ key: "", entries: entries.slice() });
-  const t = { vessel: g.vessel, shipper: g.shipper, onboardDate: g.onboard, secondVessel: g.second, groupRemark: g.remark };
+  const t = { vessel: g.vessel, shipper: g.shipper, onboardDate: g.onboard, secondVessel: g.secondVesselOnly, secondNote: g.secondNoteOnly, groupRemark: g.remark };
   TRIANGLE_STEPS.forEach((s, i) => { t[s.key] = g.states[i].kind === "mixed" ? "" : g.states[i].raw; });
   return t;
 }
@@ -503,6 +601,7 @@ function triangleNewDocData(bl, template, nowIso) {
     shipper: template.shipper || "",
     onboardDate: template.onboardDate || "",
     secondVessel: template.secondVessel || "",
+    secondNote: template.secondNote || "",
     groupRemark: template.groupRemark || "",
     popCharge: template.popCharge || "",
     mfstClose: template.mfstClose || "",
@@ -561,9 +660,9 @@ async function triangleCommitField(el) {
     if (d === null) return triangleFail('온보드: "' + txt.trim() + '" 날짜를 읽지 못했어요 (예: 10/17 또는 1017)');
     patch = { onboardDate: d };
   } else if (field === "second") {
-    const r = triangleCheckVessel(txt, true); if (r.error) return triangleFail("2ND 배: " + r.error);
-    patch = { secondVessel: r.value };
-    if (r.isNew) note = "새 2ND 배로 저장됐어요: " + r.value;
+    const r = triangleCheckSecond(txt); if (r.error) return triangleFail("2ND 배: " + r.error);
+    patch = { secondVessel: r.vessel, secondNote: r.note };
+    if (r.isNew) note = "새 2ND 배로 저장됐어요: " + r.vessel;
   } else if (field === "remark") {
     patch = { groupRemark: txt.trim() };
   }
@@ -577,41 +676,126 @@ async function triangleCommitField(el) {
   else triangleSay(note || "저장됐어요", note ? "warn" : "ok");
 }
 
-/* ---- BL 목록(칸 하나에 한 줄씩) 고치기: 늘어난 건 새로 만들고, 사라진 건 삭제 ---- */
-async function triangleApplyBlEdit(key, text) {
+/* ---- BL 한 건씩 고치기: BL 번호, 그 BL의 2ND 배 ---- */
+async function triangleCommitBlField(el) {
+  el.dataset.dirty = "0";
+  const id = el.dataset.id, field = el.dataset.field;
+  const t = TRIANGLE_LIST.find((x) => x.id === id);
+  if (!t) return;
+  const patch = {};
+  let note = "";
+  if (field === "bl") {
+    const b = triangleBlKey(el.value);
+    if (!/^[A-Z]+\d+$/.test(b)) return triangleFail("BL 형식이 이상해요: " + el.value.trim());
+    const dup = TRIANGLE_LIST.find((x) => x.id !== id && triangleBlKey(x.blNumber) === b);
+    if (dup) return triangleFail("이미 등록된 BL이에요: " + b + " (" + dup.vessel + " / " + dup.shipper + ")");
+    patch.blNumber = b;
+  } else if (field === "second") {
+    const r = triangleCheckSecond(el.value); if (r.error) return triangleFail("2ND 배: " + r.error);
+    patch.secondVessel = r.vessel;
+    patch.secondNote = r.note;
+    if (r.isNew) note = "새 2ND 배로 저장됐어요: " + r.vessel;
+  } else { return; }
+  const res = await triangleBatchUpdate([id], patch);
+  if (!res.ok) triangleSay("저장에 실패했어요: " + res.error, "bad");
+  else triangleSay(note || "저장됐어요", note ? "warn" : "ok");
+}
+
+/* ---- BL 한 건 삭제 (✕) ---- */
+async function triangleDeleteBlRow(id) {
+  const t = TRIANGLE_LIST.find((x) => x.id === id);
+  if (!t) return;
+  const left = triangleEntriesOfGroup(triangleGroupKey(t.vessel, t.shipper)).length;
+  const msg = left <= 1
+    ? t.blNumber + "은(는) 이 줄의 마지막 BL이에요. 삭제하면 이 줄이 통째로 사라져요. 삭제할까요?"
+    : t.blNumber + "을(를) 삭제할까요?";
+  if (!confirm(msg)) return;
+  const r = await triangleBatchDelete([id]);
+  triangleSay(r.ok ? t.blNumber + " 삭제했어요" : "삭제에 실패했어요: " + r.error, r.ok ? "ok" : "bad");
+}
+
+/* ---- BL 추가 칸 읽기: 한 줄에 BL 하나, 2ND 배가 있으면 BL 번호 뒤에 같이 (탭이나 띄어쓰기로 구분) ---- */
+function triangleParseBlLines(text) {
+  const items = [], bad = [];
+  const isBl = (t) => /^[A-Za-z]+\d+$/.test(t);
+  String(text || "").replace(/\r/g, "").split("\n").forEach((raw) => {
+    const line = raw.trim();
+    if (!line) return;
+    if (line.indexOf("\t") >= 0) {
+      const c = line.split("\t").map((x) => x.trim());
+      if (isBl(c[0])) items.push({ bl: c[0].toUpperCase(), second: (c[1] || "").trim() }); else bad.push(line);
+      return;
+    }
+    const toks = line.split(/[\s,;]+/).filter(Boolean);
+    if (!toks.length) return;
+    if (toks.every(isBl)) toks.forEach((t) => items.push({ bl: t.toUpperCase(), second: "" })); // 한 줄에 BL만 여러 개
+    else if (isBl(toks[0])) items.push({ bl: toks[0].toUpperCase(), second: toks.slice(1).join(" ") }); // BL 뒤는 2ND 배
+    else bad.push(line);
+  });
+  return { items, bad };
+}
+
+async function triangleAddBlsFromText(key, text, ta) {
+  if (triangleBlAddBusy) return;
   const entries = triangleEntriesOfGroup(key);
   if (!entries.length) return;
-  const tokens = triangleParseBls(text);
-  const bad = tokens.filter((b) => !/^[A-Z]+\d+$/.test(b));
-  if (bad.length) return triangleFail("BL 형식이 이상해요: " + bad.join(", "));
-  if (!tokens.length) return triangleFail("BL을 전부 지우려면 오른쪽 끝 🗑로 줄 전체를 삭제해 주세요");
-
-  const current = new Map();
-  entries.forEach((e) => { const k = triangleBlKey(e.blNumber); if (k) current.set(k, e); });
+  if (!String(text || "").trim()) { delete triangleBlAddText[key]; return; }
+  triangleBlAddText[key] = text;                       // 오류가 나도 쓰던 글이 남아 있게
+  const { items, bad } = triangleParseBlLines(text);
+  if (bad.length) return triangleFail("읽지 못한 줄이 있어요: " + bad.slice(0, 2).join(" / ") + " (BL 번호로 시작해야 해요)");
+  const byBl = new Map(entries.map((e) => [triangleBlKey(e.blNumber), e]));
   const others = new Map();
   TRIANGLE_LIST.forEach((t) => { if (triangleGroupKey(t.vessel, t.shipper) !== key) others.set(triangleBlKey(t.blNumber), t); });
 
-  const added = tokens.filter((b) => !current.has(b));
-  const removed = Array.from(current.keys()).filter((b) => tokens.indexOf(b) < 0);
-  const dup = added.filter((b) => others.has(b));
-  if (dup.length) {
-    return triangleFail("이미 다른 줄에 있는 BL이에요: " + dup.map((b) => b + " → " + others.get(b).vessel + " / " + others.get(b).shipper).join(", "));
+  const creates = [], updates = [], same = [], dupOther = [];
+  const seen = new Set();
+  for (const it of items) {
+    if (seen.has(it.bl)) continue;
+    seen.add(it.bl);
+    let second = "", secondNote = "";
+    if (it.second) {
+      const r = triangleCheckSecond(it.second);
+      if (r.error) return triangleFail(it.bl + "의 2ND 배: " + r.error);
+      second = r.vessel; secondNote = r.note;
+    }
+    if (byBl.has(it.bl)) { if (second) updates.push({ id: byBl.get(it.bl).id, bl: it.bl, second, secondNote }); else same.push(it.bl); }
+    else if (others.has(it.bl)) dupOther.push(it.bl);
+    else creates.push({ bl: it.bl, second, secondNote });
   }
-  if (!added.length && !removed.length) { renderTriangleList(); return; }
-  if (removed.length && !confirm("BL " + removed.length + "건을 삭제할까요?\n" + removed.join(", "))) { renderTriangleList(); return; }
+  if (dupOther.length) {
+    return triangleFail("이미 다른 줄에 있는 BL이에요: " + dupOther.map((b) => b + " → " + others.get(b).vessel + " / " + others.get(b).shipper).join(", "));
+  }
+  if (!creates.length && !updates.length) return triangleFail("새로 추가할 BL이 없어요 (이미 이 줄에 있는 BL: " + same.join(", ") + ")");
 
+  triangleBlAddBusy = true;
+  // 저장되는 순간 표가 바로 다시 그려질 수 있어서, 쓰던 글은 저장하기 "전에" 비워둬요 (실패하면 아래에서 되돌려요)
+  const keepText = triangleBlAddText[key];
+  delete triangleBlAddText[key];
+  if (ta) ta.value = "";
   try {
     await window.fbReady;
-    const tpl = triangleTemplateFromEntries(entries);
+    const tpl = triangleTemplateFromEntries(entries);   // 새 BL은 이 줄의 진행 단계를 물려받아요. 2ND 배는 줄 전체가 같을 때만 물려받고요
     const nowIso = new Date().toISOString();
     const batch = window.fbDb.batch();
-    added.forEach((bl) => batch.set(window.fbDb.collection(TRIANGLE_COLLECTION).doc(), triangleNewDocData(bl, tpl, nowIso)));
-    removed.forEach((bl) => batch.delete(window.fbDb.collection(TRIANGLE_COLLECTION).doc(current.get(bl).id)));
+    creates.forEach((c) => {
+      const data = triangleNewDocData(c.bl, tpl, nowIso);
+      if (c.second) { data.secondVessel = c.second; data.secondNote = c.secondNote || ""; }
+      batch.set(window.fbDb.collection(TRIANGLE_COLLECTION).doc(), data);
+    });
+    updates.forEach((u) => batch.update(window.fbDb.collection(TRIANGLE_COLLECTION).doc(u.id), { secondVessel: u.second, secondNote: u.secondNote || "" }));
     await batch.commit();
-    triangleSay("BL " + tokens.length + "건으로 저장됐어요" + (added.length ? " (추가 " + added.length + ")" : "") + (removed.length ? " (삭제 " + removed.length + ")" : ""), "ok");
+    const parts = [];
+    if (creates.length) parts.push("BL " + creates.length + "건 추가");
+    if (updates.length) parts.push("2ND 배 " + updates.length + "건 갱신");
+    if (same.length) parts.push("이미 있는 BL " + same.length + "건은 그대로");
+    triangleSay(parts.join(" · "), same.length ? "warn" : "ok");
   } catch (err) {
-    console.error("BL 수정 실패:", err);
+    console.error("BL 추가 실패:", err);
+    triangleBlAddText[key] = keepText;   // 저장에 실패하면 쓰던 글을 되돌려놔요
     triangleSay("저장에 실패했어요: " + err, "bad");
+    renderTriangleList();
+  } finally {
+    triangleBlAddBusy = false;
   }
 }
 
@@ -647,8 +831,9 @@ function triangleDraftCommit(el) {
     if (v === null) { d.onboard = ""; return triangleFail('온보드: "' + txt.trim() + '" 날짜를 읽지 못했어요 (예: 10/17 또는 1017)'); }
     d.onboard = v;
   } else if (f === "second") {
-    const r = triangleCheckVessel(txt, true); if (r.error) { d.second = ""; return triangleFail("2ND 배: " + r.error); }
-    d.second = r.value;
+    const r = triangleCheckSecond(txt); if (r.error) { d.second = ""; d.secondNote = ""; return triangleFail("2ND 배: " + r.error); }
+    d.second = r.vessel;
+    d.secondNote = r.note;
   } else if (f === "bls") {
     d.bls = triangleParseBls(txt).join(" ");
   } else if (f === "remark") {
@@ -688,11 +873,11 @@ async function triangleDraftTryCreate(note) {
       await triangleBatchUpdate(entries.map((e) => e.id), { onboardDate: d.onboard });
     }
   } else {
-    tpl = { vessel: d.vessel, shipper: d.shipper, onboardDate: d.onboard, secondVessel: d.second, groupRemark: d.remark };
+    tpl = { vessel: d.vessel, shipper: d.shipper, onboardDate: d.onboard, secondVessel: d.second, secondNote: d.secondNote || "", groupRemark: d.remark };
   }
   const res = await triangleCreateEntries(fresh, tpl);
   if (!res.ok) { triangleSay("저장에 실패했어요: " + res.error, "bad"); return; }
-  triangleDraft = { vessel: "", shipper: "", onboard: "", second: "", bls: "", remark: "" };
+  triangleDraft = { vessel: "", shipper: "", onboard: "", second: "", secondNote: "", bls: "", remark: "" };
   triangleSay("BL " + fresh.length + "건 저장됐어요 (" + (merged ? "기존 줄에 추가" : "새 줄") + ")" + (note ? " · " + note : "") + (dups.length ? " · 이미 있는 BL 제외: " + dups.join(", ") : ""), (dups.length || note) ? "warn" : "ok");
   renderTriangleList();
   const first = document.querySelector('#triangleListWrap input[data-act="draft"][data-field="vessel"]');
@@ -702,7 +887,7 @@ async function triangleDraftTryCreate(note) {
 function triangleFindCell(desc) {
   const wrap = document.getElementById("triangleListWrap");
   if (!wrap || !desc) return null;
-  const sel = 'input[data-act="' + desc.act + '"][data-field="' + desc.field + '"]' + (desc.gk != null ? '[data-gk="' + String(desc.gk).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]' : "");
+  const sel = '[data-act="' + desc.act + '"][data-field="' + desc.field + '"]' + (desc.gk != null ? '[data-gk="' + String(desc.gk).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"]' : "");
   return wrap.querySelector(sel);
 }
 
@@ -722,6 +907,11 @@ function triangleBindEvents() {
       renderTriangleList();
     }
     else if (act === "del-group") { triangleOnTrash(gk); }
+    else if (act === "del-bl") { triangleDeleteBlRow(el.dataset.id); }
+    else if (act === "bl-add-btn") {
+      const ta = el.parentElement.querySelector("textarea");
+      if (ta) { ta.dataset.dirty = "0"; triangleAddBlsFromText(gk, ta.value, ta); }
+    }
     else if (act === "copy-bls") {
       const text = triangleEntriesOfGroup(gk).sort(triangleCompareByBl).map((t) => t.blNumber).filter(Boolean).join("\n");
       const done = () => { const old = el.textContent; el.textContent = "복사됨 ✓"; setTimeout(() => { el.textContent = old; }, 1500); };
@@ -732,20 +922,24 @@ function triangleBindEvents() {
 
   wrap.addEventListener("focusin", (e) => {
     const el = e.target;
-    if (el.dataset && el.dataset.act && el.tagName === "INPUT") { el.dataset.orig = el.value; el.select(); }
-    else if (el.dataset && el.dataset.act === "bl-edit") { el.dataset.orig = el.value; }
+    if (el.dataset && el.dataset.act && el.tagName === "INPUT" && !el.readOnly) { el.dataset.orig = el.value; el.select(); }
+    else if (el.dataset && el.dataset.act && el.tagName === "TEXTAREA") { el.dataset.orig = el.value; }
   });
 
   wrap.addEventListener("keydown", (e) => {
     const el = e.target;
     if (!el.dataset || !el.dataset.act) return;
     if (el.dataset.act === "step" && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); triangleCycleStep(el.dataset.gk, Number(el.dataset.step)); return; }
-    if (el.tagName !== "INPUT") return;
-    if (e.key === "Escape") { el.value = el.dataset.orig != null ? el.dataset.orig : el.value; el.dataset.dirty = "0"; return; }
+    // REMARK 칸은 여러 줄 칸이에요: Enter = 저장하고 아래 칸으로, Shift+Enter = 줄바꿈
+    const isRemarkBox = el.tagName === "TEXTAREA" && el.dataset.act === "field";
+    if (el.tagName !== "INPUT" && !isRemarkBox) return;
+    if (el.readOnly) return;
+    if (e.key === "Escape") { el.value = el.dataset.orig != null ? el.dataset.orig : el.value; el.dataset.dirty = "0"; if (isRemarkBox) triangleAutoSize(el); return; }
     if (e.key === "Enter") {
+      if (isRemarkBox && e.shiftKey) return; // 줄바꿈은 그대로 두기
       e.preventDefault();
       // 같은 열의 아래(Shift는 위) 칸으로 이동 - 저장하느라 표가 다시 그려져도 같은 칸을 다시 찾아서 이동해요
-      const all = Array.from(wrap.querySelectorAll('input[data-field="' + el.dataset.field + '"]'));
+      const all = Array.from(wrap.querySelectorAll('input[data-field="' + el.dataset.field + '"], textarea[data-field="' + el.dataset.field + '"]'));
       const nx = all[all.indexOf(el) + (e.shiftKey ? -1 : 1)];
       const desc = nx ? { act: nx.dataset.act, field: nx.dataset.field, gk: nx.dataset.gk } : null;
       el.blur(); // 값이 바뀌었으면 여기서 저장(change)돼요
@@ -759,6 +953,7 @@ function triangleBindEvents() {
     if (el.classList && el.classList.contains("tx-input")) {
       el.dataset.dirty = "1";
       if (el.tagName === "TEXTAREA") triangleAutoSize(el);
+      if (el.dataset.act === "bl-add") triangleBlAddText[el.dataset.gk] = el.value;
     }
   });
 
@@ -777,7 +972,8 @@ function triangleBindEvents() {
     const el = e.target;
     if (!el.dataset) return;
     if (el.dataset.act === "field") triangleCommitField(el);
-    else if (el.dataset.act === "bl-edit") { el.dataset.dirty = "0"; triangleApplyBlEdit(el.dataset.gk, el.value); }
+    else if (el.dataset.act === "bl-field") triangleCommitBlField(el);
+    else if (el.dataset.act === "bl-add") { el.dataset.dirty = "0"; triangleAddBlsFromText(el.dataset.gk, el.value, el); }
     else if (el.dataset.act === "draft") triangleDraftCommit(el);
   });
 
