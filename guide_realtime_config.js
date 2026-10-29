@@ -569,10 +569,20 @@ const NEWS_CATEGORY_META = {
   "항로/통항 이슈 (파나마운하, 수에즈/홍해, 주요 항만 정체 등)": { icon: "🚢", cls: "cat-route" },
   "지정학/규제 (관세, 제재, 항만 파업, 환경 규제 등)": { icon: "⚖️", cls: "cat-regulation" },
   "선사/얼라이언스 동향 (합병, 신규 항로 개설/축소 등)": { icon: "🤝", cls: "cat-carrier" },
-  "국내 물류 이슈 (부산항 등 국내 항만, 관세청 정책 등)": { icon: "🇰🇷", cls: "cat-domestic" }
+  "국내 물류 이슈 (부산항 등 국내 항만, 관세청 정책 등)": { icon: "🇰🇷", cls: "cat-domestic" },
+  "기상·항만 운영 (태풍·허리케인·폭풍, 항만 폐쇄·적체·운영 중단 등)": { icon: "🌀", cls: "cat-weather" }
 };
 function newsCategoryMeta(category) {
-  return NEWS_CATEGORY_META[category] || { icon: "📰", cls: "" };
+  if (NEWS_CATEGORY_META[category]) return NEWS_CATEGORY_META[category];
+  // 괄호 설명 없이 저장된 짧은 이름("항로/통항 이슈", "항로·통항" 등)도 알아봄
+  const norm = (s) => String(s || "").split(" (")[0].replace(/[\s·\/]+/g, "").toLowerCase();
+  const n = norm(category);
+  if (n) {
+    const keys = Object.keys(NEWS_CATEGORY_META);
+    const key = keys.find((k) => norm(k) === n) || keys.find((k) => norm(k).indexOf(n) !== -1 || n.indexOf(norm(k)) !== -1);
+    if (key) return NEWS_CATEGORY_META[key];
+  }
+  return { icon: "📰", cls: "" };
 }
 
 /* 요약 텍스트를 문장 단위로 쪼개서 불릿 리스트용 배열로 만듦.
