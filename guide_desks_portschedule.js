@@ -260,7 +260,7 @@ function loadPortScheduleTab() {
         </div>
       </div>
       <div id="portScheduleUploadResult"></div>
-      <div class="hint" style="margin:12px 0;">표의 칸을 눌러서 바로 고쳐요 (Enter 아래 칸 · Esc 되돌리기). 새 항목은 표 맨 아래 빈 줄에 쓰거나, 엑셀에서 여러 줄을 복사해 그 빈 줄에 붙여넣어요.</div>
+      <div class="hint" style="margin:12px 0;">표의 칸을 눌러서 바로 고쳐요 (Enter 아래 칸 · Esc 되돌리기). 새 항목은 <b>표 맨 위 빈 줄</b>에 쓰거나, 엑셀에서 여러 줄을 복사해 그 빈 줄에 붙여넣어요. 방금 추가한 항목은 빈 줄 바로 아래에 모여서 바로 고칠 수 있어요.</div>
       <div id="portScheduleTableWrap"></div>
     </div>
 
@@ -532,7 +532,7 @@ function renderPortScheduleControls() {
 }
 
 /* =========================================================================
-   📄 raw 표 - 칸을 눌러서 바로 고치고, 맨 아래 빈 줄에서 새로 추가해요 (엑셀처럼)
+   📄 raw 표 - 칸을 눌러서 바로 고치고, 맨 위 빈 줄에서 새로 추가해요 (엑셀처럼)
    - 날짜는 10/22, 1022 처럼 간단히, 적하목록·하선제출은 "10/22 오후 4:00" 한 칸에
    - 입항일/출항일도 직접 고칠 수 있어요. 직접 고친 칸에는 🔒가 붙고,
      터미널이 "지난번과 같은 값"을 계속 줄 때만 내가 고친 값을 지켜줘요.
@@ -553,6 +553,7 @@ const PS_COLS = [
 ];
 
 let psDraft = {};
+let psRecentIds = [];      // 방금 추가한 항목 id (빈 줄 바로 아래에 모아 보여줘요. 탭을 새로 열거나 새로고침하면 날짜 순 자리로 들어가요)
 let psArmedDelete = null;
 let psBound = false;
 let psRenderPending = false;
@@ -691,6 +692,10 @@ function renderPortScheduleRows() {
       .some((v) => String(v || "").toUpperCase().includes(q));
   });
   const sorted = filtered.slice().sort((a, b) => (a.arrivalDate || "").localeCompare(b.arrivalDate || ""));
+  // 방금 추가한 항목은 빈 줄 바로 아래로 따로 모아요 (검색·필터와 상관없이). 같은 줄이 두 번 나오지 않게 아래 목록에서는 빼요
+  const recent = psRecentIds.map((id) => PORT_SCHEDULE_LIST.find((r) => r.id === id)).filter(Boolean);
+  const recentSet = new Set(psRecentIds);
+  const rest = sorted.filter((r) => !recentSet.has(r.id));
 
   let html = '<div id="psStatus" class="ps-status ' + escapeHtml(psStatus.kind) + '">' + escapeHtml(psStatus.text) + "</div>"
     + psDatalistsHtml()
@@ -699,13 +704,18 @@ function renderPortScheduleRows() {
     + '<div class="ps-scroll"><table class="ps-table"><colgroup>'
     + PS_COLS.map((c) => '<col style="width:' + c.w + 'px">').join("") + '<col style="width:48px"></colgroup><thead><tr>'
     + PS_COLS.map((c) => '<th' + (c.f === "vesselName" ? ' class="ps-sk"' : "") + ">" + c.label + "</th>").join("") + "<th></th></tr></thead><tbody>"
-    + sorted.map(psRowHtml).join("")
     + psDraftRowHtml()
+    + (recent.length
+      ? '<tr class="ps-recent-head"><td colspan="' + (PS_COLS.length + 1) + '">⬆️ 방금 추가한 ' + recent.length + '건 (여기서 바로 고칠 수 있어요 · 새로고침하면 입항일 순서 자리로 들어가요) <button type="button" class="ps-recent-clear" data-act="ps-recent-clear">정리</button></td></tr>'
+        + recent.map((r) => psRowHtml(r).replace("<tr ", '<tr class="ps-recent" ')).join("")
+        + '<tr class="ps-recent-end"><td colspan="' + (PS_COLS.length + 1) + '"></td></tr>'
+      : "")
+    + rest.map(psRowHtml).join("")
     + "</tbody></table></div>";
   rowsWrap.innerHTML = html;
 
   const countLabel = document.getElementById("portScheduleCountLabel");
-  if (countLabel) countLabel.textContent = `${sorted.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건`;
+  if (countLabel) countLabel.textContent = `${rest.length.toLocaleString()} / ${PORT_SCHEDULE_LIST.length.toLocaleString()}건`;
   gridRestoreFocus(rowsWrap, focusToken);
 }
 
@@ -762,7 +772,7 @@ async function psCommitField(el) {
   }
 }
 
-/* ---- 맨 아래 빈 줄 ---- */
+/* ---- 맨 위 빈 줄 (헤더 바로 아래) ---- */
 function psDraftCommit(el) {
   el.dataset.dirty = "0";
   const f = el.dataset.f, col = PS_COLS.find((c) => c.f === f), txt = el.value;
@@ -819,7 +829,8 @@ async function psDraftCreate(force) {
     const ref = built.docId ? col.doc(built.docId) : col.doc();
     await ref.set(Object.assign({}, built.data, { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: "manual" }));
     psDraft = {};
-    psSay("추가됐어요: " + built.data.vesselName + (built.data.voyage ? " " + built.data.voyage : ""), "ok");
+    psRecentIds = [ref.id].concat(psRecentIds).slice(0, 30);
+    psSay("추가됐어요: " + built.data.vesselName + (built.data.voyage ? " " + built.data.voyage : "") + " (바로 아래 '방금 추가한' 줄에 있어요)", "ok");
     renderPortScheduleRows();
     const first = document.querySelector('#portScheduleRowsWrap input[data-act="ps-draft"][data-f="vesselName"]');
     if (first) first.focus();
@@ -829,7 +840,7 @@ async function psDraftCreate(force) {
   }
 }
 
-/* 엑셀에서 여러 줄을 복사해서 맨 아래 빈 줄에 붙여넣기 - 열 순서는 표와 같아요 (선명, 코드, 항차, 입항일, 출항일, 터미널, LINE, 마감자, 적하목록, 하선제출, AN) */
+/* 엑셀에서 여러 줄을 복사해서 맨 위 빈 줄에 붙여넣기 - 열 순서는 표와 같아요 (선명, 코드, 항차, 입항일, 출항일, 터미널, LINE, 마감자, 적하목록, 하선제출, AN) */
 async function psPasteRows(text) {
   const rows = String(text).replace(/\r/g, "").replace(/\n+$/, "").split("\n").map((l) => l.split("\t"));
   if (rows.length && /^선명|vessel/i.test((rows[0][0] || "").trim())) rows.shift(); // 헤더 줄이 같이 왔으면 건너뜀
@@ -858,15 +869,18 @@ async function psPasteRows(text) {
   try {
     await window.fbReady;
     const col = window.fbDb.collection(PORT_SCHEDULE_COLLECTION);
+    const addedIds = [];
     for (let i = 0; i < docs.length; i += 400) {
       const batch = window.fbDb.batch();
       docs.slice(i, i + 400).forEach((b) => {
         const ref = b.docId ? col.doc(b.docId) : col.doc();
+        addedIds.push(ref.id);
         batch.set(ref, Object.assign({}, b.data, { updatedAt: firebase.firestore.FieldValue.serverTimestamp(), updatedBy: "manual" }));
       });
       await batch.commit();
     }
     psDraft = {};
+    psRecentIds = addedIds.concat(psRecentIds).slice(0, 30);
     psSay(docs.length + "건 추가됐어요" + (problems.length ? " · 건너뜀 " + problems.length + "건 (" + problems.slice(0, 2).join(" / ") + ")" : ""), problems.length ? "warn" : "ok");
     renderPortScheduleRows();
   } catch (err) {
@@ -912,6 +926,9 @@ function psBindEvents() {
       }
     } else if (act === "ps-add") {
       psDraftCreate(true);
+    } else if (act === "ps-recent-clear") {
+      psRecentIds = [];
+      renderPortScheduleRows();
     }
   });
 
@@ -947,7 +964,7 @@ function psBindEvents() {
     if (!/[\t\n]/.test(txt.replace(/\n+$/, ""))) return; // 한 칸 붙여넣기는 그냥 붙여넣기
     e.preventDefault();
     if (el.dataset.act === "ps-draft") psPasteRows(txt);
-    else psSay("여러 칸 붙여넣기는 맨 아래 빈 줄에서만 돼요 (새 항목으로 추가돼요)", "warn");
+    else psSay("여러 칸 붙여넣기는 맨 위 빈 줄에서만 돼요 (새 항목으로 추가돼요)", "warn");
   });
 
   wrap.addEventListener("change", (e) => {
